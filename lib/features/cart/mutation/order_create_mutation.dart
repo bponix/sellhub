@@ -1,0 +1,104 @@
+const String ORDERCREATEMUTATION = r'''
+mutation selfStoreOrderCreateByGuest($siteId: Int!, $address: String!, $affiliateCommission: Float!, $browser: String, $cashbackBalance: Float!, $charge: Float!, $cost: Float!, $currency: String!, $customerAddress: String!, $customerId: Int, $customerName: String!, $customerNote: String, $customerPhone: Int!, $deliveryTime: String, $discount: Float!, $discountName: String, $emiDuration: Int!, $emiInterest: Float!, $gatewayText: String!, $grossAmount: Float!, $image: Upload, $isEmi: Boolean!, $isRenew: Boolean, $latitude: Float!, $logisticsCharge: Float!, $logisticsExtraCharge: Float!, $logisticsId: Int!, $logisticsStoppageId: Int, $logisticsText: String!, $logisticsUrl: String, $longitude: Float!, $netAmount: Float!, $otp: Int!, $paid: Float!, $parentSiteId: Int, $productId: Int, $profit: Float!, $referCode: String!, $resellAmount: Float!, $resellerAdvanceCollect: Float!, $resellerCommission: Float!, $resellerId: Int, $rewardPoints: Float!, $shopId: Int, $source: String!, $sourceId: Int, $staffId: Int, $subscription: String, $subscriptionFee: Float, $total: Float!, $validTill: DateTime, $vat: Float!, $vatAmount: Float!, $weight: Float!, $products: [StoreOrderCartCreate!]) {
+  selfStoreOrderCreateByGuest(
+    siteId: $siteId
+    data: {address: $address, affiliateCommission: $affiliateCommission, browser: $browser, cashbackBalance: $cashbackBalance, charge: $charge, cost: $cost, currency: $currency, customerAddress: $customerAddress, customerId: $customerId, customerName: $customerName, customerNote: $customerNote, customerPhone: $customerPhone, deliveryTime: $deliveryTime, discount: $discount, discountName: $discountName, emiDuration: $emiDuration, emiInterest: $emiInterest, gatewayText: $gatewayText, grossAmount: $grossAmount, image: $image, isEmi: $isEmi, isRenew: $isRenew, latitude: $latitude, logisticsCharge: $logisticsCharge, logisticsExtraCharge: $logisticsExtraCharge, logisticsId: $logisticsId, logisticsStoppageId: $logisticsStoppageId, logisticsText: $logisticsText, logisticsUrl: $logisticsUrl, longitude: $longitude, netAmount: $netAmount, otp: $otp, paid: $paid, parentSiteId: $parentSiteId, productId: $productId, profit: $profit, referCode: $referCode, resellAmount: $resellAmount, resellerAdvanceCollect: $resellerAdvanceCollect, resellerCommission: $resellerCommission, resellerId: $resellerId, rewardPoints: $rewardPoints, shopId: $shopId, source: $source, sourceId: $sourceId, staffId: $staffId, subscription: $subscription, subscriptionFee: $subscriptionFee, total: $total, userId: 1, validTill: $validTill, vat: $vat, vatAmount: $vatAmount, weight: $weight}
+    products: $products
+  ) {
+    address
+    affiliateCommission
+    affiliateIsPaid
+    cashbackBalance
+    charge
+    childHid
+    childId
+    cost
+    createdAt
+    currency
+    customerAddress
+    customerId
+    customerName
+    customerNote
+    customerPhone
+    deliveryTime
+    discount
+    discountName
+    emiDuration
+    emiInterest
+    gatewayText
+    grossAmount
+    id
+    image
+    isChargePaid
+    isEmi
+    isPaid
+    isSettle
+    isTransferred
+    latitude
+    logisticsCharge
+    logisticsCityId
+    logisticsExtraCharge
+    logisticsId
+    logisticsIsConfirmed
+    logisticsIsPaid
+    logisticsStoppageId
+    logisticsText
+    logisticsUrl
+    logisticsZoneId
+    longitude
+    netAmount
+    orderId
+    paid
+    paymentId
+    paymentResellerId
+    profit
+    resellAmount
+    resellerAdvanceCollect
+    resellerCommission
+    resellerId
+    resellerIsPaid
+    rewardPoints
+    status
+    statusCompleted
+    total
+    trackingId
+    updatedAt
+    vat
+    vatAmount
+    customer {
+      avatar
+      domain
+      userId
+      hid
+      title
+      phone
+      address
+    }
+    events {
+      createdAt
+      eventType
+      id
+      note
+    }
+    lines {
+      cost
+      currency
+      id
+      image
+      isActive
+      productId
+      productHid
+      productName
+      productSku
+      quantity
+      resellPrice
+      source
+      unit
+      price
+      unitType
+      variant
+      vat
+    }
+  }
+}
+ ''';

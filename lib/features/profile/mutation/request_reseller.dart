@@ -1,0 +1,99 @@
+const String RESELLERREQUEST = r'''
+mutation selfStoreCustomerUpdateByCustomer($userId: Int!, $customerId: Int!, $customerType: Int, $customerTypes: [Int], $address: String, $avatar: Upload, $billingAddress: String, $domain: String, $formattedAddress: String, $isActive: Boolean, $isAffiliate: Boolean, $isReseller: Boolean, $latitude: Float, $longitude: Float, $note: JSON, $paymentNo: String, $paymentTitle: String, $phone: Int, $referCode: String, $shippingAddress: String, $title: String) {
+  selfStoreCustomerUpdateByCustomer(
+    userId: $userId
+    customerId: $customerId
+    data: {address: $address, avatar: $avatar, billingAddress: $billingAddress, customerType: $customerType, customerTypes: $customerTypes, domain: $domain, formattedAddress: $formattedAddress, isActive: $isActive, isAffiliate: $isAffiliate, isReseller: $isReseller, latitude: $latitude, longitude: $longitude, note: $note, paymentNo: $paymentNo, paymentTitle: $paymentTitle, phone: $phone, referCode: $referCode, shippingAddress: $shippingAddress, title: $title}
+  ) {
+    affiliatePaid
+    affiliateProcessing
+    affiliateTotal
+    affiliatePayable
+    address
+    avatar
+    billingAddress {
+      address
+      formattedAddress
+      id
+      latitude
+      longitude
+    }
+    blockProducts
+    createdAt
+    currency
+    customerType
+    customerTypes
+    cartProducts {
+      id
+      price
+      quantity
+      resellPrice
+      title
+      variant
+      variantId
+    }
+    domain
+    favorite
+    formattedAddress
+    id
+    isActive
+    isAffiliate
+    isAffiliateCommission
+    isAffiliateJoin
+    isReseller
+    isWholesale
+    latitude
+    longitude
+    nid
+    note
+    ordersCancelled
+    ordersConfirmed
+    ordersDelivered
+    ordersOnTheWay
+    ordersPackaging
+    ordersPending
+    ordersPlaced
+    ordersRejected
+    ordersReturned
+    ordersShipment
+    ordersStation
+    ordersTotal
+    paymentNo
+    paymentTitle
+    pendingBalance
+    pendingCashbackBalance
+    pendingGiftCardBalance
+    pendingProfit
+    pendingPurchase
+    pendingRewardPoints
+    phone
+    referCode
+    referId
+    resellPaid
+    resellProcessing
+    resellTotal
+    resellPayable
+    tags
+    shippingAddress {
+      address
+      formattedAddress
+      id
+      latitude
+      longitude
+    }
+    siteId
+    tags
+    title
+    totalBalance
+    totalCashbackBalance
+    totalGiftCardBalance
+    totalPaid
+    totalProfit
+    totalPurchase
+    totalReturnCharge
+    totalRewardPoints
+    updatedAt
+    userId
+  }
+}
+ ''';
