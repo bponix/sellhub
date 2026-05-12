@@ -6,6 +6,8 @@ import 'package:sellhub/features/cart/data/models/payment_method_res.dart';
 import 'package:sellhub/features/cart/data/models/voucher_check_res.dart';
 import 'package:sellhub/features/profile/data/model/store_customer_address.dart';
 
+enum CheckoutResourceStatus { initial, loading, success, failure }
+
 class CheckoutState extends Equatable {
   const CheckoutState({
     this.deliveryCharge = 0,
@@ -23,6 +25,12 @@ class CheckoutState extends Equatable {
     this.selectedShippingAddressId,
     this.voucherCode = '',
     this.voucher,
+    this.quickOrderDraftStatus = CheckoutResourceStatus.initial,
+    this.quickOrderDraft,
+    this.buyerRiskDecisionStatus = CheckoutResourceStatus.initial,
+    this.buyerRiskDecision,
+    this.supplierSplitPreviewStatus = CheckoutResourceStatus.initial,
+    this.supplierSplitPreview,
     this.isLoading = false,
     this.error,
   });
@@ -42,8 +50,31 @@ class CheckoutState extends Equatable {
   final int? selectedShippingAddressId;
   final String voucherCode;
   final VoucherCheckRes? voucher;
+  final CheckoutResourceStatus quickOrderDraftStatus;
+  final Map<String, dynamic>? quickOrderDraft;
+  final CheckoutResourceStatus buyerRiskDecisionStatus;
+  final Map<String, dynamic>? buyerRiskDecision;
+  final CheckoutResourceStatus supplierSplitPreviewStatus;
+  final Map<String, dynamic>? supplierSplitPreview;
   final bool isLoading;
   final AppFailure? error;
+
+  bool get hasResumableQuickOrderDraft {
+    final draft = quickOrderDraft;
+    if (draft == null) return false;
+    final lines = draft['lines'];
+    if (lines is List) return lines.isNotEmpty;
+    return draft.isNotEmpty;
+  }
+
+  String? get buyerRiskDisposition =>
+      buyerRiskDecision?['decision']?.toString();
+
+  CheckoutResourceStatus get supplierOrderGroupingStatus =>
+      supplierSplitPreviewStatus;
+
+  Map<String, dynamic>? get supplierOrderGroupingPreview =>
+      supplierSplitPreview;
 
   CheckoutState copyWith({
     double? deliveryCharge,
@@ -63,6 +94,15 @@ class CheckoutState extends Equatable {
     String? voucherCode,
     VoucherCheckRes? voucher,
     bool clearVoucher = false,
+    CheckoutResourceStatus? quickOrderDraftStatus,
+    Map<String, dynamic>? quickOrderDraft,
+    bool clearQuickOrderDraft = false,
+    CheckoutResourceStatus? buyerRiskDecisionStatus,
+    Map<String, dynamic>? buyerRiskDecision,
+    bool clearBuyerRiskDecision = false,
+    CheckoutResourceStatus? supplierSplitPreviewStatus,
+    Map<String, dynamic>? supplierSplitPreview,
+    bool clearSupplierSplitPreview = false,
     bool? isLoading,
     AppFailure? error,
     bool clearError = false,
@@ -87,6 +127,21 @@ class CheckoutState extends Equatable {
           : selectedShippingAddressId ?? this.selectedShippingAddressId,
       voucherCode: voucherCode ?? this.voucherCode,
       voucher: clearVoucher ? null : voucher ?? this.voucher,
+      quickOrderDraftStatus:
+          quickOrderDraftStatus ?? this.quickOrderDraftStatus,
+      quickOrderDraft: clearQuickOrderDraft
+          ? null
+          : quickOrderDraft ?? this.quickOrderDraft,
+      buyerRiskDecisionStatus:
+          buyerRiskDecisionStatus ?? this.buyerRiskDecisionStatus,
+      buyerRiskDecision: clearBuyerRiskDecision
+          ? null
+          : buyerRiskDecision ?? this.buyerRiskDecision,
+      supplierSplitPreviewStatus:
+          supplierSplitPreviewStatus ?? this.supplierSplitPreviewStatus,
+      supplierSplitPreview: clearSupplierSplitPreview
+          ? null
+          : supplierSplitPreview ?? this.supplierSplitPreview,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : error ?? this.error,
     );
@@ -109,6 +164,12 @@ class CheckoutState extends Equatable {
     selectedShippingAddressId,
     voucherCode,
     voucher,
+    quickOrderDraftStatus,
+    quickOrderDraft,
+    buyerRiskDecisionStatus,
+    buyerRiskDecision,
+    supplierSplitPreviewStatus,
+    supplierSplitPreview,
     isLoading,
     error,
   ];

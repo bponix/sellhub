@@ -8,12 +8,12 @@ class StoreScope {
   const StoreScope._();
 
   static int siteIdFromState(StorefrontState state) =>
-      state.siteDetails?.id ?? StoreRegistry.currentStore?.siteId ?? 11984;
+      state.siteDetails?.id ?? StoreRegistry.currentStore?.siteId ?? 0;
 
   static String domainFromState(StorefrontState state) =>
       state.siteDetails?.domain?.trim().isNotEmpty == true
       ? state.siteDetails!.domain!.trim()
-      : (StoreRegistry.currentStore?.domain ?? 'www.anammart.com');
+      : (StoreRegistry.currentStore?.domain ?? 'sellhub.bponi.com');
 
   static int sourceIdFromState(StorefrontState state) =>
       state.siteDetails?.createdById ??

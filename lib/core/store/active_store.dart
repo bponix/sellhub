@@ -1,3 +1,5 @@
+import 'package:sellhub/core/supplier_trust/supplier_trust_model.dart';
+
 class ActiveStore {
   const ActiveStore({
     required this.siteId,
@@ -7,6 +9,7 @@ class ActiveStore {
     this.address,
     this.latitude,
     this.longitude,
+    this.trustProfile,
   });
 
   final int siteId;
@@ -16,6 +19,7 @@ class ActiveStore {
   final String? address;
   final double? latitude;
   final double? longitude;
+  final SupplierTrustProfile? trustProfile;
 
   factory ActiveStore.fromJson(Map<String, dynamic> json) {
     return ActiveStore(
@@ -26,6 +30,9 @@ class ActiveStore {
       address: json['address'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
+      trustProfile: json['trustProfile'] is Map<String, dynamic>
+          ? SupplierTrustProfile.fromJson(json['trustProfile'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -37,6 +44,7 @@ class ActiveStore {
     'address': address,
     'latitude': latitude,
     'longitude': longitude,
+    'trustProfile': trustProfile?.toJson(),
   };
 
   ActiveStore copyWith({
@@ -47,6 +55,7 @@ class ActiveStore {
     String? address,
     double? latitude,
     double? longitude,
+    SupplierTrustProfile? trustProfile,
   }) {
     return ActiveStore(
       siteId: siteId ?? this.siteId,
@@ -56,6 +65,7 @@ class ActiveStore {
       address: address ?? this.address,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      trustProfile: trustProfile ?? this.trustProfile,
     );
   }
 }

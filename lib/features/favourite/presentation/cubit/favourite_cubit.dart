@@ -38,9 +38,9 @@ class FavouriteCubit extends SafeCubit<FavouriteState> {
       emit(
         state.copyWith(
           isLoading: false,
-          error: AppFailure.fromObject(
+            error: AppFailure.fromObject(
             error,
-            fallbackTitle: 'Unable to load favourites.',
+            fallbackTitle: 'Unable to load saved products.',
           ),
         ),
       );
@@ -153,7 +153,7 @@ class FavouriteCubit extends SafeCubit<FavouriteState> {
         state.copyWith(
           error: AppFailure.fromObject(
             error,
-            fallbackTitle: 'Unable to sync favourites.',
+            fallbackTitle: 'Unable to sync saved products.',
           ),
         ),
       );

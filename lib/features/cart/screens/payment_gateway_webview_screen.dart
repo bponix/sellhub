@@ -88,7 +88,6 @@ class _PaymentGatewayWebViewScreenState
         backgroundColor: Colors.white,
         appBar: SellHubTopAppBar(
           title: widget.title,
-          subtitle: 'Secure payment',
           icon: HugeIcons.strokeRoundedWallet02,
           showBackButton: true,
         ),

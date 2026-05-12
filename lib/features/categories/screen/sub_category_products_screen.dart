@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:sellhub/core/constants/app_color.dart';
+import 'package:sellhub/core/product_viability/product_viability.dart';
 import 'package:sellhub/core/store/store_scope.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
 import 'package:sellhub/core/widget/sellhub_top_app_bar.dart';
@@ -35,6 +36,9 @@ class SubCategoryProductsScreen extends StatefulWidget {
 
 class _SubCategoryProductsScreenState extends State<SubCategoryProductsScreen> {
   final ScrollController _mainScrollController = ScrollController();
+  ProductViabilityFilter _viabilityFilter = ProductViabilityFilter.all;
+  ProductViabilitySort _viabilitySort = ProductViabilitySort.featured;
+  String _sellerLens = 'all';
 
   @override
   void initState() {
@@ -87,6 +91,37 @@ class _SubCategoryProductsScreenState extends State<SubCategoryProductsScreen> {
       widget.subCategoryId,
       0,
     );
+  }
+
+  void _applySellerLens(String lens) {
+    setState(() {
+      _sellerLens = lens;
+      switch (lens) {
+        case 'student':
+          _viabilityFilter = ProductViabilityFilter.beginnerFriendly;
+          _viabilitySort = ProductViabilitySort.lowestRisk;
+          break;
+        case 'repeat':
+          _viabilityFilter = ProductViabilityFilter.highRepeatPotential;
+          _viabilitySort = ProductViabilitySort.highRepeatPotential;
+          break;
+        case 'margin':
+          _viabilityFilter = ProductViabilityFilter.goodMargin;
+          _viabilitySort = ProductViabilitySort.highestMargin;
+          break;
+        case 'cod':
+          _viabilityFilter = ProductViabilityFilter.beginnerFriendly;
+          _viabilitySort = ProductViabilitySort.lowestRisk;
+          break;
+        case 'fast':
+          _viabilityFilter = ProductViabilityFilter.fastMover;
+          _viabilitySort = ProductViabilitySort.featured;
+          break;
+        default:
+          _viabilityFilter = ProductViabilityFilter.all;
+          _viabilitySort = ProductViabilitySort.featured;
+      }
+    });
   }
 
   @override
@@ -178,6 +213,14 @@ class _SubCategoryProductsScreenState extends State<SubCategoryProductsScreen> {
                   },
                 ),
               ),
+              IconButton(
+                tooltip: 'Viability',
+                onPressed: _openViabilitySheet,
+                icon: const AppHugeIcon(
+                  HugeIcons.strokeRoundedAiIdea,
+                  size: 20,
+                ),
+              ),
             ],
           ),
           body: Padding(
@@ -229,21 +272,40 @@ class _SubCategoryProductsScreenState extends State<SubCategoryProductsScreen> {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _CatalogChip(
-                              icon: HugeIcons.strokeRoundedGridView,
-                              label: widget.brandId != null
-                                  ? 'Brand catalog'
-                                  : (widget.seeAll
-                                        ? 'Whole category'
-                                        : 'Subcategory'),
+                            _CatalogIntentCard(
+                              lens: _sellerLens,
+                              onSelectLens: _applySellerLens,
                             ),
-                            _CatalogChip(
-                              icon: HugeIcons.strokeRoundedFilterHorizontal,
-                              label: _filterLabel(categoriesState.queryType),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _CatalogChip(
+                                  icon: HugeIcons.strokeRoundedGridView,
+                                  label: widget.brandId != null
+                                      ? 'Brand catalog'
+                                      : (widget.seeAll
+                                            ? 'Whole category'
+                                            : 'Subcategory'),
+                                ),
+                                _CatalogChip(
+                                  icon: HugeIcons.strokeRoundedFilterHorizontal,
+                                  label: _filterLabel(categoriesState.queryType),
+                                ),
+                                _CatalogChip(
+                                  icon: HugeIcons.strokeRoundedAiIdea,
+                                  label: _viabilityFilterLabel(_viabilityFilter),
+                                ),
+                                _CatalogChip(
+                                  icon: HugeIcons
+                                      .strokeRoundedArrowDataTransferHorizontal,
+                                  label: _viabilitySortLabel(_viabilitySort),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -251,7 +313,11 @@ class _SubCategoryProductsScreenState extends State<SubCategoryProductsScreen> {
                     ),
                     SliverToBoxAdapter(
                       child: ProductListViewVerical(
-                        products: categoriesState.subCategoriesProduct,
+                        products: applyProductViability(
+                          categoriesState.subCategoriesProduct,
+                          filter: _viabilityFilter,
+                          sort: _viabilitySort,
+                        ),
                         emphasizeImage: true,
                         padding: EdgeInsets.zero,
                       ),
@@ -318,6 +384,141 @@ class _SubCategoryProductsScreenState extends State<SubCategoryProductsScreen> {
       default:
         return 'Newest';
     }
+  }
+
+  Future<void> _openViabilitySheet() async {
+    final selected = await showModalBottomSheet<_ViabilitySelection>(
+      context: context,
+      backgroundColor: Colors.white,
+      builder: (context) => _ViabilityPickerSheet(
+        filter: _viabilityFilter,
+        sort: _viabilitySort,
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _viabilityFilter = selected.filter;
+      _viabilitySort = selected.sort;
+    });
+  }
+
+  String _viabilityFilterLabel(ProductViabilityFilter filter) {
+    switch (filter) {
+      case ProductViabilityFilter.all:
+        return 'All products';
+      case ProductViabilityFilter.fastMover:
+        return 'Fast mover';
+      case ProductViabilityFilter.goodMargin:
+        return 'Good margin';
+      case ProductViabilityFilter.beginnerFriendly:
+        return 'Beginner friendly';
+      case ProductViabilityFilter.highRepeatPotential:
+        return 'High repeat';
+      case ProductViabilityFilter.riskyDeliveryZone:
+        return 'Risky delivery';
+      case ProductViabilityFilter.lowTrustSupplier:
+        return 'Low trust';
+    }
+  }
+
+  String _viabilitySortLabel(ProductViabilitySort sort) {
+    switch (sort) {
+      case ProductViabilitySort.featured:
+        return 'Featured';
+      case ProductViabilitySort.strongestDemand:
+        return 'Strongest demand';
+      case ProductViabilitySort.highestMargin:
+        return 'Highest margin';
+      case ProductViabilitySort.lowestRisk:
+        return 'Lowest risk';
+      case ProductViabilitySort.beginnerFriendly:
+        return 'Best for beginners';
+      case ProductViabilitySort.highRepeatPotential:
+        return 'Repeat potential';
+    }
+  }
+}
+
+class _ViabilitySelection {
+  const _ViabilitySelection({required this.filter, required this.sort});
+
+  final ProductViabilityFilter filter;
+  final ProductViabilitySort sort;
+}
+
+class _ViabilityPickerSheet extends StatefulWidget {
+  const _ViabilityPickerSheet({required this.filter, required this.sort});
+
+  final ProductViabilityFilter filter;
+  final ProductViabilitySort sort;
+
+  @override
+  State<_ViabilityPickerSheet> createState() => _ViabilityPickerSheetState();
+}
+
+class _ViabilityPickerSheetState extends State<_ViabilityPickerSheet> {
+  late ProductViabilityFilter _filter = widget.filter;
+  late ProductViabilitySort _sort = widget.sort;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Product viability',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ProductViabilityFilter.values
+                  .map(
+                    (filter) => ChoiceChip(
+                      label: Text(filter.name),
+                      selected: _filter == filter,
+                      onSelected: (_) => setState(() => _filter = filter),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<ProductViabilitySort>(
+              initialValue: _sort,
+              items: ProductViabilitySort.values
+                  .map(
+                    (sort) => DropdownMenuItem(
+                      value: sort,
+                      child: Text(sort.name),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value != null) setState(() => _sort = value);
+              },
+              decoration: const InputDecoration(labelText: 'Sort by'),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(
+                  context,
+                ).pop(_ViabilitySelection(filter: _filter, sort: _sort)),
+                child: const Text('Apply'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -448,6 +649,104 @@ class _CatalogHero extends StatelessWidget {
   }
 }
 
+class _CatalogIntentCard extends StatelessWidget {
+  const _CatalogIntentCard({
+    required this.lens,
+    required this.onSelectLens,
+  });
+
+  final String lens;
+  final ValueChanged<String> onSelectLens;
+
+  String get _summary {
+    switch (lens) {
+      case 'student':
+        return 'Beginner-safe picks for students, part-time sellers, and first COD orders.';
+      case 'repeat':
+        return 'Focus on products that are easier to sell again to neighborhood and repeat buyers.';
+      case 'margin':
+        return 'Push higher-margin products when you already trust the buyer and supplier lane.';
+      case 'cod':
+        return 'Safer COD picks for Bangladesh delivery and first-time buyer confirmation.';
+      case 'fast':
+        return 'Use fast movers when you need faster response from Facebook and WhatsApp audiences.';
+      default:
+        return 'Choose a Bangladesh reseller lens before reviewing supplier products.';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColor.safe1,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColor.safe),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Bangladesh seller lens',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColor.text,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _summary,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _CatalogActionChip(
+                  label: 'All',
+                  selected: lens == 'all',
+                  onTap: () => onSelectLens('all'),
+                ),
+                _CatalogActionChip(
+                  label: 'Student budget',
+                  selected: lens == 'student',
+                  onTap: () => onSelectLens('student'),
+                ),
+                _CatalogActionChip(
+                  label: 'Repeat buyers',
+                  selected: lens == 'repeat',
+                  onTap: () => onSelectLens('repeat'),
+                ),
+                _CatalogActionChip(
+                  label: 'Good margin',
+                  selected: lens == 'margin',
+                  onTap: () => onSelectLens('margin'),
+                ),
+                _CatalogActionChip(
+                  label: 'COD safer',
+                  selected: lens == 'cod',
+                  onTap: () => onSelectLens('cod'),
+                ),
+                _CatalogActionChip(
+                  label: 'Fast movers',
+                  selected: lens == 'fast',
+                  onTap: () => onSelectLens('fast'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CatalogChip extends StatelessWidget {
   const _CatalogChip({
     required this.icon,
@@ -479,6 +778,46 @@ class _CatalogChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CatalogActionChip extends StatelessWidget {
+  const _CatalogActionChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? AppColor.primary : Colors.white,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? AppColor.primary : AppColor.safe,
+            ),
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: selected ? Colors.white : AppColor.text,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
       ),
     );
   }

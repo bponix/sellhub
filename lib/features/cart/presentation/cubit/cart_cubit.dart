@@ -19,23 +19,65 @@ class CartCubit extends SafeCubit<CartState> {
     emit(state.copyWith(items: _box!.values.toList()));
   }
 
-  Future<void> addToCart(ProductResCommon product) async {
-    await addProduct(product, quantity: 1);
+  int _normalizedMinSellPrice(ProductResCommon product) {
+    final base = product.price?.round() ?? 0;
+    final min = product.minResellPrice?.round();
+    final max = product.maxResellPrice?.round();
+    final floor = min ?? max ?? base;
+    if (floor <= 0) return base;
+    return floor < base ? base : floor;
+  }
+
+  int _normalizedMaxSellPrice(ProductResCommon product) {
+    final floor = _normalizedMinSellPrice(product);
+    final max = product.maxResellPrice?.round() ?? floor;
+    if (max < floor) return floor;
+    return max <= 0 ? floor : max;
+  }
+
+  int defaultSellPrice(ProductResCommon product) {
+    final min = _normalizedMinSellPrice(product);
+    final max = _normalizedMaxSellPrice(product);
+    if (max >= min && max > 0) return max;
+    if (min > 0) return min;
+    return product.price?.round() ?? 0;
+  }
+
+  Future<void> addToCart(ProductResCommon product, {int? sellPrice}) async {
+    await addProduct(product, quantity: 1, sellPrice: sellPrice);
   }
 
   Future<void> addProduct(
     ProductResCommon product, {
     required int quantity,
+    int? sellPrice,
   }) async {
     if (_box == null) await init();
     if (quantity <= 0) return;
     final items = [...state.items];
     final index = items.indexWhere((item) => item.product.id == product.id);
+    final minSellPrice = _normalizedMinSellPrice(product);
+    final maxSellPrice = _normalizedMaxSellPrice(product);
+    final resolvedSellPrice = (sellPrice ?? defaultSellPrice(product)).clamp(
+      minSellPrice,
+      maxSellPrice,
+    );
     if (index >= 0) {
       items[index].quantity += quantity;
+      items[index].minSellPrice = minSellPrice;
+      items[index].maxSellPrice = maxSellPrice;
+      if (sellPrice != null) {
+        items[index].sellPrice = resolvedSellPrice;
+      }
       await items[index].save();
     } else {
-      final newItem = CartItem(product: product, quantity: quantity);
+      final newItem = CartItem(
+        product: product,
+        quantity: quantity,
+        sellPrice: resolvedSellPrice,
+        minSellPrice: minSellPrice,
+        maxSellPrice: maxSellPrice,
+      );
       await _box!.add(newItem);
       items.add(newItem);
     }
@@ -50,7 +92,15 @@ class CartCubit extends SafeCubit<CartState> {
     final newItems = <CartItem>[];
     for (final item in items) {
       if (item.quantity <= 0) continue;
-      final cartItem = CartItem(product: item.product, quantity: item.quantity);
+      final minSellPrice = _normalizedMinSellPrice(item.product);
+      final maxSellPrice = _normalizedMaxSellPrice(item.product);
+      final cartItem = CartItem(
+        product: item.product,
+        quantity: item.quantity,
+        sellPrice: defaultSellPrice(item.product),
+        minSellPrice: minSellPrice,
+        maxSellPrice: maxSellPrice,
+      );
       await _box!.add(cartItem);
       newItems.add(cartItem);
     }
@@ -74,6 +124,13 @@ class CartCubit extends SafeCubit<CartState> {
       return;
     }
     item.quantity = quantity;
+    await item.save();
+    emit(state.copyWith(items: [...state.items]));
+  }
+
+  Future<void> updateSellPrice(CartItem item, int sellPrice) async {
+    final clamped = sellPrice.clamp(item.minSellPrice, item.maxSellPrice);
+    item.sellPrice = clamped;
     await item.save();
     emit(state.copyWith(items: [...state.items]));
   }

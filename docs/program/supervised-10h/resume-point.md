@@ -1,0 +1,351 @@
+# Resume Point
+
+Current phase:
+- reseller ops hub slice completed and checkpointed
+
+Immediate next actions:
+1. future heartbeat runs must read `ceo-product-memo.md` and `automation-operator-spec.md` before choosing scope
+2. validate the new `Reseller Ops` route with analyzer and runtime once `dart` / `flutter` are available in-shell
+3. keep `future-mvp-backlog.md` as the source for non-SLA MVP gaps in future supervised waves
+4. add real automation/heartbeat integration if the Codex automation tool becomes available in-session
+
+Known truths:
+- local GraphQL + SQLite exists already
+- wave-1 now covers:
+  - quick-order draft contracts
+  - buyer-risk profiles and decisioning
+  - supplier order-group draft preview
+  - share-asset draft contracts
+  - share-first selling list and quote UX
+  - reseller console home and seller decision support on product surfaces
+- wave-2 now covers:
+  - reseller-intent guidance in search/category discovery
+  - delivery-zone confidence for Bangladesh
+  - repeat-sell prompts inside Buyer Book
+  - payout promise timeline inside Payout Ledger
+- neighborhood and follow-up workflow now covers:
+  - local repeat-sell reminder persistence
+  - Buyer Book reminder scheduling
+  - neighborhood district clusters
+  - home-level reminder visibility
+- supplier execution trust now covers:
+  - queue-level supplier health visibility
+  - order-detail SLA and escalation guidance
+  - payout-batch blocked vs next-batch state on individual orders
+- richer supplier trust profile now covers:
+  - product-detail trust decision guidance
+  - push-now vs confirm-first recommendation
+  - return, issue, delivery, and payout-aware supplier reasoning
+- repeat-sell completion now covers:
+  - Buyer Book to Selling List handoff
+  - visible queued-buyer context in Selling List
+  - direct continue-to-checkout path for reopened buyers
+- selling-list handoff continuity now covers:
+  - `Buyer ready to order` as the queued-buyer state in Selling List
+  - `Start order with buyer` as the direct CTA into checkout
+- selling-list reopened-buyer continuity now covers:
+  - `Buyer ready to order` as the reopened-buyer card title in Selling List
+  - shorter `Add products now` / `Start with ...` guidance before checkout
+- selling-list quote-start continuity now covers:
+  - `Start quote` as the direct handoff from Selling List into checkout
+  - shorter next-step guidance before buyer entry and supplier order setup
+- selling-list summary clarity now covers:
+  - `Quote summary` as the top Selling List summary title
+  - shorter pricing guidance and `Base` / `Total` metric labels
+- selling-list quote-action continuity now covers:
+  - `Start quote` as the consistent quote-entry label across Selling List actions
+- selling-list pricing clarity now covers:
+  - `Base`, `Total`, and `Profit` as the compact pricing language in Selling List
+- selling-list queued-buyer action continuity now covers:
+  - `Start quote` becoming the primary action when Buyer Book already queued a buyer
+  - queued-buyer helper text pushing directly into checkout confirmation
+- selling-list bottom-quote continuity now covers:
+  - `Start quote for buyer` at the bottom of Selling List when buyer context already exists
+  - queued-buyer helper text staying consistent across top and bottom actions
+- selling-list header clarity now covers:
+  - `Share, quote, then order` as the compact route subtitle
+  - `Supplier groups` as the direct supplier review section title
+- empty-selling-list continuity now covers:
+  - `Find products for buyer` when a Buyer Book buyer is already queued
+  - queued-buyer helper text staying visible before product discovery
+- empty-selling-list flow continuity now covers:
+  - `Buyer-ready flow` when a Buyer Book buyer is already queued
+  - `Find -> Quote -> Order` as the visible sequence for repeat-selling discovery
+- empty-selling-list state continuity now covers:
+  - buyer-aware empty-state title and helper copy
+  - `Find -> Quote -> Order` hint chips when a buyer is already queued
+- empty-selling-list buyer continuity now covers:
+  - queued buyer identity staying visible with phone and context pills before product discovery
+- buyer-book local-record continuity now covers:
+  - local record language staying consistent across edit, save, reset, toast, and list header surfaces
+- buyer-book overview continuity now covers:
+  - `Buyer record snapshot` at the top Buyer Book truth surface
+  - overview guidance using `buyer records` instead of `profiles`
+- buyer-book repeat-sell continuity now covers:
+  - `Start order` as the direct reopen action on Buyer Book prompts
+  - reminder guidance using `start order` instead of `quick order`
+- buyer-book reminder continuity now covers:
+  - `Start order` on the remaining reminder/reopen cards
+  - reminder note text aligning with checkout order-start language
+- buyer-book product continuity now covers:
+  - `Pick product` placeholder instead of fake follow-up product queries
+  - repeat/reminder cards avoiding dead-end `Find product` actions without real product history
+- payout share continuity now covers:
+  - exported payout text carrying `Local MVP record` instead of implying backend-settled truth
+- buyer-book history continuity now covers:
+  - `Order history only` as the clearer label for buyers without tuned local review
+- buyer-book history tag continuity now covers:
+  - `Order history only` in the buyer tag row as well as the summary surfaces
+- buyer-book placeholder continuity now covers:
+  - prompt and reminder titles showing just the buyer name when no real lead product exists
+- payout hero continuity now covers:
+  - local-record wording in the payout hero subtitle and share affordance
+- payout share continuity now covers:
+  - exported payout text carrying `Cash state`, `Next move`, and `Channel status`
+- payout next-window continuity now covers:
+  - `Shows after the first payable batch` as the softer fallback for the next payout field
+- payout fulfilment-lock continuity now covers:
+  - `The next delivery lock will appear here first.` as the forward-looking fallback for the fulfilment step
+- payout release continuity now covers:
+  - `The first released payout will appear here after the release run.` as the forward-looking fallback for the release step
+- payout channel setup continuity now covers:
+  - `Add a payout channel before the first release` as the direct payout-channel fallback in the top snapshot
+- payout batch assignment continuity now covers:
+  - `The next scheduled release should assign this order.` as the forward-looking unassigned-batch reason on payable rows
+- payout empty-state continuity now covers:
+  - `First payout starts here` as the top payout zero-state title
+  - delivered orders becoming payout-ready cash as the zero-state explanation
+- payout row empty-state continuity now covers:
+  - `Payout rows appear after delivery` as the filtered row empty-state title
+  - direct filter-reset guidance to bring delivered earning rows back
+- payout share next-window continuity now covers:
+  - the same softer next-payout fallback in exported payout text
+- payout reason continuity now covers:
+  - forward-looking zero-state copy for blocker and released-cash explanations
+- payout payable continuity now covers:
+  - forward-looking zero-state copy for the payable step in the payout promise timeline
+- payout cash-state continuity now covers:
+  - forward-looking zero-state copy for the top payout cash-state label
+- payout next-move continuity now covers:
+  - forward-looking zero-state copy for the top payout next-move label
+- support/dispute workflow now covers:
+  - order-detail issue reporting
+  - orders-queue visibility for local issue reports
+  - active issue cards that keep support state visible without reopening every order
+- payout/backend-truth prep now covers:
+  - payout ledger mismatch reporting
+  - orders-queue visibility for payout disputes
+  - payout-disputed orders carrying dispute reason into the daily order desk
+- local network effects now cover:
+  - neighborhood clusters from Buyer Book
+  - active district focus for local repeat-selling
+  - cluster-to-buyer-list continuity instead of read-only local insights
+  - referral-tagged buyers as a reusable growth lane
+  - direct referral filter and reopen flow inside Buyer Book
+- buyer-book backend-truth prep now covers:
+  - visible distinction between raw order history and tuned profile data
+  - profile freshness using saved buyer-meta update timestamps
+- supplier-trust compounding now covers:
+  - visible trust freshness on supplier trust surfaces
+  - reuse of collection `updatedAt` for trust review recency
+- payout confidence now covers:
+  - visible payout channel readiness in the payout snapshot
+  - direct handoff from payout blocker to payout setup
+- product/share trust continuity now covers:
+  - compact trust strip in quote preview
+  - buyer-facing share variants carrying the same total, delivery, and COD trust line
+- checkout/payment truth continuity now covers:
+  - compact order-route summary at the top of payment
+  - buyer, area, payment, voucher, and split mode staying visible from checkout into payment
+  - less explanatory text at the payment decision surface
+  - action-strip route pills at the final confirm step
+  - direct `Quote` / `Create order` action language instead of narrated button labels
+  - post-confirmation route strips and direct next-step actions on single and split order completion
+- home/search continuity now covers:
+  - active home discovery focus routing directly into the matching search lens
+  - starter query handoff so Search opens in a usable reseller mode instead of resetting to blank
+- buyer-book/search continuity now covers:
+  - repeat-sell prompts opening Search on the lead product
+  - referral prompts opening Search on the lead product
+  - query plus reseller-lens handoff from Buyer Book into Search
+- neighborhood/search continuity now covers:
+  - neighborhood clusters opening Search on the local top product
+  - repeat-selling lens handoff for local cluster discovery
+- buyer-card/search continuity now covers:
+  - prepared buyer cards opening Search on the lead product
+  - repeat-selling lens handoff from buyer cards into Search
+- buyer-book order-start continuity now covers:
+  - `Start order` as the direct returning-buyer handoff from Buyer Book
+  - `Start reorder` and `Buyer ready` as the direct reorder language on buyer cards
+- reminder/search continuity now covers:
+  - reminder queue cards opening Search on the reminder product
+  - repeat-selling lens handoff from reminders into Search
+- buyer-book backend-truth continuity now covers:
+  - buyer profile freshness reading as `Reviewed today`, `Reviewed this week`, or `Needs review`
+  - consistent truth labels across buyer-card tags and summary pills
+- payout-ledger truth continuity now covers:
+  - payout rows reading as direct cash states instead of raw eligibility fields
+  - separate meaning between cash readiness and batch assignment
+- payout local-record continuity now covers:
+  - payout dispute entry using explicit local-record language
+  - create vs edit dispute state staying clear on payout rows
+- payout-batch truth continuity now covers:
+  - payout batches reading as direct cash states instead of schedule-only labels
+  - separate meaning between batch cash readiness and inclusion/release explanations
+- payout-summary truth continuity now covers:
+  - top payout surfaces reading as one clear cash state
+  - separate meaning between current cash condition and next action
+- order-queue payout continuity now covers:
+  - order cards reading as direct cash states inside Orders
+  - dispute holds and payout readiness visible from the main queue
+- order-detail payout continuity now covers:
+  - order detail using the same direct cash-state language as queue and ledger
+- support-sheet continuity now covers:
+  - copied support brief carrying order status, cash state, and buyer phone context
+  - support sheet reading as a ready support handoff instead of a generic contact panel
+- issue-report continuity now covers:
+  - issue sheet and open-issue card both reading as issue briefs
+  - direct issue-brief copy from the saved issue card
+- buyer-risk continuity now covers:
+  - buyer cards using the same direct risk labels as checkout
+  - risk state visible in both tags and summary pills before reopening order flow
+- checkout risk-action continuity now covers:
+  - one direct buyer-risk action per checkout state
+  - less checklist-style reasoning inside the buyer-risk decision card
+- delivery-lane action continuity now covers:
+  - one direct delivery-lane action per payment state
+  - less checklist-style reasoning inside the delivery decision card
+- quick-order start continuity now covers:
+  - `Start order` as the aligned entry label from Home into checkout
+  - less internal-feature wording at the start of the sell flow
+- reseller ops continuity now covers:
+  - one reachable operator hub for chat intake, quick-order, supplier legs, repeat-selling, disputes, team, referrals, and truth mode
+  - protected routing for the new operator hub
+  - a direct `Ops hub` entry from Profile instead of leaving the new operating surface hidden
+  - visible recent quick-order drafts and visible top team members inside the hub so the quick-order and team lanes can be reused directly
+- quick-order draft clarity now covers:
+  - `Resume order` / `Save order` as the direct draft card titles in checkout
+  - shorter saved-draft facts and direct actions for save, use, update, and remove
+- buyer entry clarity now covers:
+  - `Buyer` as the simpler section title in checkout
+  - shorter chat, repeat-buyer, and new-buyer hints at the start of order setup
+- checkout summary clarity now covers:
+  - shorter top summary language for the order setup step
+  - simpler `Base` and `Voucher` states in the top card
+- delivery lane card clarity now covers:
+  - `Delivery lane` as the simpler checkout lane title
+  - shorter fallback lane guidance and tag values in the checkout lane card
+- order split card clarity now covers:
+  - `Order split` as the simpler supplier-split title in checkout
+  - shorter split subtitle and `Sell` label in the supplier order cards
+- buyer form label clarity now covers:
+  - `Phone`, `Name`, and `Address` as the simpler buyer field labels
+  - shorter buyer form hints at the start of checkout
+- buyer insight card clarity now covers:
+  - `Buyer found` / `Buyer needs review` as the matched-buyer card titles
+  - shorter next-step copy and `Next` tags inside the matched-buyer card
+- buyer risk message clarity now covers:
+  - shorter buyer-risk loading, failure, and fallback copy in checkout
+  - shorter buyer-risk toasts before moving from checkout to payment
+- checkout totals clarity now covers:
+  - shorter split notice and base/voucher labels in the lower checkout summary
+  - less admin-style wording in the order-total block before payment
+- checkout bottom bar clarity now covers:
+  - `Order total` as the checkout amount label
+  - `Go to payment` as the direct handoff CTA from checkout
+- buyer risk card label slice now covers:
+  - `Risk N` as the compact buyer-risk score label
+  - `Why` tags and `Go to payment` as the direct buyer-risk card labels
+- save address action slice now covers:
+  - `Save address` as the direct saved-address action label in checkout
+  - `Saved address` as the shorter save confirmation
+- voucher field clarity now covers:
+  - `Voucher` as the simpler voucher field label in checkout
+  - shorter voucher hint and semantic label
+- voucher action and summary title slice now covers:
+  - `Use code` / `Clear` as the direct voucher action labels
+  - `Order summary` as the simpler lower summary title in checkout
+- checkout page title slice now covers:
+  - `Start order` as the direct checkout app-bar title
+- draft fact strip slice now covers:
+  - shorter saved-state facts inside the checkout draft card
+  - less internal wording in the draft context strip
+- buyer entry hint slice now covers:
+  - `Chat order` / `WhatsApp or Facebook` as the simpler buyer-entry source cue
+  - shorter new-buyer hint copy at the top of checkout
+- draft subtitle slice now covers:
+  - shorter save/resume subtitle copy in the checkout draft card
+- draft action label slice now covers:
+  - `Update`, `Resume`, and `Clear` as the direct draft action labels in checkout
+- saved buyer shortcut slice now covers:
+  - `Saved buyers` as the shortcut strip title in checkout
+  - shorter buyer shortcut meta for quick refill use
+- saved buyer flag slice now covers:
+  - shorter matched-buyer status flags inside the buyer insight card
+- saved buyer cue slice now covers:
+  - `Tap to use` as the shortcut cue for saved buyers in checkout
+- buyer ready label slice now covers:
+  - `Buyer ready` as the approved buyer-risk state in checkout
+  - shorter approved COD guidance in the buyer-risk card
+- buyer card title consistency slice now covers:
+  - `Buyer ready` as the safe matched-buyer card title in checkout
+  - shorter new-buyer fallback copy in the matched-buyer card
+- new buyer hint consistency slice now covers:
+  - `Check landmark and COD` as the standalone new-buyer hint in checkout
+- buyer risk fallback slice now covers:
+  - shorter blocked/review fallback copy in the buyer-risk card and toasts
+- buyer risk badge slice now covers:
+  - direct blocked/review/ready badges in the buyer-risk card instead of a numeric risk score
+- payment delivery state slice now covers:
+  - direct blocked/review/ready lane states in the payment delivery decision card
+  - shorter delivery guidance and operational labels in payment
+- payment buyer state slice now covers:
+  - direct blocked/review/ready buyer states in the payment buyer-risk snapshot
+  - shorter buyer guidance, operational labels, and actions in payment
+- payment delivery confidence slice now covers:
+  - `Delivery lane` as the standalone payment delivery-confidence title
+  - shorter fallback delivery guidance and fact labels in payment
+- payment order split slice now covers:
+  - `Order split` as the payment supplier-split title
+  - shorter split summary line and `Sell` / `Base` labels in payment
+- payment route pill slice now covers:
+  - `Order` as the compact pill label in the payment route summary
+- payout local record slice now covers:
+  - explicit local-record visibility on disputed payout rows
+  - clearer local-only action labels for payout disputes
+- buyer history label slice now covers:
+  - `History only` as the plain buyer-data truth label in Buyer Book
+- buyer record summary slice now covers:
+  - `Record` as the buyer truth-mode summary label in Buyer Book
+- buyer record header slice now covers:
+  - `Buyer record` as the buyer details section title in Buyer Book
+  - truth label plus last-order timestamp in the buyer details subtitle
+- buyer local reset slice now covers:
+  - `Reset local record` as the buyer local-meta reset action in Buyer Book
+- buyer local edit slice now covers:
+  - `Edit local record` as the buyer local-meta edit action in Buyer Book
+- payout local dispute dialog slice now covers:
+  - local-record wording in the payout dispute create/delete dialogs and success message
+- payout snapshot record mode slice now covers:
+  - `Local MVP record` visibility in the top payout snapshot
+- next bounded feature should come from the beta gate:
+  - payout/buyer backend-truth continuation
+  - the next quick-order continuity slice
+  - payout/buyer backend-truth continuation if discovery work is blocked
+- broader MVP backlog for future waves now tracks:
+  - beta gate:
+    - reseller onboarding
+    - quick-order completion
+    - buyer risk and COD scoring
+    - delivery confidence hardening
+    - social-ready share assets
+    - dashboard metrics
+  - MVP launch gate:
+    - multivendor routing truth
+    - payout trust end-to-end
+    - backend-backed buyer book and payout data
+    - richer supplier trust profile
+    - repeat-sell completion
+    - support and dispute workflow
+  - post-launch hardening:
+    - backend hardening away from local-seed-only truth

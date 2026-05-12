@@ -1,12 +1,12 @@
 # SellHub
 
-SellHub is Bponi's customer-facing Flutter commerce app. It lets a shopper discover a store, switch into that store context, browse products, search, buy, track orders, and come back through notifications or deep links.
+SellHub is Bponi's seller-layer Flutter commerce app. It ports the current Shopfront mobile shell into a new standalone app identity and positions it as the fastest way to start and run a business without inventory.
 
-It is not a demo storefront. It is a production mobile shell for real Bponi-powered stores.
+It is not a demo storefront. It is a production mobile shell for real Bponi-powered commerce flows inside the Bponi ecosystem.
 
 ## What The App Does
 
-SellHub covers the full customer journey:
+SellHub currently carries the full commerce shell from Shopfront while the product direction shifts toward seller-led flows:
 
 - store discovery and store switching
 - storefront home, campaign rails, category browsing, and search
@@ -14,13 +14,20 @@ SellHub covers the full customer journey:
 - cart, checkout, payment selection, and order confirmation
 - profile, settings, notifications, and order continuity
 
-The app is designed around one consistent mobile commerce flow:
+The current codebase still follows one consistent mobile commerce flow:
 
 `Discover store -> Browse -> Search -> Open product -> Add to cart -> Checkout -> Place order -> Return via notifications or deep links`
 
 ## Product Position
 
-SellHub sits inside the Bponi ecosystem as the shopper app.
+SellHub sits inside the Bponi ecosystem as the seller layer.
+
+Target ecosystem fit:
+
+- suppliers -> `store/` merchants and Bponi inventory sources
+- sellers -> `sellhub/` users
+- buyers -> `shopfront/` and other buying surfaces
+- fulfillment -> supplier, Bponi, or warehouse operations
 
 It borrows:
 
@@ -28,11 +35,16 @@ It borrows:
 - commerce UX direction from the existing Bponi storefront surfaces
 - real backend contracts from the live GraphQL API
 
-It intentionally excludes non-commerce business modules. SellHub should stay focused on customer browsing, conversion, account continuity, and retention.
+It intentionally excludes unrelated business modules. SellHub should stay focused on seller activation, product sharing, trust, order routing, and repeat commerce.
+
+Core positioning:
+
+- SellHub = the fastest way to start and run a business without inventory
+- SellHub = where anyone becomes a seller instantly
 
 ## Current Product Shape
 
-The current app already includes:
+The current app already includes the 1:1 ported Shopfront feature set:
 
 - splash and startup orchestration
 - active store hydration and recent-store recovery
@@ -190,8 +202,18 @@ For production-safe work in SellHub, keep this minimum bar:
 - no unverified GraphQL contract changes
 - no changes that blur the app into non-commerce scope
 
+## Next Product Layer
+
+The copied app is now ready for the next SellHub-specific phase:
+
+- one-tap product import
+- margin-aware pricing suggestions
+- social selling share flows
+- order routing from seller to supplier
+- supplier trust and verification signals
+- seller dashboard and team selling
+
 ## Related Docs
 
 - product direction and decision filter: [CORE_IDEA.md](/Users/dev/prod/sellhub/CORE_IDEA.md)
 - app bootstrap and platform lifecycle: [main.dart](/Users/dev/prod/sellhub/lib/main.dart)
-

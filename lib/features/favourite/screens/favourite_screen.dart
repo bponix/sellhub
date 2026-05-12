@@ -3,18 +3,30 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:sellhub/core/constants/app_color.dart';
+import 'package:sellhub/core/utils/app_router.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
+import 'package:sellhub/core/widget/sellhub_top_app_bar.dart';
 import 'package:sellhub/features/favourite/presentation/cubit/favourite_cubit.dart';
 import 'package:sellhub/features/favourite/presentation/cubit/favourite_state.dart';
 import 'package:sellhub/features/product/screens/widget/product_list_vertical.dart';
 
 class FavouriteScreen extends StatelessWidget {
-  const FavouriteScreen({super.key});
+  const FavouriteScreen({super.key, this.showAppBar = false});
+
+  final bool showAppBar;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: showAppBar
+          ? const SellHubTopAppBar(
+              title: 'Saved',
+              subtitle: 'Keep fast-sell products close',
+              icon: HugeIcons.strokeRoundedFavourite,
+              showBackButton: true,
+            )
+          : null,
       body: BlocBuilder<FavouriteCubit, FavouriteState>(
         builder: (context, favourites) {
           if (favourites.items.isEmpty) {
@@ -24,8 +36,8 @@ class FavouriteScreen extends StatelessWidget {
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 14.h),
-                  child: _FavouriteIntroCard(count: favourites.items.length),
+                  padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 12.h),
+                  child: _SavedHeaderCard(itemCount: favourites.items.length),
                 ),
               ),
               SliverPadding(
@@ -72,7 +84,7 @@ class FavouriteScreen extends StatelessWidget {
             ),
             SizedBox(height: 24.h),
             Text(
-              'No favourites yet',
+              'No saved products yet',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 20.sp,
@@ -82,7 +94,7 @@ class FavouriteScreen extends StatelessWidget {
             ),
             SizedBox(height: 12.h),
             Text(
-              'Save products here for quick access later.',
+              'Keep products here for faster sharing, quoting, and repeat selling.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14.sp,
@@ -109,7 +121,7 @@ class FavouriteScreen extends StatelessWidget {
                   SizedBox(width: 10.w),
                   Flexible(
                     child: Text(
-                      'Tap the heart on any product card to save it here.',
+                      'Tap the heart on any product card to keep it in your saved list.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12.sp,
@@ -122,6 +134,23 @@ class FavouriteScreen extends StatelessWidget {
                 ],
               ),
             ),
+            SizedBox(height: 22.h),
+            SizedBox(
+              width: double.infinity,
+              height: 50.h,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDFF55A),
+                  foregroundColor: AppColor.text,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18.r),
+                  ),
+                ),
+                onPressed: () => AppRouter.goToHome(context),
+                child: const Text('Browse products'),
+              ),
+            ),
           ],
         ),
       ),
@@ -129,10 +158,10 @@ class FavouriteScreen extends StatelessWidget {
   }
 }
 
-class _FavouriteIntroCard extends StatelessWidget {
-  const _FavouriteIntroCard({required this.count});
+class _SavedHeaderCard extends StatelessWidget {
+  const _SavedHeaderCard({required this.itemCount});
 
-  final int count;
+  final int itemCount;
 
   @override
   Widget build(BuildContext context) {
@@ -146,15 +175,15 @@ class _FavouriteIntroCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 46.r,
-            height: 46.r,
+            width: 44.r,
+            height: 44.r,
             decoration: BoxDecoration(
               color: AppColor.safe1,
               borderRadius: BorderRadius.circular(16.r),
             ),
             child: AppHugeIcon(
               HugeIcons.strokeRoundedFavourite,
-              size: 22.r,
+              size: 20.r,
               color: AppColor.primary,
             ),
           ),
@@ -173,30 +202,15 @@ class _FavouriteIntroCard extends StatelessWidget {
                 ),
                 SizedBox(height: 4.h),
                 Text(
-                  'Keep your shortlist ready for faster repeat orders.',
+                  '$itemCount items ready for repeat share, quote, or quick order.',
                   style: TextStyle(
-                    fontSize: 12.sp,
-                    color: AppColor.neutral2,
+                    fontSize: 12.5.sp,
                     fontWeight: FontWeight.w600,
-                    height: 1.35,
+                    color: AppColor.neutral2,
+                    height: 1.3,
                   ),
                 ),
               ],
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-            decoration: BoxDecoration(
-              color: AppColor.safe1,
-              borderRadius: BorderRadius.circular(999.r),
-            ),
-            child: Text(
-              '$count items',
-              style: TextStyle(
-                fontSize: 11.sp,
-                color: AppColor.primary,
-                fontWeight: FontWeight.w800,
-              ),
             ),
           ),
         ],

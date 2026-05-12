@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:sellhub/core/product_viability/product_viability.dart';
 import 'package:sellhub/core/store/store_industry.dart';
 import 'package:sellhub/core/utils/convertBengaliNumber.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
@@ -11,6 +12,7 @@ import '../../../../core/constants/app_color.dart';
 import '../../../cart/presentation/cubit/cart_cubit.dart';
 import '../../../cart/presentation/cubit/cart_state.dart';
 import '../../../cart/screens/checkout_screen.dart';
+import '../../../cart/screens/widget/reseller_price_sheet.dart';
 import '../../../favourite/presentation/cubit/favourite_cubit.dart';
 import '../../../favourite/presentation/cubit/favourite_state.dart';
 import '../../../storefront/presentation/cubit/storefront_cubit.dart';
@@ -46,11 +48,45 @@ class ProductCard extends StatelessWidget {
     return 0;
   }
 
+  Future<void> _handleAddToCart(
+    BuildContext context, {
+    required bool alreadyInCart,
+  }) async {
+    if (alreadyInCart) {
+      await context.read<CartCubit>().addToCart(product);
+      return;
+    }
+    final sellPrice = await showResellerPriceSheet(context, product: product);
+    if (sellPrice == null || !context.mounted) return;
+    await context.read<CartCubit>().addToCart(product, sellPrice: sellPrice);
+  }
+
   String _compactInfoLabel() {
     if (_hasSavings) {
       return 'Save ৳${convertToBengaliNumber(_saveAmount)}';
     }
     return (product.quantity ?? 0) > 0 ? 'In stock' : 'Check stock';
+  }
+
+  String _decisionLabel(ProductViabilityProfile viability, bool compactCard) {
+    final margin = viability.minMargin.round();
+    if (compactCard) {
+      return 'Profit ৳${convertToBengaliNumber(margin)} • T${viability.trustScore.round()}';
+    }
+    return 'Margin ৳${convertToBengaliNumber(margin)} • Trust ${viability.trustScore.round()} • Share ${viability.shareabilityScore.round()}';
+  }
+
+  String _heroTag(ProductViabilityProfile viability) {
+    if (viability.deliveryRisk == ViabilityRiskLevel.high) {
+      return 'Watch risk';
+    }
+    if (viability.shareabilityScore >= 72) {
+      return 'Share-ready';
+    }
+    if (viability.minMargin >= 120) {
+      return 'Margin pick';
+    }
+    return 'Seller check';
   }
 
   Color get _availabilityColor =>
@@ -60,7 +96,7 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final productId = product.id;
     final productHid = product.hid?.trim();
-    final discount = product.discount;
+    final viability = ProductViabilityEngine.build(product);
     final imageUrl =
         product.thumbnail ??
         (product.images.isNotEmpty ? product.images.first.image : '');
@@ -165,8 +201,8 @@ class ProductCard extends StatelessWidget {
                                       ? Colors.red.withValues(alpha: 0.18)
                                       : null,
                                   semanticLabel: isFav
-                                      ? 'Remove from favourites'
-                                      : 'Add to favourites',
+                                      ? 'Remove from saved products'
+                                      : 'Add to saved products',
                                 ),
                               ),
                             );
@@ -203,29 +239,42 @@ class ProductCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                      if ((discount ?? 0) != 0)
-                        Positioned(
-                          left: 8,
-                          bottom: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                      Positioned(
+                        left: 8,
+                        bottom: 8,
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxWidth: compactCard ? 84 : 116,
+                          ),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: compactCard ? 7 : 9,
+                            vertical: compactCard ? 4 : 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.96),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: viability.deliveryRisk ==
+                                      ViabilityRiskLevel.high
+                                  ? const Color(0xFFF1C9B8)
+                                  : AppColor.safe.withValues(alpha: 0.8),
                             ),
-                            decoration: BoxDecoration(
-                              color: AppColor.text,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              'OFF ${discount!.toStringAsFixed(1)}%',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w800,
-                              ),
+                          ),
+                          child: Text(
+                            _heroTag(viability),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: viability.deliveryRisk ==
+                                      ViabilityRiskLevel.high
+                                  ? const Color(0xFFA85A2A)
+                                  : AppColor.text,
+                              fontSize: compactCard ? 8.3 : 9.2,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
+                      ),
                     ],
                   ),
                 ),
@@ -240,9 +289,9 @@ class ProductCard extends StatelessWidget {
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final denseCompact = compactCard;
-                        final mediumCompact = constraints.maxHeight < 128;
-                        final ultraCompact = constraints.maxHeight < 112;
-                        final roomyCard = constraints.maxHeight > 144;
+                        final mediumCompact = constraints.maxHeight < 120;
+                        final ultraCompact = constraints.maxHeight < 108;
+                        final roomyCard = constraints.maxHeight > 138;
                         final verticalGap = ultraCompact
                             ? 2.0
                             : denseCompact
@@ -260,8 +309,8 @@ class ProductCard extends StatelessWidget {
                               height: ultraCompact
                                   ? 28
                                   : denseCompact
-                                  ? 30
-                                  : 32,
+                                  ? 28
+                                  : 30,
                               child: Text(
                                 _displayTitle,
                                 maxLines: 2,
@@ -270,8 +319,8 @@ class ProductCard extends StatelessWidget {
                                   fontSize: ultraCompact
                                       ? 10.4.sp
                                       : denseCompact
-                                      ? 10.8.sp
-                                      : 12.5.sp,
+                                      ? 10.4.sp
+                                      : 11.8.sp,
                                   fontWeight: FontWeight.w800,
                                   color: AppColor.text,
                                   height: ultraCompact
@@ -284,11 +333,7 @@ class ProductCard extends StatelessWidget {
                             ),
                             SizedBox(height: verticalGap),
                             SizedBox(
-                              height: ultraCompact
-                                  ? 17
-                                  : denseCompact
-                                  ? 17
-                                  : 18,
+                              height: ultraCompact ? 15 : 16,
                               child: Row(
                                 children: [
                                   Expanded(
@@ -300,8 +345,8 @@ class ProductCard extends StatelessWidget {
                                         fontSize: ultraCompact
                                             ? 11.8.sp
                                             : denseCompact
-                                            ? 12.sp
-                                            : 14.sp,
+                                            ? 11.5.sp
+                                            : 13.sp,
                                         color: AppColor.text,
                                         fontWeight: FontWeight.w900,
                                       ),
@@ -315,7 +360,7 @@ class ProductCard extends StatelessWidget {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                          fontSize: 10.sp,
+                                          fontSize: 9.sp,
                                           color: AppColor.neutral1,
                                           decoration:
                                               TextDecoration.lineThrough,
@@ -325,6 +370,22 @@ class ProductCard extends StatelessWidget {
                                     ),
                                   ],
                                 ],
+                              ),
+                            ),
+                            SizedBox(height: verticalGap),
+                            SizedBox(
+                              height: ultraCompact ? 12 : 14,
+                              child: Text(
+                                _decisionLabel(viability, denseCompact),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: AppColor.primary,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: ultraCompact ? 8.0 : 8.6,
+                                      height: 1.0,
+                                    ),
                               ),
                             ),
                             SizedBox(height: verticalGap),
@@ -359,68 +420,41 @@ class ProductCard extends StatelessWidget {
                                                   ?.copyWith(
                                                     color: AppColor.neutral2,
                                                     fontWeight: FontWeight.w700,
-                                                    fontSize: ultraCompact
-                                                        ? 9.2
-                                                        : 10,
+                                                    fontSize: ultraCompact ? 8.8 : 9.2,
                                                     height: 1.0,
                                                   ),
                                             ),
                                           ),
                                         ],
                                       )
-                                    : SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        physics:
-                                            const NeverScrollableScrollPhysics(),
-                                        child: Row(
-                                          children: [
-                                            if (_saveAmount > 0)
-                                              _InfoChip(
-                                                label:
-                                                    'Save ৳${convertToBengaliNumber(_saveAmount)}',
-                                              ),
-                                            if (_saveAmount > 0)
-                                              const SizedBox(width: 6),
-                                            _InfoChip(
-                                              label: (product.quantity ?? 0) > 0
-                                                  ? 'In stock'
-                                                  : 'Check stock',
+                                    : Row(
+                                        children: [
+                                          Container(
+                                            width: 6,
+                                            height: 6,
+                                            decoration: BoxDecoration(
+                                              color: _availabilityColor,
+                                              shape: BoxShape.circle,
                                             ),
-                                            const SizedBox(width: 6),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 3,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Expanded(
+                                            child: Text(
+                                              _compactInfoLabel(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelSmall
+                                                  ?.copyWith(
+                                                    color: AppColor.neutral2,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 8.8,
+                                                    height: 1.0,
                                                   ),
-                                              decoration: BoxDecoration(
-                                                color: AppColor.safe1,
-                                                borderRadius:
-                                                    BorderRadius.circular(999),
-                                              ),
-                                              child: Text(
-                                                _hasSavings
-                                                    ? 'Quick buy'
-                                                    : 'Ready',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .labelSmall
-                                                    ?.copyWith(
-                                                      color: AppColor.primary,
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      fontSize: 9.2,
-                                                      height: 1.0,
-                                                    ),
-                                              ),
                                             ),
-                                            if (_saveAmount > 0) ...[
-                                              const SizedBox(width: 6),
-                                            ],
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
                               ),
                             ),
@@ -456,6 +490,15 @@ class ProductCard extends StatelessWidget {
                                                     payPrice: product.price
                                                         ?.toInt(),
                                                     savePrice: save,
+                                                    minSellPrice: product
+                                                        .minResellPrice
+                                                        ?.round(),
+                                                    maxSellPrice: product
+                                                        .maxResellPrice
+                                                        ?.round(),
+                                                    thumbnail:
+                                                        product.thumbnail ??
+                                                        product.images.firstOrNull?.image,
                                                     title:
                                                         product.translation ??
                                                         product.title ??
@@ -489,10 +532,10 @@ class ProductCard extends StatelessWidget {
                                           child: Center(
                                             child: Text(
                                               visualCatalog
-                                                  ? 'View product'
+                                                  ? 'Open'
                                                   : denseCompact
-                                                  ? 'Buy'
-                                                  : 'Buy Now',
+                                                  ? 'Order'
+                                                  : 'Quick order',
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
@@ -582,9 +625,10 @@ class ProductCard extends StatelessWidget {
                                                   ),
                                                 ),
                                                 InkWell(
-                                                  onTap: () => context
-                                                      .read<CartCubit>()
-                                                      .addToCart(product),
+                                                  onTap: () => _handleAddToCart(
+                                                    context,
+                                                    alreadyInCart: true,
+                                                  ),
                                                   child: AppHugeIcon(
                                                     HugeIcons
                                                         .strokeRoundedPlusSign,
@@ -600,11 +644,10 @@ class ProductCard extends StatelessWidget {
                                             ),
                                           )
                                         : GestureDetector(
-                                            onTap: () {
-                                              context
-                                                  .read<CartCubit>()
-                                                  .addToCart(product);
-                                            },
+                                            onTap: () => _handleAddToCart(
+                                              context,
+                                              alreadyInCart: false,
+                                            ),
                                             child: Container(
                                               width: actionHeight,
                                               height: actionHeight,
@@ -638,7 +681,8 @@ class ProductCard extends StatelessWidget {
                                                       ? 14
                                                       : 15,
                                                   color: AppColor.text,
-                                                  semanticLabel: 'Add to cart',
+                                                  semanticLabel:
+                                                      'Add to selling list',
                                                 ),
                                               ),
                                             ),
@@ -749,35 +793,6 @@ class ProductListViewVerical extends StatelessWidget {
             },
           )
         : const _EmptyStateWidget(); // use separate widget for cleaning
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: AppColor.safe1,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        softWrap: false,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: AppColor.neutral2,
-          fontWeight: FontWeight.w700,
-          fontSize: 10,
-          height: 1.0,
-        ),
-      ),
-    );
   }
 }
 

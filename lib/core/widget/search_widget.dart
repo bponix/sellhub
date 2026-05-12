@@ -58,7 +58,7 @@ class SearchWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Search the store',
+                        'Find products to sell',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelMedium?.copyWith(
@@ -68,7 +68,7 @@ class SearchWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Products, brands, categories',
+                        'Products, suppliers, categories',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodySmall?.copyWith(
@@ -93,7 +93,7 @@ class SearchWidget extends StatelessWidget {
                   child: Row(
                     children: [
                       Text(
-                        'Browse',
+                        'Find',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: AppColor.primary,
                           fontWeight: FontWeight.w800,

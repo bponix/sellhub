@@ -56,39 +56,43 @@ class _CategoryScreenState extends State<CategoryScreen> {
           return BlocBuilder<CategoriesCubit, CategoriesState>(
             builder: (context, categoriesState) {
               final categories = storefrontState.allCategory;
-              final selectedCategory = categoriesState.selectCategory;
-              final selectedTitle =
-                  selectedCategory?.translation ??
-                  selectedCategory?.title ??
-                  'Browse';
               return Padding(
                 padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _CategoryHero(
-                      title: selectedTitle,
-                      categoryCount: categories.length,
+                    Text(
+                      'Find by category or selling lane',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 0, 8),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColor.safe1,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColor.safe),
+                      ),
+                      child: Text(
+                        'Choose a category first, then switch to a Bangladesh seller lens like student budget, repeat buy, margin, or COD safer inside the catalog.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColor.neutral2,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(4, 4, 0, 4),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: AppColor.safe.withValues(alpha: 0.8),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColor.safe.withValues(alpha: 0.16),
-                            blurRadius: 14,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
+                        borderRadius: BorderRadius.circular(18),
                       ),
                       child: SizedBox(
-                        height: 86,
+                        height: 90,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           itemCount: categories.length,
@@ -117,7 +121,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                 );
                               },
                               child: Container(
-                                width: 76,
+                                width: 82,
                                 margin: const EdgeInsets.only(right: 8),
                                 child: Column(
                                   children: [
@@ -170,9 +174,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                     const SizedBox(height: 6),
                                     Text(
                                       title,
-                                      maxLines: 1,
+                                      maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      softWrap: false,
                                       textAlign: TextAlign.center,
                                       style: Theme.of(context).textTheme.labelSmall
                                           ?.copyWith(
@@ -223,35 +226,43 @@ class _CategoryScreenState extends State<CategoryScreen> {
                           }
 
                           if (categoriesState.isLoading && items.isEmpty) {
-                            return GridView.builder(
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: 9,
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 4,
-                                    crossAxisSpacing: 8,
-                                    mainAxisSpacing: 8,
-                                    childAspectRatio: 0.72,
+                            return LayoutBuilder(
+                              builder: (context, constraints) {
+                                final crossAxisCount =
+                                    constraints.maxWidth >= 430 ? 4 : 3;
+                                final childAspectRatio =
+                                    crossAxisCount == 4 ? 0.76 : 0.84;
+                                return GridView.builder(
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: 9,
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: crossAxisCount,
+                                        crossAxisSpacing: 8,
+                                        mainAxisSpacing: 8,
+                                        childAspectRatio: childAspectRatio,
+                                      ),
+                                  itemBuilder: (_, __) => const AppSkeletonCard(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        AppSkeleton(height: 92, radius: 18),
+                                        Spacer(),
+                                        AppSkeleton(width: 62, height: 20, radius: 999),
+                                        SizedBox(height: 8),
+                                        AppSkeleton(height: 28, radius: 10),
+                                      ],
+                                    ),
                                   ),
-                              itemBuilder: (_, __) => const AppSkeletonCard(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    AppSkeleton(height: 92, radius: 18),
-                                    Spacer(),
-                                    AppSkeleton(width: 62, height: 20, radius: 999),
-                                    SizedBox(height: 8),
-                                    AppSkeleton(height: 28, radius: 10),
-                                  ],
-                                ),
-                              ),
+                                );
+                              },
                             );
                           }
 
                           if (items.isEmpty) {
                             return const _CategoryStateCard(
                               icon: HugeIcons.strokeRoundedPackageSearch01,
-                              title: 'No subcategories found',
+                              title: 'No items',
                             );
                           }
 
@@ -267,82 +278,71 @@ class _CategoryScreenState extends State<CategoryScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    _CategorySectionLead(
-                                      title: 'Subcategories',
-                                      subtitle: selectedTitle,
+                                    Text(
+                                      'Subcategories',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
                                     ),
                                     const Spacer(),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: AppColor.safe1,
-                                        borderRadius: BorderRadius.circular(999),
-                                      ),
-                                      child: Text(
-                                        '${items.length + 1} items',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelMedium
-                                            ?.copyWith(
-                                              color: AppColor.neutral2,
-                                              fontWeight: FontWeight.w700,
+                                    TextButton(
+                                      onPressed: () {
+                                        context
+                                            .read<CategoriesCubit>()
+                                            .fetchCategoriesAllProduct(
+                                              siteId,
+                                              16,
+                                              categoriesState.selectCategory?.id ?? 0,
+                                              0,
+                                            );
+
+                                        Navigator.of(context).push(
+                                          _fadeRoute(
+                                            SubCategoryProductsScreen(
+                                              subCategoryId: -1,
+                                              title:
+                                                  categoriesState
+                                                      .selectCategory
+                                                      ?.translation ??
+                                                  categoriesState
+                                                      .selectCategory
+                                                      ?.title ??
+                                                  'Browse',
+                                              seeAll: true,
+                                              categoryId:
+                                                  categoriesState.selectCategory?.id ??
+                                                  0,
                                             ),
-                                      ),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text('See all'),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 8),
                                 Expanded(
-                                  child: GridView.builder(
-                                    physics: const AlwaysScrollableScrollPhysics(),
-                                    gridDelegate:
-                                        const SliverGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: 4,
-                                          crossAxisSpacing: 8,
-                                          mainAxisSpacing: 8,
-                                          childAspectRatio: 0.76,
-                                        ),
-                                    itemCount: items.length + 1,
-                                    itemBuilder: (context, index) {
-                                        if (index == items.length) {
-                                          return GestureDetector(
-                                            onTap: () {
-                                              context
-                                                  .read<CategoriesCubit>()
-                                                  .fetchCategoriesAllProduct(
-                                                    siteId,
-                                                    16,
-                                                    categoriesState.selectCategory?.id ?? 0,
-                                                    0,
-                                                  );
-
-                                              Navigator.of(context).push(
-                                                _fadeRoute(
-                                                  SubCategoryProductsScreen(
-                                                    subCategoryId: -1,
-                                                    title: items[0].title ?? '',
-                                                    seeAll: true,
-                                                    categoryId:
-                                                        categoriesState
-                                                            .selectCategory
-                                                            ?.id ??
-                                                        0,
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                            child: _CategoryGridCard(
-                                              imageUrl:
-                                                  categoriesState
-                                                      .selectCategory
-                                                      ?.image ??
-                                                  'https://thumbs.dreamstime.com/b/more-d-word-increase-improve-larger-bigger-demand-letters-to-illustrate-desire-improved-results-growing-supply-36806749.jpg',
-                                              title: 'See All',
-                                              accent: true,
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final crossAxisCount =
+                                          constraints.maxWidth >= 430 ? 4 : 3;
+                                      final childAspectRatio =
+                                          crossAxisCount == 4 ? 0.8 : 0.9;
+                                      return GridView.builder(
+                                        physics:
+                                            const AlwaysScrollableScrollPhysics(),
+                                        gridDelegate:
+                                            SliverGridDelegateWithFixedCrossAxisCount(
+                                              crossAxisCount: crossAxisCount,
+                                              crossAxisSpacing: 8,
+                                              mainAxisSpacing: 8,
+                                              childAspectRatio: childAspectRatio,
                                             ),
-                                          );
-                                        }
-
+                                        itemCount: items.length,
+                                        itemBuilder: (context, index) {
                                         final sub = items[index];
                                         return GestureDetector(
                                           onTap: () {
@@ -371,6 +371,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                             title: sub.translation ?? sub.title ?? '',
                                           ),
                                         );
+                                        },
+                                      );
                                     },
                                   ),
                                 ),
@@ -395,12 +397,10 @@ class _CategoryGridCard extends StatelessWidget {
   const _CategoryGridCard({
     required this.imageUrl,
     required this.title,
-    this.accent = false,
   });
 
   final String imageUrl;
   final String title;
-  final bool accent;
 
   @override
   Widget build(BuildContext context) {
@@ -423,21 +423,12 @@ class _CategoryGridCard extends StatelessWidget {
                     width: iconSize,
                     height: iconSize,
                     decoration: BoxDecoration(
-                      color: accent ? const Color(0xFFFFF6DD) : Colors.white,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: accent ? AppColor.accent : AppColor.safe,
-                        width: accent ? 1.4 : 1,
+                        color: AppColor.safe,
+                        width: 1,
                       ),
-                      boxShadow: accent
-                          ? [
-                              BoxShadow(
-                                color: AppColor.accent.withValues(alpha: 0.12),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                            ]
-                          : null,
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(14),
@@ -447,26 +438,6 @@ class _CategoryGridCard extends StatelessWidget {
                         backgroundColor: Colors.white,
                         icon: HugeIcons.strokeRoundedGridView,
                       ),
-                    ),
-                  ),
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: accent
-                            ? AppColor.accent.withValues(alpha: 0.25)
-                            : AppColor.safe.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    child: AppHugeIcon(
-                      accent
-                          ? HugeIcons.strokeRoundedArrowRight01
-                          : HugeIcons.strokeRoundedArrowUpRight01,
-                      size: 10,
-                      color: accent ? AppColor.accent : AppColor.primary,
                     ),
                   ),
                 ],
@@ -482,175 +453,17 @@ class _CategoryGridCard extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: compact ? 10.1 : 10.6,
-                      fontWeight: accent ? FontWeight.w800 : FontWeight.w700,
-                      color: accent ? AppColor.accent : AppColor.text,
+                      fontWeight: FontWeight.w700,
+                      color: AppColor.text,
                       height: compact ? 1.05 : 1.1,
                     ),
                   ),
-                ),
-              ),
-              Container(
-                width: accent ? 16 : 8,
-                height: 2.5,
-                decoration: BoxDecoration(
-                  color: accent ? AppColor.accent : AppColor.safe,
-                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
             ],
           ),
         );
       },
-    );
-  }
-}
-
-class _CategoryHero extends StatelessWidget {
-  const _CategoryHero({
-    required this.title,
-    required this.categoryCount,
-  });
-
-  final String title;
-  final int categoryCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFCFDF7),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColor.safe.withValues(alpha: 0.85)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColor.safe.withValues(alpha: 0.16),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFF6FADD),
-                  Color(0xFFE8F2C9),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const AppHugeIcon(
-              HugeIcons.strokeRoundedGridView,
-              size: 18,
-              color: AppColor.primary,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Category flow',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColor.neutral2,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColor.text,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColor.safe.withValues(alpha: 0.85)),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  '$categoryCount',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColor.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  'Categories',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColor.neutral2,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategorySectionLead extends StatelessWidget {
-  const _CategorySectionLead({
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppColor.text,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFCFDF7),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppColor.safe.withValues(alpha: 0.85)),
-          ),
-          child: Text(
-            subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColor.primary,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

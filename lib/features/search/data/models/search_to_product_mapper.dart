@@ -15,6 +15,9 @@ class SearchToProductMapper {
           '${AppEnvironment.mediaBaseUrl}${s.thumbnail}', // '${AppEnvironment.mediaBaseUrl}${d.thumbnail}'
       price: s.price,
       comparePrice: s.comparePrice,
+      wholesalePrice: s.wholesalePrice,
+      minResellPrice: s.minResellPrice,
+      maxResellPrice: s.maxResellPrice,
       siteId: s.siteId,
       sku: s.sku,
 

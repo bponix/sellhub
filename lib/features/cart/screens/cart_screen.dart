@@ -3,15 +3,20 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sellhub/core/constants/app_color.dart';
+import 'package:sellhub/core/local/local_storage.dart';
+import 'package:sellhub/core/product_viability/product_viability.dart';
 import 'package:sellhub/core/share/sellhub_share_link_builder.dart';
 import 'package:sellhub/core/store/store_context_cubit.dart';
 import 'package:sellhub/core/utils/convertBengaliNumber.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
 import 'package:sellhub/core/widget/app_network_image.dart';
 import 'package:sellhub/core/widget/sellhub_top_app_bar.dart';
+import 'package:sellhub/features/cart/data/models/cart_item_model.dart';
 import 'package:sellhub/features/cart/presentation/cubit/cart_cubit.dart';
 import 'package:sellhub/features/cart/presentation/cubit/cart_state.dart';
 import 'package:sellhub/features/cart/screens/checkout_screen.dart';
+import 'package:sellhub/features/cart/screens/widget/reseller_price_sheet.dart';
+import 'package:sellhub/features/profile/data/model/buyer_book_profile.dart';
 import 'package:sellhub/features/shell/presentation/cubit/store_shell_cubit.dart';
 
 class CartScreen extends StatelessWidget {
@@ -25,8 +30,8 @@ class CartScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       appBar: isNewScreen == true
           ? const SellHubTopAppBar(
-              title: 'My Cart',
-              subtitle: 'Review your bag',
+              title: 'Selling List',
+              subtitle: 'Share, quote, then order',
               icon: HugeIcons.strokeRoundedShoppingCart01,
               showBackButton: true,
             )
@@ -36,9 +41,15 @@ class CartScreen extends StatelessWidget {
           if (cartState.items.isEmpty) {
             return _buildEmptyCart(context);
           }
+          final supplierGroups = _groupCartItems(cartState.items);
           final totalAmount = cartState.totalAmount.toInt();
+          final totalSellAmount = cartState.totalSellAmount.toInt();
+          final totalProfitAmount = cartState.totalProfitAmount.toInt();
           final totalCompareAmount = cartState.totalCompareAmount.toInt();
-          final savedAmount = (totalCompareAmount - totalAmount).clamp(0, 1 << 31);
+          final savedAmount = (totalCompareAmount - totalAmount).clamp(
+            0,
+            1 << 31,
+          );
           return Column(
             children: <Widget>[
               Expanded(
@@ -48,20 +59,27 @@ class CartScreen extends StatelessWidget {
                     _CartHeaderCard(
                       itemCount: cartState.totalItems,
                       totalAmount: totalAmount,
+                      totalSellAmount: totalSellAmount,
+                      totalProfitAmount: totalProfitAmount,
                       onClear: () => context.read<CartCubit>().clearCart(),
                       onShare: () => _shareCart(context, cartState),
+                      onPrepareQuote: () => _openCartCheckout(context),
                     ),
+                    const SizedBox(height: 12),
+                    const _PendingBuyerCartCard(),
+                    const SizedBox(height: 12),
+                    const _QuickSellFlowCard(),
                     const SizedBox(height: 12),
                     _SectionLabel(
                       icon: HugeIcons.strokeRoundedPackageMoving,
-                      eyebrow: 'Bag items',
-                      title: 'Review items',
+                      eyebrow: 'Supplier',
+                      title: 'Supplier groups',
                     ),
                     const SizedBox(height: 16),
-                    ...cartState.items.map(
-                      (item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _CartItemCard(item: item),
+                    ...supplierGroups.map(
+                      (group) => Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _CartSupplierSection(group: group),
                       ),
                     ),
                   ],
@@ -76,98 +94,77 @@ class CartScreen extends StatelessWidget {
                   ),
                   border: const Border(top: BorderSide(color: AppColor.safe)),
                 ),
-                child: Column(
-                  children: <Widget>[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColor.safe1,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColor.safe),
-                      ),
-                      child: const Row(
-                        children: <Widget>[
-                          AppHugeIcon(
-                            HugeIcons.strokeRoundedCoupon01,
-                            size: 18,
-                            color: AppColor.primary,
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Promo and delivery options come next.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColor.neutral2,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                child: FutureBuilder<BuyerBookProfile?>(
+                  future: LocalStorage.getPendingBuyer(),
+                  builder: (context, snapshot) {
+                    final hasPendingBuyer = snapshot.data != null;
+                    return Column(
+                      children: <Widget>[
+                        _SummaryRow(
+                          label: 'Base',
+                          value: '৳ ${convertToBengaliNumber(totalAmount)}',
+                        ),
+                        const SizedBox(height: 8),
+                        _SummaryRow(
+                          label: 'Total',
+                          value: '৳ ${convertToBengaliNumber(totalSellAmount)}',
+                          bold: true,
+                        ),
+                        const SizedBox(height: 8),
+                        _SummaryRow(
+                          label: 'Profit',
+                          value: '৳ ${convertToBengaliNumber(totalProfitAmount)}',
+                        ),
+                        if (savedAmount > 0) ...[
+                          const SizedBox(height: 8),
+                          _SummaryRow(
+                            label: 'You save',
+                            value: '৳ ${convertToBengaliNumber(savedAmount)}',
                           ),
                         ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    _SummaryRow(
-                      label: 'Subtotal',
-                      value: '৳ ${convertToBengaliNumber(totalAmount)}',
-                    ),
-                    if (savedAmount > 0) ...[
-                      const SizedBox(height: 8),
-                      _SummaryRow(
-                        label: 'You save',
-                        value: '৳ ${convertToBengaliNumber(savedAmount)}',
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    const _SummaryRow(
-                      label: 'Delivery',
-                      value: 'Selected in checkout',
-                    ),
-                    const SizedBox(height: 12),
-                    const _DashedDivider(),
-                    const SizedBox(height: 12),
-                    _SummaryRow(
-                      label: 'Estimated total',
-                      value: '৳ ${convertToBengaliNumber(totalAmount)}',
-                      bold: true,
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFDFF55A),
-                          foregroundColor: AppColor.text,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          elevation: 0,
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const CheckoutScreen(isCart: true),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFDFF55A),
+                              foregroundColor: AppColor.text,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              elevation: 0,
                             ),
-                          );
-                        },
-                        child: const Text('Go to checkout'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: isNewScreen == false
-                          ? kBottomNavigationBarHeight +
-                                MediaQuery.of(context).padding.bottom +
-                                12
-                          : 0,
-                    ),
-                  ],
+                            onPressed: () => _openCartCheckout(context),
+                            child: Text(
+                              hasPendingBuyer
+                                  ? 'Start quote for buyer'
+                                  : 'Start quote',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          hasPendingBuyer
+                              ? 'Buyer is ready. Address and final supplier order come next.'
+                              : 'Buyer, address, and final supplier order come next.',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColor.neutral2,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: isNewScreen == false
+                              ? kBottomNavigationBarHeight +
+                                    MediaQuery.of(context).padding.bottom +
+                                    12
+                              : 0,
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -226,46 +223,71 @@ class CartScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Your cart is empty',
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Add a few products and come back when you are ready to place an order.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: const [
-                        Expanded(
-                          child: _EmptyCartHint(
-                            icon: HugeIcons.strokeRoundedShoppingBag02,
-                            title: 'Browse',
+                  const SizedBox(height: 20),
+                  FutureBuilder<BuyerBookProfile?>(
+                    future: LocalStorage.getPendingBuyer(),
+                    builder: (context, snapshot) {
+                      final pendingBuyer = snapshot.data;
+                      return Column(
+                        children: [
+                          Text(
+                            pendingBuyer == null
+                                ? 'Your selling list is empty'
+                                : 'Buyer is ready for products',
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: _EmptyCartHint(
-                            icon: HugeIcons.strokeRoundedFavourite,
-                            title: 'Save',
+                          const SizedBox(height: 10),
+                          Text(
+                            pendingBuyer == null
+                                ? 'Add products from any supplier. Set your sell price first, then finish the buyer order.'
+                                : 'Add products now, then quote and finish the buyer order.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 15,
+                            ),
                           ),
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: _EmptyCartHint(
-                            icon: HugeIcons.strokeRoundedDeliveryTruck02,
-                            title: 'Checkout',
+                          const SizedBox(height: 18),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _EmptyCartHint(
+                                  icon: HugeIcons.strokeRoundedShoppingBag02,
+                                  title: pendingBuyer == null ? 'Browse' : 'Find',
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _EmptyCartHint(
+                                  icon: pendingBuyer == null
+                                      ? HugeIcons.strokeRoundedFavourite
+                                      : HugeIcons.strokeRoundedInvoice03,
+                                  title: pendingBuyer == null ? 'Save' : 'Quote',
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: _EmptyCartHint(
+                                  icon: HugeIcons.strokeRoundedDeliveryTruck02,
+                                  title: 'Order',
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                  const _PendingBuyerEmptyStateCard(),
+                ],
               ),
             ),
+          ),
         ),
         Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -274,26 +296,52 @@ class CartScreen extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border: const Border(top: BorderSide(color: AppColor.safe)),
           ),
-          child: SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDFF55A),
-                foregroundColor: AppColor.text,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                elevation: 0,
-              ),
-              onPressed: () {
-                context.read<StoreShellCubit>().setIndex(0);
-                if (isNewScreen == true) {
-                  Navigator.of(context).maybePop();
-                }
-              },
-              child: const Text('Browse products'),
-            ),
+          child: FutureBuilder<BuyerBookProfile?>(
+            future: LocalStorage.getPendingBuyer(),
+            builder: (context, snapshot) {
+              final pendingBuyer = snapshot.data;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDFF55A),
+                        foregroundColor: AppColor.text,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        context.read<StoreShellCubit>().setIndex(0);
+                        if (isNewScreen == true) {
+                          Navigator.of(context).maybePop();
+                        }
+                      },
+                      child: Text(
+                        pendingBuyer == null
+                            ? 'Find products'
+                            : 'Find products for buyer',
+                      ),
+                    ),
+                  ),
+                  if (pendingBuyer != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Pick products now. ${pendingBuyer.name} will stay ready in checkout.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
         ),
       ],
@@ -307,7 +355,430 @@ class CartScreen extends StatelessWidget {
       store: store,
       items: cartState.items,
     );
-    await Share.share(text, subject: 'Shared cart');
+    await Share.share(text, subject: 'Shared selling list');
+  }
+
+}
+
+void _openCartCheckout(BuildContext context) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const CheckoutScreen(isCart: true),
+    ),
+  );
+}
+
+class _PendingBuyerCartCard extends StatelessWidget {
+  const _PendingBuyerCartCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<BuyerBookProfile?>(
+      future: LocalStorage.getPendingBuyer(),
+      builder: (context, snapshot) {
+        final buyer = snapshot.data;
+        if (buyer == null) return const SizedBox.shrink();
+        final leadProduct = buyer.preferredProducts.isNotEmpty
+            ? buyer.preferredProducts.first
+            : null;
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColor.safe1,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColor.safe),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const AppHugeIcon(
+                  HugeIcons.strokeRoundedUser,
+                  size: 18,
+                  color: AppColor.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Buyer ready to order',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: AppColor.text,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${buyer.name} • ${buyer.phone}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColor.text,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      leadProduct == null
+                          ? 'Add products now. Buyer auto-fills in checkout.'
+                          : 'Start with $leadProduct',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _PendingBuyerPill(label: buyer.district),
+                        _PendingBuyerPill(
+                          label: buyer.isRepeatBuyer ? 'Repeat buyer' : 'Buyer',
+                        ),
+                        _PendingBuyerPill(label: buyer.sourceTag),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _openCartCheckout(context),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColor.text,
+                          side: const BorderSide(color: AppColor.safe),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        icon: const AppHugeIcon(
+                          HugeIcons.strokeRoundedInvoice03,
+                          size: 16,
+                          color: AppColor.text,
+                        ),
+                        label: const Text('Start order with buyer'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PendingBuyerEmptyStateCard extends StatelessWidget {
+  const _PendingBuyerEmptyStateCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<BuyerBookProfile?>(
+      future: LocalStorage.getPendingBuyer(),
+      builder: (context, snapshot) {
+        final buyer = snapshot.data;
+        if (buyer == null) return const SizedBox.shrink();
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColor.safe1,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColor.safe),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Buyer stays ready',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppColor.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${buyer.name} • ${buyer.phone}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColor.text,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${buyer.name} is queued from Buyer Book. Add products now, then the buyer will auto-fill in checkout.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColor.neutral2,
+                  fontWeight: FontWeight.w600,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _PendingBuyerPill(label: buyer.district),
+                  _PendingBuyerPill(
+                    label: buyer.isRepeatBuyer ? 'Repeat buyer' : 'Buyer',
+                  ),
+                  _PendingBuyerPill(label: buyer.sourceTag),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PendingBuyerPill extends StatelessWidget {
+  const _PendingBuyerPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final trimmed = label.trim().isEmpty ? 'Unknown' : label.trim();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColor.safe),
+      ),
+      child: Text(
+        trimmed,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: AppColor.text,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickSellFlowCard extends StatelessWidget {
+  const _QuickSellFlowCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<BuyerBookProfile?>(
+      future: LocalStorage.getPendingBuyer(),
+      builder: (context, snapshot) {
+        final hasPendingBuyer = snapshot.data != null;
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColor.safe),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                hasPendingBuyer ? 'Buyer-ready flow' : 'Quote-first selling flow',
+                style: const TextStyle(
+                  color: AppColor.text,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                hasPendingBuyer
+                    ? 'Pick products for the buyer, quote next, then finish the supplier order.'
+                    : 'Price each item for the buyer, share the list, then finish the supplier order after confirmation.',
+                style: const TextStyle(
+                  color: AppColor.neutral2,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _QuickSellStep(
+                      title: hasPendingBuyer ? 'Find' : 'Share',
+                      subtitle: hasPendingBuyer
+                          ? 'Pick products now'
+                          : 'Post to WhatsApp or FB',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: _QuickSellStep(
+                      title: 'Quote',
+                      subtitle: 'Lock buyer price first',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: _QuickSellStep(
+                      title: 'Order',
+                      subtitle: 'Place supplier order',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _QuickSellStep extends StatelessWidget {
+  const _QuickSellStep({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColor.safe1,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: AppColor.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+List<_CartSupplierGroup> _groupCartItems(List<CartItem> items) {
+  final grouped = <int, List<CartItem>>{};
+  final names = <int, String>{};
+  for (final item in items) {
+    final siteId = item.product.siteId ?? 0;
+    grouped.putIfAbsent(siteId, () => <CartItem>[]).add(item);
+    names[siteId] = ProductViabilityEngine.build(item.product).supplierName;
+  }
+  return grouped.entries
+      .map((entry) {
+        final itemList = entry.value;
+        final baseAmount = itemList.fold<int>(
+          0,
+          (sum, item) =>
+              sum + ((item.product.price ?? 0).round() * item.quantity),
+        );
+        return _CartSupplierGroup(
+          supplierName: names[entry.key] ?? 'Supplier',
+          items: itemList,
+          baseAmount: baseAmount,
+        );
+      })
+      .toList(growable: false)
+    ..sort((a, b) => a.supplierName.compareTo(b.supplierName));
+}
+
+class _CartSupplierGroup {
+  const _CartSupplierGroup({
+    required this.supplierName,
+    required this.items,
+    required this.baseAmount,
+  });
+
+  final String supplierName;
+  final List<CartItem> items;
+  final int baseAmount;
+}
+
+class _CartSupplierSection extends StatelessWidget {
+  const _CartSupplierSection({required this.group});
+
+  final _CartSupplierGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColor.safe1,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColor.safe),
+          ),
+          child: Row(
+            children: [
+              const AppHugeIcon(
+                HugeIcons.strokeRoundedStore04,
+                size: 18,
+                color: AppColor.primary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      group.supplierName,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColor.text,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${group.items.length} item${group.items.length > 1 ? 's' : ''} • Base ৳ ${convertToBengaliNumber(group.baseAmount)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        ...group.items.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _CartItemCard(item: item),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -348,67 +819,143 @@ class _CartHeaderCard extends StatelessWidget {
   const _CartHeaderCard({
     required this.itemCount,
     required this.totalAmount,
+    required this.totalSellAmount,
+    required this.totalProfitAmount,
     required this.onClear,
     required this.onShare,
+    required this.onPrepareQuote,
   });
 
   final int itemCount;
   final int totalAmount;
+  final int totalSellAmount;
+  final int totalProfitAmount;
   final VoidCallback onClear;
   final VoidCallback onShare;
+  final VoidCallback onPrepareQuote;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColor.safe),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return FutureBuilder<BuyerBookProfile?>(
+      future: LocalStorage.getPendingBuyer(),
+      builder: (context, snapshot) {
+        final hasPendingBuyer = snapshot.data != null;
+        final primaryButton = FilledButton.icon(
+          onPressed: hasPendingBuyer ? onPrepareQuote : onShare,
+          style: FilledButton.styleFrom(
+            backgroundColor: hasPendingBuyer
+                ? const Color(0xFFDFF55A)
+                : AppColor.primary,
+            foregroundColor: hasPendingBuyer ? AppColor.text : Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          icon: AppHugeIcon(
+            hasPendingBuyer
+                ? HugeIcons.strokeRoundedInvoice03
+                : HugeIcons.strokeRoundedShare08,
+            size: 16,
+            color: hasPendingBuyer ? AppColor.text : Colors.white,
+          ),
+          label: Text(hasPendingBuyer ? 'Start quote' : 'Share list'),
+        );
+        final secondaryButton = OutlinedButton.icon(
+          onPressed: hasPendingBuyer ? onShare : onPrepareQuote,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColor.text,
+            side: const BorderSide(color: AppColor.safe),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          icon: AppHugeIcon(
+            hasPendingBuyer
+                ? HugeIcons.strokeRoundedShare08
+                : HugeIcons.strokeRoundedInvoice03,
+            size: 16,
+            color: AppColor.text,
+          ),
+          label: Text(hasPendingBuyer ? 'Share list' : 'Start quote'),
+        );
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColor.safe),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _InlineSectionLead(
-                icon: HugeIcons.strokeRoundedShoppingCart01,
-                eyebrow: 'Cart summary',
-                title: 'Cart overview',
+              Row(
+                children: [
+                  const Expanded(
+                    child: _InlineSectionLead(
+                      icon: HugeIcons.strokeRoundedShoppingCart01,
+                      eyebrow: 'Selling list',
+                      title: 'Quote summary',
+                    ),
+                  ),
+                  TextButton(onPressed: onClear, child: const Text('Clear')),
+                ],
               ),
-              const Spacer(),
-              IconButton(
-                onPressed: onShare,
-                tooltip: 'Share cart',
-                icon: const AppHugeIcon(
-                  HugeIcons.strokeRoundedShare08,
-                  size: 18,
-                  color: AppColor.primary,
+              const SizedBox(height: 10),
+              Text(
+                hasPendingBuyer
+                    ? 'Buyer is ready. Quote first, then confirm in checkout.'
+                    : 'Buyer pricing stays here so you can quote before checkout.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColor.neutral2,
+                  fontWeight: FontWeight.w600,
+                  height: 1.35,
                 ),
               ),
-              TextButton(onPressed: onClear, child: const Text('Clear cart')),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _CartMetric(label: 'Items', value: '$itemCount'),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _CartMetric(
+                      label: 'Base',
+                      value: '৳ ${convertToBengaliNumber(totalAmount)}',
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _CartMetric(
+                      label: 'Total',
+                      value: '৳ ${convertToBengaliNumber(totalSellAmount)}',
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _CartMetric(
+                      label: 'Profit',
+                      value: '৳ ${convertToBengaliNumber(totalProfitAmount)}',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: primaryButton),
+                  const SizedBox(width: 10),
+                  Expanded(child: secondaryButton),
+                ],
+              ),
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _CartMetric(
-                  label: 'Items',
-                  value: '$itemCount',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _CartMetric(
-                  label: 'Subtotal',
-                  value: '৳ ${convertToBengaliNumber(totalAmount)}',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -432,16 +979,16 @@ class _CartMetric extends StatelessWidget {
         children: [
           Text(
             value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColor.neutral2,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColor.neutral2),
           ),
         ],
       ),
@@ -452,12 +999,17 @@ class _CartMetric extends StatelessWidget {
 class _CartItemCard extends StatelessWidget {
   const _CartItemCard({required this.item});
 
-  final dynamic item;
+  final CartItem item;
 
   @override
   Widget build(BuildContext context) {
     final unitPrice = item.product.price?.toInt() ?? 0;
-    final lineTotal = unitPrice * (item.quantity as int);
+    final sellPrice = item.sellPrice;
+    final lineTotal = unitPrice * item.quantity;
+    final lineSellTotal = sellPrice * item.quantity;
+    final lineProfit = (sellPrice - unitPrice) * item.quantity;
+    final viability = ProductViabilityEngine.build(item.product);
+    final activeStore = context.read<StoreContextCubit>().state.activeStore;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -514,7 +1066,7 @@ class _CartItemCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: const Text(
-                        'Ready to ship',
+                        'Supplier item',
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColor.primary,
@@ -522,9 +1074,21 @@ class _CartItemCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        viability.supplierName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColor.neutral2,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                     Text(
-                      '৳ ${convertToBengaliNumber(item.product.price?.toInt() ?? 0)}',
+                      'Base ৳ ${convertToBengaliNumber(item.product.price?.toInt() ?? 0)}',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
@@ -533,114 +1097,228 @@ class _CartItemCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: <Widget>[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: Colors.grey.shade300,
-                        ),
-                      ),
-                      child: Row(
-                        children: <Widget>[
-                          InkWell(
-                            onTap: () => context
-                                .read<CartCubit>()
-                                .updateQuantity(item, item.quantity - 1),
-                            child: const Padding(
-                              padding: EdgeInsets.all(4),
-                              child: AppHugeIcon(
-                                HugeIcons.strokeRoundedMinusSign,
-                                size: 16,
-                                color: AppColor.text,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _QuantityPill(item: item),
+                    _MiniActionChip(
+                      label: 'Set price',
+                      icon: HugeIcons.strokeRoundedInvoice03,
+                      onTap: () async {
+                        final newPrice = await showResellerPriceSheet(
+                          context,
+                          product: item.product,
+                          initialPrice: item.sellPrice,
+                        );
+                        if (newPrice == null || !context.mounted) return;
+                        await context.read<CartCubit>().updateSellPrice(
+                          item,
+                          newPrice,
+                        );
+                      },
+                    ),
+                    _MiniActionChip(
+                      label: 'Share item',
+                      icon: HugeIcons.strokeRoundedShare08,
+                      onTap: activeStore == null
+                          ? null
+                          : () async {
+                              await Share.share(
+                                SellHubShareLinkBuilder.buildProductShareText(
+                                  store: activeStore,
+                                  product: item.product,
+                                ),
+                                subject: item.product.title ?? 'Shared item',
+                              );
+                            },
+                    ),
+                    _MiniActionChip(
+                      label: 'Remove',
+                      icon: HugeIcons.strokeRoundedDelete02,
+                      onTap: () =>
+                          context.read<CartCubit>().removeFromCart(item),
+                      isAlert: true,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColor.safe1,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Sell ৳ ${convertToBengaliNumber(sellPrice)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                                color: AppColor.primary,
                               ),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: AppColor.safe),
+                            ),
                             child: Text(
-                              '${item.quantity}',
+                              'Range ৳${convertToBengaliNumber(item.minSellPrice)}-${convertToBengaliNumber(item.maxSellPrice)}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          InkWell(
-                            onTap: () => context
-                                .read<CartCubit>()
-                                .updateQuantity(item, item.quantity + 1),
-                            child: const Padding(
-                              padding: EdgeInsets.all(4),
-                              child: AppHugeIcon(
-                                HugeIcons.strokeRoundedPlusSign,
-                                size: 16,
-                                color: AppColor.text,
+                                fontSize: 11,
+                                color: AppColor.neutral2,
                               ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const Spacer(),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '৳ ${convertToBengaliNumber(lineTotal)}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                          ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Base ৳ ${convertToBengaliNumber(lineTotal)} • Total ৳ ${convertToBengaliNumber(lineSellTotal)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: AppColor.neutral2,
                         ),
-                        const SizedBox(height: 6),
-                        InkWell(
-                          onTap: () =>
-                              context.read<CartCubit>().removeFromCart(item),
-                          borderRadius: BorderRadius.circular(999),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColor.alertLight,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AppHugeIcon(
-                                  HugeIcons.strokeRoundedDelete02,
-                                  size: 15,
-                                  color: AppColor.alert,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Remove',
-                                  style: TextStyle(
-                                    color: AppColor.alert,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Profit ৳ ${convertToBengaliNumber(lineProfit)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          color: AppColor.text,
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuantityPill extends StatelessWidget {
+  const _QuantityPill({required this.item});
+
+  final CartItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          InkWell(
+            onTap: () => context.read<CartCubit>().updateQuantity(
+              item,
+              item.quantity - 1,
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: AppHugeIcon(
+                HugeIcons.strokeRoundedMinusSign,
+                size: 16,
+                color: AppColor.text,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              '${item.quantity}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          InkWell(
+            onTap: () => context.read<CartCubit>().updateQuantity(
+              item,
+              item.quantity + 1,
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: AppHugeIcon(
+                HugeIcons.strokeRoundedPlusSign,
+                size: 16,
+                color: AppColor.text,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniActionChip extends StatelessWidget {
+  const _MiniActionChip({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.isAlert = false,
+  });
+
+  final String label;
+  final List<List<dynamic>> icon;
+  final VoidCallback? onTap;
+  final bool isAlert;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = isAlert ? AppColor.alert : AppColor.text;
+    final background = isAlert ? AppColor.alertLight : Colors.white;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isAlert ? AppColor.alertLight : AppColor.safe,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppHugeIcon(icon, size: 14, color: foreground),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: foreground,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -659,11 +1337,7 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _InlineSectionLead(
-      icon: icon,
-      eyebrow: eyebrow,
-      title: title,
-    );
+    return _InlineSectionLead(icon: icon, eyebrow: eyebrow, title: title);
   }
 }
 
@@ -744,26 +1418,6 @@ class _SummaryRow extends StatelessWidget {
         Text(label, style: style),
         Text(value, style: style),
       ],
-    );
-  }
-}
-
-class _DashedDivider extends StatelessWidget {
-  const _DashedDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final dashCount = (constraints.maxWidth / 8).floor();
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(
-            dashCount,
-            (_) => Container(width: 4, height: 1, color: Colors.grey.shade400),
-          ),
-        );
-      },
     );
   }
 }

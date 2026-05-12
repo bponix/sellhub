@@ -40,19 +40,18 @@ class DeepLinkService {
     RouteNames.login,
     RouteNames.register,
     RouteNames.forgotPassword,
-    RouteNames.storeSelector,
-    RouteNames.storeScanner,
     RouteNames.unsupportedLink,
   };
 
   static final Set<String> _deferredRouteNames = <String>{
     RouteNames.home,
-    RouteNames.cart,
-    RouteNames.favourite,
+    RouteNames.sellingList,
+    RouteNames.saved,
     RouteNames.profile,
     RouteNames.search,
     RouteNames.notifications,
     RouteNames.orders,
+    RouteNames.teamInvite,
     RouteNames.settings,
     RouteNames.collection,
   };
@@ -66,18 +65,19 @@ class DeepLinkService {
     '/${RouteNames.login}',
     '/${RouteNames.register}',
     '/${RouteNames.forgotPassword}',
-    '/${RouteNames.storeSelector}',
-    '/${RouteNames.storeScanner}',
     '/${RouteNames.unsupportedLink}',
   };
 
   static final Set<String> _deferredRawPaths = <String>{
     '/${RouteNames.home}',
-    '/${RouteNames.cart}',
-    '/${RouteNames.favourite}',
+    '/${RouteNames.sellingList}',
+    '/${RouteNames.saved}',
+    '/cart',
+    '/favourite',
     '/${RouteNames.profile}',
     '/${RouteNames.search}',
     '/${RouteNames.notifications}',
+    '/${RouteNames.teamInvite}',
     '/${RouteNames.orders}',
     '/${RouteNames.settings}',
     '/${RouteNames.collection}',

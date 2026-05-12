@@ -6,8 +6,13 @@ import 'package:sellhub/core/constants/app_color.dart';
 import 'package:sellhub/core/utils/app_router.dart';
 import 'package:sellhub/core/utils/custom_toast.dart';
 import 'package:sellhub/core/utils/formatDateTime.dart';
+import 'package:sellhub/core/supplier_trust/supplier_trust_helpers.dart';
+import 'package:sellhub/core/supplier_trust/supplier_trust_local_store.dart';
+import 'package:sellhub/core/supplier_trust/supplier_trust_model.dart';
+import 'package:sellhub/core/supplier_trust/supplier_trust_widgets.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
 import 'package:sellhub/core/widget/sellhub_top_app_bar.dart';
+import 'package:sellhub/features/orders/data/models/order_issue_report.dart';
 import 'package:sellhub/features/orders/data/models/order_event_model.dart';
 import 'package:sellhub/features/orders/data/orders_repository.dart';
 import 'package:sellhub/features/orders/presentation/cubit/orders_cubit.dart';
@@ -33,6 +38,8 @@ class OrderDetailsScreen extends StatefulWidget {
 
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   late Future<List<OrderEventModel>> _eventsFuture;
+  late Future<SupplierTrustProfile?> _supplierTrustFuture;
+  late Future<OrderIssueReport?> _issueReportFuture;
 
   @override
   void initState() {
@@ -41,6 +48,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       siteId: widget.siteId,
       orderId: widget.order.id ?? 0,
     );
+    _supplierTrustFuture = _loadSupplierTrust();
+    _issueReportFuture = _loadIssueReport();
   }
 
   Future<void> _reload() async {
@@ -49,8 +58,26 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         siteId: widget.siteId,
         orderId: widget.order.id ?? 0,
       );
+      _supplierTrustFuture = _loadSupplierTrust();
+      _issueReportFuture = _loadIssueReport();
     });
     await _eventsFuture;
+  }
+
+  Future<SupplierTrustProfile?> _loadSupplierTrust() {
+    final store = context.read<StorefrontCubit>().state.siteDetails;
+    return di.sl<SupplierTrustLocalStore>().loadProfile(
+      siteId: widget.siteId,
+      domain: store?.domain?.trim() ?? '',
+      title: store?.title?.trim() ?? '',
+    );
+  }
+
+  Future<OrderIssueReport?> _loadIssueReport() {
+    return LocalStorage.getLatestOrderIssueReport(
+      siteId: widget.siteId,
+      orderId: widget.order.orderId ?? '',
+    );
   }
 
   bool _canRequestCancel() {
@@ -75,6 +102,24 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
   }
 
+  Future<void> _openIssueReportSheet() async {
+    final report = await showModalBottomSheet<OrderIssueReport>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _OrderIssueReportSheet(
+        siteId: widget.siteId,
+        orderId: widget.order.orderId ?? 'Order',
+      ),
+    );
+    if (report == null || !mounted) return;
+    CustomToast.success('Issue report saved for follow-up.');
+    await _reload();
+  }
+
   Future<void> _openSupportSheet() async {
     final cubit = context.read<OrdersCubit>();
     final userId = await LocalStorage.getUserID() ?? 0;
@@ -86,12 +131,12 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
     if (!mounted) return;
     if (!ok) {
-      final message = cubit.state.actionError?.title ??
-          'Unable to send support request.';
+      final message =
+          cubit.state.actionError?.title ?? 'Unable to send support request.';
       CustomToast.error(message);
       return;
     }
-    CustomToast.success('Support request sent to the store.');
+    CustomToast.success('Support request sent to the supplier.');
     await _reload();
     if (!mounted) return;
     await _showSupportSheet();
@@ -108,23 +153,133 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
     if (!mounted) return;
     if (!ok) {
-      final message = cubit.state.actionError?.title ??
+      final message =
+          cubit.state.actionError?.title ??
           'Unable to send cancellation request.';
       CustomToast.error(message);
       return;
     }
-    CustomToast.success('Cancellation request sent to the store.');
+    CustomToast.success('Cancellation request sent to the supplier.');
     await _reload();
   }
 
   Future<void> _reorder() async {
     final orderId = widget.order.orderId ?? 'Order';
-    await Clipboard.setData(
-      ClipboardData(text: 'Reorder reference: $orderId'),
-    );
+    await Clipboard.setData(ClipboardData(text: orderId));
     if (!mounted) return;
-    CustomToast.info('Order reference copied. Shop again to reorder.');
-    AppRouter.goToHome(context);
+    CustomToast.info(
+      'Order ID copied. Use it for buyer follow-up or supplier support.',
+    );
+  }
+
+  String _nextActionTitle() {
+    final status = widget.order.status ?? 0;
+    if (widget.order.supportIssue || status == 8) {
+      return 'Resolve supplier issue';
+    }
+    if (status >= 10 && widget.order.isSettle != true) {
+      return 'Review payout status';
+    }
+    if (status >= 4) {
+      return 'Track fulfillment';
+    }
+    return 'Keep buyer updated';
+  }
+
+  String _nextActionDescription() {
+    final status = widget.order.status ?? 0;
+    if (widget.order.supportIssue || status == 8) {
+      return 'Open supplier support, log the issue, and keep the buyer informed on the resolution.';
+    }
+    if (status >= 10 && widget.order.isSettle != true) {
+      return 'Delivery is complete. Check payout timing and profit release next.';
+    }
+    if (status >= 4) {
+      return 'Supplier fulfillment is active. Watch progress here and escalate delays early.';
+    }
+    return 'The order is still early in the pipeline. Use the order ID for buyer follow-up and confirmation.';
+  }
+
+  String _nextActionLabel() {
+    final status = widget.order.status ?? 0;
+    if (widget.order.supportIssue || status == 8) {
+      return 'Supplier support';
+    }
+    if (status >= 10 && widget.order.isSettle != true) {
+      return 'Open payouts';
+    }
+    if (status >= 4) {
+      return 'Open support';
+    }
+    return 'Copy order ID';
+  }
+
+  Future<void> _runNextAction() async {
+    final status = widget.order.status ?? 0;
+    if (widget.order.supportIssue || status == 8) {
+      await _openSupportSheet();
+      return;
+    }
+    if (status >= 10 && widget.order.isSettle != true) {
+      if (!mounted) return;
+      AppRouter.goToPayouts(context);
+      return;
+    }
+    if (status >= 4) {
+      await _openSupportSheet();
+      return;
+    }
+    await _reorder();
+  }
+
+  String _riskLabel() {
+    final status = widget.order.status ?? 0;
+    if (widget.order.supportIssue || status == 8) {
+      return 'High risk';
+    }
+    if (status == 7 || status == 9) {
+      return 'Closed issue';
+    }
+    if (status >= 4) {
+      return 'Watch delivery';
+    }
+    return 'Buyer follow-up';
+  }
+
+  Color _riskColor() {
+    final status = widget.order.status ?? 0;
+    if (widget.order.supportIssue || status == 8) {
+      return AppColor.alert;
+    }
+    if (status >= 4) {
+      return AppColor.warning;
+    }
+    return const Color(0xFF0E9F6E);
+  }
+
+  Color _riskBackground() {
+    final status = widget.order.status ?? 0;
+    if (widget.order.supportIssue || status == 8) {
+      return AppColor.alertLight;
+    }
+    if (status >= 4) {
+      return AppColor.warningLight;
+    }
+    return const Color(0xFFEAF8F1);
+  }
+
+  String _payoutLabel() {
+    final status = widget.order.status ?? 0;
+    if (widget.order.isSettle == true) {
+      return 'Paid out';
+    }
+    if (status >= 10) {
+      return 'Ready for payout';
+    }
+    if (status >= 4) {
+      return 'Clearing now';
+    }
+    return 'Delivery lock';
   }
 
   @override
@@ -132,7 +287,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: SellHubTopAppBar(
-        title: widget.order.orderId ?? 'Order details',
+        title: widget.order.orderId ?? 'Buyer order',
         icon: HugeIcons.strokeRoundedPackageSearch01,
         showBackButton: true,
       ),
@@ -149,17 +304,114 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                     state.actionSubmitting &&
                     state.actionOrderId == widget.order.id;
                 return _OrderActionPanel(
+                  primaryLabel: _nextActionLabel(),
+                  onPrimaryAction: _runNextAction,
                   onSupport: _openSupportSheet,
-                  onReorder: _reorder,
+                  onReportIssue: _openIssueReportSheet,
+                  onCopyId: _reorder,
                   onCancel: _canRequestCancel() ? _requestCancel : null,
                   isBusy: isBusy,
                 );
               },
             ),
             const SizedBox(height: 16),
-            _OrderProgressPanel(order: widget.order),
+            FutureBuilder<OrderIssueReport?>(
+              future: _issueReportFuture,
+              builder: (context, snapshot) {
+                final report = snapshot.data;
+                if (report == null) return const SizedBox.shrink();
+                return Column(
+                  children: [
+                    _OrderIssueReportCard(report: report),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              },
+            ),
+            FutureBuilder<SupplierTrustProfile?>(
+              future: _supplierTrustFuture,
+              builder: (context, snapshot) {
+                final profile = snapshot.data;
+                if (profile == null) {
+                  return const SizedBox.shrink();
+                }
+                final supplierName = context
+                    .read<StorefrontCubit>()
+                    .state
+                    .siteDetails
+                    ?.title
+                    ?.trim();
+                return Column(
+                  children: [
+                    _OrderSupplierExecutionCard(
+                      order: widget.order,
+                      profile: profile,
+                      supplierName: (supplierName?.isNotEmpty ?? false)
+                          ? supplierName!
+                          : (profile.supplierName?.trim().isNotEmpty ?? false)
+                          ? profile.supplierName!.trim()
+                          : 'Active supplier',
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              },
+            ),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColor.safe),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _nextActionTitle(),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: AppColor.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _HeroPill(
+                        label: 'Risk ${_riskLabel()}',
+                        toneColor: _riskColor(),
+                        background: _riskBackground(),
+                      ),
+                      _HeroPill(
+                        label: 'Cash ${_payoutLabel()}',
+                        toneColor: AppColor.primary,
+                        background: AppColor.primarySoft,
+                      ),
+                      _HeroPill(
+                        label: 'Next ${_nextActionLabel()}',
+                        toneColor: const Color(0xFF0E9F6E),
+                        background: const Color(0xFFEAF8F1),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _nextActionDescription(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColor.neutral2,
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
-            _QuickStatusStrip(order: widget.order),
+            _OrderProgressPanel(order: widget.order),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
@@ -225,14 +477,20 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
 class _OrderActionPanel extends StatelessWidget {
   const _OrderActionPanel({
+    required this.primaryLabel,
+    required this.onPrimaryAction,
     required this.onSupport,
-    required this.onReorder,
+    required this.onReportIssue,
+    required this.onCopyId,
     required this.onCancel,
     this.isBusy = false,
   });
 
+  final String primaryLabel;
+  final Future<void> Function() onPrimaryAction;
   final VoidCallback onSupport;
-  final VoidCallback onReorder;
+  final VoidCallback onReportIssue;
+  final VoidCallback onCopyId;
   final VoidCallback? onCancel;
   final bool isBusy;
 
@@ -245,28 +503,137 @@ class _OrderActionPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColor.safe),
       ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+      child: Column(
         children: [
-          _OrderActionChip(
-            label: 'Support',
-            icon: HugeIcons.strokeRoundedHelpCircle,
-            onTap: onSupport,
-            isBusy: isBusy,
-          ),
-          _OrderActionChip(
-            label: 'Reorder',
-            icon: HugeIcons.strokeRoundedReload,
-            onTap: onReorder,
-          ),
-          if (onCancel != null)
-            _OrderActionChip(
-              label: 'Cancel',
-              icon: HugeIcons.strokeRoundedCancel01,
-              onTap: onCancel!,
-              isBusy: isBusy,
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: isBusy ? null : onPrimaryAction,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDFF55A),
+                foregroundColor: AppColor.text,
+                elevation: 0,
+              ),
+              child: Text(primaryLabel),
             ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _OrderActionChip(
+                label: 'Support',
+                icon: HugeIcons.strokeRoundedHelpCircle,
+                onTap: onSupport,
+                isBusy: isBusy,
+              ),
+              _OrderActionChip(
+                label: 'Report issue',
+                icon: HugeIcons.strokeRoundedAlert02,
+                onTap: onReportIssue,
+              ),
+              _OrderActionChip(
+                label: 'Copy ID',
+                icon: HugeIcons.strokeRoundedReload,
+                onTap: onCopyId,
+              ),
+              if (onCancel != null)
+                _OrderActionChip(
+                  label: 'Cancel',
+                  icon: HugeIcons.strokeRoundedCancel01,
+                  onTap: onCancel!,
+                  isBusy: isBusy,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderIssueReportCard extends StatelessWidget {
+  const _OrderIssueReportCard({required this.report});
+
+  final OrderIssueReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final brief = StringBuffer('SellHub issue brief\n')
+      ..writeln('Order: ${report.orderId}')
+      ..writeln('Issue: ${report.issueType}')
+      ..writeln('Status: ${report.status}')
+      ..writeln('Updated: ${formatDateTime(report.updatedAt)}');
+    if (report.note.trim().isNotEmpty) {
+      brief.writeln('Note: ${report.note.trim()}');
+    }
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColor.alertLight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColor.alert),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const AppHugeIcon(
+                HugeIcons.strokeRoundedAlert02,
+                size: 18,
+                color: AppColor.alert,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Issue follow-up',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              _HeroPill(
+                label: report.status,
+                toneColor: AppColor.alert,
+                background: Colors.white,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${report.issueType} • ${formatDateTime(report.updatedAt)}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColor.alert,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (report.note.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              report.note,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColor.text,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: brief.toString()));
+                if (!context.mounted) return;
+                CustomToast.success('Issue brief copied');
+              },
+              icon: const Icon(Icons.copy_rounded, size: 18),
+              label: const Text('Copy issue brief'),
+            ),
+          ),
         ],
       ),
     );
@@ -313,9 +680,9 @@ class _OrderActionChip extends StatelessWidget {
             Text(
               isBusy ? 'Sending...' : label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColor.text,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: AppColor.text,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),
@@ -340,14 +707,26 @@ class _DetailsSupportSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final orderId = order.orderId ?? 'Order';
+    final status = OrdersScreen.statusNames[order.status] ?? 'Pending';
+    final cashState = order.isSettle == true
+        ? 'Paid out'
+        : (order.status ?? 0) >= 10
+            ? 'Ready for payout'
+            : (order.status ?? 0) >= 4
+                ? 'Clearing now'
+                : 'Delivery lock';
     final rows = <({String label, String value})>[
+      (label: 'Order', value: orderId),
+      (label: 'Status', value: status),
+      (label: 'Cash', value: cashState),
+      if ((order.customerPhone?.toString().trim().isNotEmpty ?? false))
+        (label: 'Buyer', value: order.customerPhone!.toString().trim()),
       if ((storeTitle ?? '').trim().isNotEmpty)
         (label: 'Store', value: storeTitle!.trim()),
       if ((storePhone ?? '').trim().isNotEmpty)
         (label: 'Phone', value: storePhone!.trim()),
       if ((storeEmail ?? '').trim().isNotEmpty)
         (label: 'Email', value: storeEmail!.trim()),
-      (label: 'Order ID', value: orderId),
     ];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
@@ -358,17 +737,17 @@ class _DetailsSupportSheet extends StatelessWidget {
           Text(
             'Order support',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Use these support details for cancel, return, delivery, or reorder questions.',
+            'Ready support context for this order.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 16),
           ...rows.map(
@@ -382,16 +761,16 @@ class _DetailsSupportSheet extends StatelessWidget {
             width: double.infinity,
             child: FilledButton(
               onPressed: () async {
-                final buffer = StringBuffer('Support reference\n');
+                final buffer = StringBuffer('SellHub support brief\n');
                 for (final row in rows) {
                   buffer.writeln('${row.label}: ${row.value}');
                 }
                 await Clipboard.setData(ClipboardData(text: buffer.toString()));
                 if (!context.mounted) return;
-                CustomToast.success('Support details copied');
+                CustomToast.success('Support brief copied');
                 Navigator.of(context).pop();
               },
-              child: const Text('Copy support details'),
+              child: const Text('Copy support brief'),
             ),
           ),
         ],
@@ -422,19 +801,137 @@ class _DetailsSupportRow extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _OrderIssueReportSheet extends StatefulWidget {
+  const _OrderIssueReportSheet({
+    required this.siteId,
+    required this.orderId,
+  });
+
+  final int siteId;
+  final String orderId;
+
+  @override
+  State<_OrderIssueReportSheet> createState() => _OrderIssueReportSheetState();
+}
+
+class _OrderIssueReportSheetState extends State<_OrderIssueReportSheet> {
+  final _noteController = TextEditingController();
+  String _issueType = 'Supplier problem';
+
+  static const List<String> _issueTypes = <String>[
+    'Supplier problem',
+    'Buyer fraud',
+    'Delivery problem',
+    'Payout follow-up',
+  ];
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          18,
+          16,
+          MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Report order issue',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppColor.text,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          const SizedBox(height: 6),
+          Text(
+            'Capture the issue once so follow-up stays consistent.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _issueTypes
+                  .map(
+                    (type) => ChoiceChip(
+                      label: Text(type),
+                      selected: _issueType == type,
+                      onSelected: (_) {
+                        setState(() {
+                          _issueType = type;
+                        });
+                      },
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _noteController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Issue note',
+                hintText: 'What happened and what should happen next?',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () async {
+                  final navigator = Navigator.of(context);
+                  final report = OrderIssueReport(
+                    id: 'issue-${DateTime.now().millisecondsSinceEpoch}',
+                    siteId: widget.siteId,
+                    orderId: widget.orderId,
+                    issueType: _issueType,
+                    note: _noteController.text.trim(),
+                    status: 'Open',
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                  );
+                  await LocalStorage.upsertOrderIssueReport(report);
+                  if (!mounted) return;
+                  navigator.pop(report);
+                },
+                child: const Text('Save issue brief'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -462,61 +959,84 @@ class _OrderHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColor.safe),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _OrderSectionLead(
-            icon: HugeIcons.strokeRoundedPackageSearch01,
-            eyebrow: 'Order snapshot',
-            title: 'Order details',
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+          Row(
             children: [
+              Expanded(
+                child: Text(
+                  order.orderId ?? 'Order',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColor.text,
+                  ),
+                ),
+              ),
               _HeroPill(
                 label: _statusNames[order.status] ?? 'Pending',
                 toneColor: AppColor.primary,
                 background: AppColor.primarySoft,
               ),
-              _HeroPill(
-                label: formatDateTime(order.updatedAt),
-                toneColor: AppColor.neutral2,
-                background: Colors.white,
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  order.customerName ?? 'Buyer',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColor.text,
+                  ),
+                ),
+              ),
+              Text(
+                order.isSettle == true ? 'Settled' : 'Payout pending',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppColor.neutral2,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Text(
-            order.orderId ?? 'Order',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColor.text,
-            ),
-          ),
           const SizedBox(height: 6),
           Text(
-            '৳ ${order.total?.toStringAsFixed(0) ?? '0'}',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: AppColor.primary,
+            '${order.customerPhone ?? ''}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 16),
-          _OrderMetaRow(label: 'Customer', value: order.customerName ?? 'Customer'),
-          _OrderMetaRow(
-            label: 'Phone',
-            value: '${order.customerPhone ?? ''}',
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _HeroPill(
+                label: 'Sell ${_currency(order.total)}',
+                toneColor: AppColor.primary,
+                background: AppColor.primarySoft,
+              ),
+              _HeroPill(
+                label: 'Margin ${_currency(order.profit)}',
+                toneColor: const Color(0xFF0E9F6E),
+                background: const Color(0xFFEAF8F1),
+              ),
+            ],
           ),
+          const SizedBox(height: 12),
+          _OrderMetaRow(label: 'Buyer', value: order.customerName ?? 'Buyer'),
+          _OrderMetaRow(label: 'Phone', value: '${order.customerPhone ?? ''}'),
           _OrderMetaRow(
-            label: 'Address',
+            label: 'Delivery',
             value: order.customerAddress ?? 'No address provided',
           ),
           if ((order.customerNote ?? '').trim().isNotEmpty)
@@ -526,6 +1046,175 @@ class _OrderHero extends StatelessWidget {
     );
   }
 }
+
+class _OrderSupplierExecutionCard extends StatelessWidget {
+  const _OrderSupplierExecutionCard({
+    required this.order,
+    required this.profile,
+    required this.supplierName,
+  });
+
+  final OrderHistoryResModelProfile order;
+  final SupplierTrustProfile profile;
+  final String supplierName;
+
+  bool get _isDelivered => (order.status ?? 0) >= 10;
+
+  bool get _isDelayed {
+    if (_isDelivered) return false;
+    final updatedAt = order.updatedAt ?? order.createdAt;
+    if (updatedAt == null) return false;
+    return DateTime.now().difference(updatedAt).inDays >= 3;
+  }
+
+  String get _slaLabel {
+    final avgDays = profile.averageDeliveryDays ?? 0;
+    if (avgDays > 0 && avgDays <= 2.5) return 'Fast SLA';
+    if (avgDays > 0 && avgDays <= 4.5) return 'Normal SLA';
+    return 'Watch SLA';
+  }
+
+  String get _escalationTitle {
+    if (order.supportIssue || order.status == 8) {
+      return 'Supplier escalation running';
+    }
+    if (_isDelayed) {
+      return 'Escalate now';
+    }
+    if (_isDelivered && order.isSettle != true) {
+      return 'Watch payout batch';
+    }
+    return 'Healthy execution';
+  }
+
+  String get _escalationDescription {
+    if (order.supportIssue || order.status == 8) {
+      return 'A supplier-side issue is already open. Keep buyer updates tight until resolution closes.';
+    }
+    if (_isDelayed) {
+      return 'This order has no fresh movement for 3+ days. Push supplier follow-up before payout risk grows.';
+    }
+    if (_isDelivered && order.isSettle != true) {
+      return 'Delivery is done. Margin should move into the next payout batch unless a dispute opens.';
+    }
+    return 'Supplier health is acceptable for this order. Continue normal buyer follow-up.';
+  }
+
+  String get _batchLabel {
+    if (order.isSettle == true) return 'Paid in batch';
+    if (order.supportIssue || order.status == 8) return 'Batch blocked';
+    if (_isDelivered) return 'Next payout batch';
+    return 'Batch locked';
+  }
+
+  Color get _batchColor {
+    if (order.isSettle == true) return AppColor.green;
+    if (order.supportIssue || order.status == 8) return AppColor.alert;
+    if (_isDelivered) return AppColor.primary;
+    return AppColor.warning;
+  }
+
+  Color get _batchBackground {
+    if (order.isSettle == true) return const Color(0xFFEAF8F1);
+    if (order.supportIssue || order.status == 8) return AppColor.alertLight;
+    if (_isDelivered) return AppColor.primarySoft;
+    return AppColor.warningLight;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final trustStyle = supplierTrustBandStyleForScore(profile.score);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColor.safe),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SupplierTrustScoreBadge(score: profile.score, compact: true),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Supplier execution truth',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: AppColor.text,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      supplierName,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _HeroPill(
+                label: _slaLabel,
+                toneColor: trustStyle.color,
+                background: trustStyle.softColor,
+              ),
+              _HeroPill(
+                label: 'Issue floor ${formatTrustPercent(profile.minimumIssueRate)}',
+                toneColor: (profile.minimumIssueRate ?? 100) <= 3
+                    ? AppColor.green
+                    : AppColor.warning,
+                background: (profile.minimumIssueRate ?? 100) <= 3
+                    ? const Color(0xFFEAF8F1)
+                    : AppColor.warningLight,
+              ),
+              _HeroPill(
+                label: _batchLabel,
+                toneColor: _batchColor,
+                background: _batchBackground,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            _escalationTitle,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _escalationDescription,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SupplierTrustCompactFacts(profile: profile),
+        ],
+      ),
+    );
+  }
+}
+
+String _currency(num? value) => '৳ ${(value ?? 0).toStringAsFixed(0)}';
 
 class _OrderProgressPanel extends StatelessWidget {
   const _OrderProgressPanel({required this.order});
@@ -627,35 +1316,6 @@ class _OrderProgressPanel extends StatelessWidget {
               );
             }),
           ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColor.safe1,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColor.safe),
-            ),
-            child: Row(
-              children: [
-                const AppHugeIcon(
-                  HugeIcons.strokeRoundedCustomerSupport,
-                  size: 18,
-                  color: AppColor.primary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Latest delivery and support context is shown here.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColor.neutral2,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -667,99 +1327,6 @@ class _ProgressStep {
 
   final String label;
   final List<List<dynamic>> icon;
-}
-
-class _QuickStatusStrip extends StatelessWidget {
-  const _QuickStatusStrip({required this.order});
-
-  final OrderHistoryResModelProfile order;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _StatusStripTile(
-            icon: HugeIcons.strokeRoundedCalendar03,
-            label: 'Updated',
-            value: formatDateTime(order.updatedAt),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatusStripTile(
-            icon: HugeIcons.strokeRoundedCall02,
-            label: 'Phone',
-            value: '${order.customerPhone ?? ''}'.isEmpty
-                ? 'Unavailable'
-                : '${order.customerPhone ?? ''}',
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatusStripTile extends StatelessWidget {
-  const _StatusStripTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final List<List<dynamic>> icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColor.safe),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: AppColor.safe1,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: AppHugeIcon(icon, size: 16, color: AppColor.primary),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColor.neutral2,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _OrderSectionLead extends StatelessWidget {
@@ -860,9 +1427,9 @@ class _OrderMetaRow extends StatelessWidget {
             width: 70,
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColor.neutral2,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColor.neutral2),
             ),
           ),
           const SizedBox(width: 12),
@@ -902,17 +1469,17 @@ class _TimelineMessage extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColor.neutral2,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColor.neutral2),
           ),
         ],
       ),
@@ -968,11 +1535,7 @@ class _TimelineTile extends StatelessWidget {
                 ),
               ),
               if (!isLast)
-                Container(
-                  width: 2,
-                  height: 72,
-                  color: AppColor.safe,
-                ),
+                Container(width: 2, height: 72, color: AppColor.safe),
             ],
           ),
         ),
@@ -999,17 +1562,17 @@ class _TimelineTile extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     formatDateTime(event.createdAt),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColor.neutral2,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColor.neutral2),
                   ),
                   if (event.address.trim().isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
                       event.address.trim(),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColor.neutral2,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColor.neutral2),
                     ),
                   ],
                 ],

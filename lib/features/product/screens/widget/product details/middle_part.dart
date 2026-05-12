@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:sellhub/core/product_viability/product_viability.dart';
+import 'package:sellhub/core/utils/convertBengaliNumber.dart';
 
 import '../../../../../core/constants/app_color.dart';
 import '../../../../../core/utils/custom_toast.dart';
@@ -26,6 +28,30 @@ class ProductDetailsMiddlePart extends StatelessWidget {
   Widget build(BuildContext context) {
     final labelStyle = TextStyle(color: AppColor.grey, fontSize: 12.sp);
     final valueStyle = TextStyle(color: AppColor.primary, fontSize: 12.sp);
+    final viability = ProductViabilityEngine.build(productResCommon);
+    final decisionTiles = <_DecisionTileData>[
+      _DecisionTileData(
+        icon: HugeIcons.strokeRoundedMoneyBag02,
+        label: 'Margin range',
+        value:
+            '৳${convertToBengaliNumber(viability.minMargin.round())}-${convertToBengaliNumber(viability.maxMargin.round())}',
+      ),
+      _DecisionTileData(
+        icon: HugeIcons.strokeRoundedShield01,
+        label: 'Supplier trust',
+        value: '${viability.trustScore.round()}/100',
+      ),
+      _DecisionTileData(
+        icon: HugeIcons.strokeRoundedShare08,
+        label: 'Shareability',
+        value: '${viability.shareabilityScore.round()}/100',
+      ),
+      _DecisionTileData(
+        icon: HugeIcons.strokeRoundedAlert02,
+        label: 'Delivery risk',
+        value: viabilityRiskLabel(viability.deliveryRisk),
+      ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.start,
@@ -74,6 +100,58 @@ class ProductDetailsMiddlePart extends StatelessWidget {
           ),
         ),
         SizedBox(height: 12.h),
+        Container(
+          padding: EdgeInsets.all(14.r),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18.r),
+            boxShadow: [
+              BoxShadow(
+                color: AppColor.text.withValues(alpha: 0.025),
+                blurRadius: 16,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _DetailSectionLead(
+                icon: HugeIcons.strokeRoundedTarget01,
+                title: 'Seller decision',
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                'Check profit room, trust, risk, and share strength before you quote the buyer.',
+                style: TextStyle(
+                  color: AppColor.secondary,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                  height: 1.35,
+                ),
+              ),
+              SizedBox(height: 12.h),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final tileWidth = (constraints.maxWidth - 8.w) / 2;
+                  return Wrap(
+                    spacing: 8.w,
+                    runSpacing: 8.h,
+                    children: decisionTiles
+                        .map(
+                          (tile) => SizedBox(
+                            width: tileWidth,
+                            child: _DecisionTile(data: tile),
+                          ),
+                        )
+                        .toList(growable: false),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 12.h),
         BlocBuilder<FavouriteCubit, FavouriteState>(
           builder: (context, favourites) {
             final isFav = favourites.favoriteIds.contains(product?.id ?? 0);
@@ -83,9 +161,9 @@ class ProductDetailsMiddlePart extends StatelessWidget {
                   productResCommon,
                 );
                 if (!isFav) {
-                  CustomToast.info('Added to the favourite');
+                  CustomToast.info('Saved for later selling');
                 } else {
-                  CustomToast.info('Removed from favourite');
+                  CustomToast.info('Removed from saved products');
                 }
               },
               child: Container(
@@ -109,14 +187,28 @@ class ProductDetailsMiddlePart extends StatelessWidget {
                     Expanded(
                       child: Text(
                         isFav
-                            ? 'Remove from your favorite list'
-                            : 'Add to your favorite list',
+                            ? 'Remove from saved products'
+                            : 'Save product for later',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: isFav ? AppColor.primary : AppColor.grey,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    Flexible(
+                      child: Text(
+                        isFav ? 'Shortlisted' : 'Keep for quote sharing',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          color: AppColor.secondary,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -162,6 +254,63 @@ class ProductDetailsMiddlePart extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DecisionTileData {
+  const _DecisionTileData({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final List<List<dynamic>> icon;
+  final String label;
+  final String value;
+}
+
+class _DecisionTile extends StatelessWidget {
+  const _DecisionTile({required this.data});
+
+  final _DecisionTileData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(12.r),
+      decoration: BoxDecoration(
+        color: AppColor.safe1,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColor.safe.withValues(alpha: 0.85)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppHugeIcon(data.icon, size: 16, color: AppColor.primary),
+          SizedBox(height: 8.h),
+          Text(
+            data.label,
+            style: TextStyle(
+              color: AppColor.grey,
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            data.value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppColor.text,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w800,
+              height: 1.25,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

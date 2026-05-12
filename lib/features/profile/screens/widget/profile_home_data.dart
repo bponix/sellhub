@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-
-import '../../../../core/constants/app_color.dart';
-import '../../../../core/widget/app_huge_icon.dart';
-import '../../data/model/profile_res-Model.dart';
+import 'package:sellhub/core/constants/app_color.dart';
+import 'package:sellhub/core/widget/app_huge_icon.dart';
+import 'package:sellhub/features/profile/data/model/profile_res-Model.dart';
 
 class ProfileHomeData extends StatelessWidget {
   const ProfileHomeData({super.key, required this.profile});
@@ -12,195 +11,187 @@ class ProfileHomeData extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _ProfileSectionLead(
-            icon: HugeIcons.strokeRoundedWalletAdd01,
-            title: 'Account snapshot',
-          ),
-          SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildBalanceStatus(
-                context: context,
-                text: 'Purchase',
-                color: Colors.blue,
-                amount: profile?.totalPurchase?.toStringAsFixed(0) ?? '0',
-                icon: Icons.add_shopping_cart_outlined,
-              ),
-              _buildBalanceStatus(
-                context: context,
-                text: 'Balance',
-                color: Colors.blue,
-                amount: profile?.totalBalance?.toStringAsFixed(0) ?? '0',
-                icon: Icons.balance,
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildBalanceStatus(
-                context: context,
-                text: 'Cashback',
-                color: Colors.deepPurple,
-                amount: profile?.totalCashbackBalance?.toStringAsFixed(0) ?? '0',
-                icon: Icons.attach_money_sharp,
-              ),
-              _buildBalanceStatus(
-                context: context,
-                text: 'Gift Card',
-                color: Colors.deepOrangeAccent,
-                amount: profile?.totalGiftCardBalance?.toStringAsFixed(0) ?? '0',
-                icon: Icons.card_giftcard_sharp,
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          _buildBalanceStatus(
-            context: context,
-            text: 'Reward Point',
-            color: Colors.green,
-            amount: profile?.totalRewardPoints?.toStringAsFixed(0) ?? '0',
-            icon: Icons.wallet_giftcard_sharp,
-          ),
+    final totalOrders = profile?.ordersTotal ?? 0;
+    final resellTotal = _currency(profile?.resellTotal);
+    final resellPayable = _currency(profile?.resellPayable);
+    final resellPaid = _currency(profile?.resellPaid);
+    final resellProcessing = _currency(profile?.resellProcessing);
 
-          SizedBox(height: 20),
-          const _ProfileSectionLead(
-            icon: HugeIcons.strokeRoundedPackageProcess,
-            title: 'Order status',
-          ),
-          SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildOrderStatusCard(
-                context: context,
-                text: 'Pending',
-                color: Colors.blue,
-                quantity: profile?.ordersPending?.toStringAsFixed(0) ?? '0',
-              ),
-              _buildOrderStatusCard(
-                context: context,
-                text: 'Processing',
-                color: Colors.deepPurple,
-                quantity: profile?.ordersPackaging?.toStringAsFixed(0) ?? '0',
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildOrderStatusCard(
-                context: context,
-                text: 'Delivered',
-                color: Colors.green,
-                quantity: profile?.ordersDelivered?.toStringAsFixed(0) ?? '0',
-              ),
-              _buildOrderStatusCard(
-                context: context,
-                text: 'Return',
-                color: Colors.orangeAccent,
-                quantity: profile?.ordersReturned?.toStringAsFixed(0) ?? '0',
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          _buildOrderStatusCard(
-            context: context,
-            text: 'Cancel',
-            color: Colors.pinkAccent,
-            quantity: profile?.ordersCancelled?.toStringAsFixed(0) ?? '0',
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _ProfileSectionLead(
+          icon: HugeIcons.strokeRoundedAnalytics01,
+          title: 'Business',
+        ),
+        const SizedBox(height: 14),
+        GridView.count(
+          crossAxisCount: 2,
+          childAspectRatio: 1.62,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _MetricTile(
+              label: 'Ready for payout',
+              value: resellPayable,
+              icon: HugeIcons.strokeRoundedMoneyReceiveSquare,
+              tone: const Color(0xFF0E9F6E),
+            ),
+            _MetricTile(
+              label: 'Paid out',
+              value: resellPaid,
+              icon: HugeIcons.strokeRoundedWalletDone02,
+              tone: const Color(0xFF2563EB),
+            ),
+            _MetricTile(
+              label: 'Processing',
+              value: resellProcessing,
+              icon: HugeIcons.strokeRoundedLoading03,
+              tone: const Color(0xFFEA580C),
+            ),
+            _MetricTile(
+              label: 'Resell total',
+              value: resellTotal,
+              icon: HugeIcons.strokeRoundedWallet02,
+              tone: AppColor.primary,
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        const _ProfileSectionLead(
+          icon: HugeIcons.strokeRoundedPackageProcess,
+          title: 'Pipeline',
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            _StatusChip(label: 'Total orders', value: '$totalOrders'),
+            _StatusChip(
+              label: 'Delivered',
+              value: '${profile?.ordersDelivered ?? 0}',
+            ),
+            _StatusChip(
+              label: 'Pending',
+              value: '${profile?.ordersPending ?? 0}',
+            ),
+            _StatusChip(
+              label: 'Packaging',
+              value: '${profile?.ordersPackaging ?? 0}',
+            ),
+            _StatusChip(
+              label: 'Returned',
+              value: '${profile?.ordersReturned ?? 0}',
+            ),
+            _StatusChip(
+              label: 'Canceled',
+              value: '${profile?.ordersCancelled ?? 0}',
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _buildOrderStatusCard({
-    required BuildContext context,
-    required String text,
-    required Color color,
-    required String quantity,
-  }) {
+  static String _currency(num? value) {
+    return '৳${(value ?? 0).toStringAsFixed(0)}';
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.tone,
+  });
+
+  final String label;
+  final String value;
+  final List<List<dynamic>> icon;
+  final Color tone;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(10),
-      height: 70,
-      width: MediaQuery.of(context).size.width / 2 - 30,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.5), width: 0.5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColor.safe),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            text,
-            style: TextStyle(color: AppColor.neutral2, fontWeight: FontWeight.w600),
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: tone.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: AppHugeIcon(icon, size: 16, color: tone),
+              ),
+            ],
           ),
-          SizedBox(height: 6),
+          const Spacer(),
           Text(
-            quantity,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: color,
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppColor.text,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildBalanceStatus({
-    required BuildContext context,
-    required Color color,
-    required String text,
-    required IconData icon,
-    required String amount,
-  }) {
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(10),
-      height: 90,
-      width: MediaQuery.of(context).size.width / 2 - 30,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: AppColor.grey.withValues(alpha: 0.3),
-          width: 0.5,
-        ),
+        color: AppColor.safe1,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColor.safe),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(text, style: TextStyle(color: AppColor.grey)),
-              CircleAvatar(
-                radius: 15,
-                backgroundColor: color.withValues(alpha: 0.12),
-                child: Icon(icon, size: 18, color: color),
-              ),
-            ],
-          ),
           Text(
-            '৳ $amount',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: color,
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],

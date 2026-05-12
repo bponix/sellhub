@@ -5,6 +5,8 @@ import 'package:sellhub/core/config/app_environment.dart';
 import 'package:sellhub/core/config/id_encoder.dart';
 import 'package:sellhub/core/constants/app_color.dart';
 import 'package:sellhub/core/local/local_storage.dart';
+import 'package:sellhub/core/product_viability/product_viability.dart';
+import 'package:sellhub/core/product_viability/product_viability_widgets.dart';
 import 'package:sellhub/core/store/store_context_cubit.dart';
 import 'package:sellhub/core/utils/constants.dart';
 import 'package:sellhub/core/utils/convertBengaliNumber.dart';
@@ -19,8 +21,25 @@ import 'package:sellhub/features/search/presentation/cubit/search_cubit.dart';
 import 'package:sellhub/features/search/presentation/cubit/search_state.dart';
 import 'package:sellhub/features/search/screen/search_button_click_result.dart';
 
+enum _SearchDiscoveryMode {
+  all,
+  whatsapp,
+  facebook,
+  cod,
+  lowRisk,
+  goodMargin,
+  repeat,
+}
+
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({
+    super.key,
+    this.initialMode,
+    this.initialQuery,
+  });
+
+  final String? initialMode;
+  final String? initialQuery;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -33,10 +52,16 @@ class _SearchScreenState extends State<SearchScreen> {
   static const String _recentSearchKey = 'sellhub_recent_search_v1';
   List<String> _recentSearches = const <String>[];
   int? _lastSiteId;
+  _SearchDiscoveryMode _discoveryMode = _SearchDiscoveryMode.all;
 
   @override
   void initState() {
     super.initState();
+    _discoveryMode = _modeFromValue(widget.initialMode);
+    final initialQuery = (widget.initialQuery ?? '').trim();
+    if (initialQuery.isNotEmpty) {
+      _controller.text = initialQuery;
+    }
     _loadRecentSearches();
     _focusNode.addListener(() {
       if (mounted) {
@@ -46,12 +71,42 @@ class _SearchScreenState extends State<SearchScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _focusNode.requestFocus();
+        if (initialQuery.isNotEmpty) {
+          final activeSiteId =
+              context.read<StoreContextCubit>().state.activeStore?.siteId ??
+              AppConstants.kDefaultSiteId;
+          context.read<SearchCubit>().search(
+            initialQuery,
+            siteId: activeSiteId,
+          );
+        }
       }
     });
     // Listen to controller changes to update the UI (specifically the Clear icon)
     _controller.addListener(() {
       setState(() {});
     });
+  }
+
+  _SearchDiscoveryMode _modeFromValue(String? value) {
+    switch ((value ?? '').trim().toLowerCase()) {
+      case 'whatsapp':
+        return _SearchDiscoveryMode.whatsapp;
+      case 'facebook':
+        return _SearchDiscoveryMode.facebook;
+      case 'cod':
+        return _SearchDiscoveryMode.cod;
+      case 'lowrisk':
+      case 'low-risk':
+        return _SearchDiscoveryMode.lowRisk;
+      case 'goodmargin':
+      case 'good-margin':
+        return _SearchDiscoveryMode.goodMargin;
+      case 'repeat':
+        return _SearchDiscoveryMode.repeat;
+      default:
+        return _SearchDiscoveryMode.all;
+    }
   }
 
   Future<void> _loadRecentSearches() async {
@@ -109,7 +164,7 @@ class _SearchScreenState extends State<SearchScreen> {
     final hasQuery = query.isNotEmpty;
     return Scaffold(
       appBar: SellHubTopAppBar(
-        title: 'Search',
+        title: 'Find products to sell',
         icon: HugeIcons.strokeRoundedSearch01,
         showBackButton: true,
         actions: [
@@ -173,33 +228,74 @@ class _SearchScreenState extends State<SearchScreen> {
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
         child: Column(
           children: [
-            _SearchContextHero(
-              hasQuery: hasQuery,
-              query: query,
-              recentCount: _recentSearches.length,
+            const SizedBox(height: 4),
+            _SearchStartCard(mode: _discoveryMode),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _SearchShortcutChip(
+                      label: 'WhatsApp winners',
+                      onTap: () => _runShortcutSearch(
+                        query: 'bundle',
+                        siteId: activeSiteId,
+                        mode: _SearchDiscoveryMode.whatsapp,
+                      ),
+                    ),
+                    _SearchShortcutChip(
+                      label: 'Low-risk COD',
+                      onTap: () => _runShortcutSearch(
+                        query: 'home',
+                        siteId: activeSiteId,
+                        mode: _SearchDiscoveryMode.cod,
+                      ),
+                    ),
+                    _SearchShortcutChip(
+                      label: 'Repeat buyers',
+                      onTap: () => _runShortcutSearch(
+                        query: 'beauty',
+                        siteId: activeSiteId,
+                        mode: _SearchDiscoveryMode.repeat,
+                      ),
+                    ),
+                    _SearchShortcutChip(
+                      label: 'Facebook winners',
+                      onTap: () => _runShortcutSearch(
+                        query: 'fashion',
+                        siteId: activeSiteId,
+                        mode: _SearchDiscoveryMode.facebook,
+                      ),
+                    ),
+                    _SearchShortcutChip(
+                      label: 'Margin starters',
+                      onTap: () => _runShortcutSearch(
+                        query: 'gift',
+                        siteId: activeSiteId,
+                        mode: _SearchDiscoveryMode.goodMargin,
+                      ),
+                    ),
+                    _SearchShortcutChip(
+                      label: 'Low-return lanes',
+                      onTap: () => _runShortcutSearch(
+                        query: 'daily',
+                        siteId: activeSiteId,
+                        mode: _SearchDiscoveryMode.lowRisk,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
+            const SizedBox(height: 12),
             if (hasQuery)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12, top: 2),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: const [
-                          _ContextChip(
-                            icon: HugeIcons.strokeRoundedStore01,
-                            label: 'Current store',
-                          ),
-                          _ContextChip(
-                            icon: HugeIcons.strokeRoundedSearchArea,
-                            label: 'Live match',
-                          ),
-                        ],
-                      ),
-                    ),
-                    TextButton(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
                     onPressed: () {
                       _pushRecentSearch(query);
                       context.read<SearchCubit>().searchProductsByButtonClick(
@@ -216,9 +312,8 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                       );
                     },
-                      child: const Text('Search'),
-                    ),
-                  ],
+                    child: const Text('Full results'),
+                  ),
                 ),
               ),
             Expanded(
@@ -229,46 +324,19 @@ class _SearchScreenState extends State<SearchScreen> {
                   }
                   if (_controller.text.isEmpty) {
                     if (_recentSearches.isEmpty) {
-                      return const _SearchEmptyState(
+                      return _SearchEmptyState(
                         icon: HugeIcons.strokeRoundedSearch01,
-                        title: 'Type something to search',
-                        subtitle:
-                            'Search products across the current store catalog.',
+                        title: 'Start with a reseller shortcut',
+                        subtitle: _modeHintLabel,
                       );
                     }
                     return ListView(
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 14),
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _ContextChip(
-                                icon: HugeIcons.strokeRoundedStore01,
-                                label: 'Current store',
-                              ),
-                              _ContextChip(
-                                icon: HugeIcons.strokeRoundedStars,
-                                label: 'Recent picks',
-                              ),
-                            ],
-                          ),
-                        ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Recent searches',
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(
-                                    color: AppColor.neutral2,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Pick up where you left off',
                               style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w800),
                             ),
@@ -322,74 +390,60 @@ class _SearchScreenState extends State<SearchScreen> {
                       subtitle: 'Try a different keyword or use full search.',
                     );
                   }
+                  final filteredProducts = _filterQuickMatches(state.products);
+                  if (filteredProducts.isEmpty) {
+                    return const _SearchEmptyState(
+                      icon: HugeIcons.strokeRoundedFilterVertical,
+                      title: 'No matches for this lens',
+                      subtitle: 'Try another reseller focus like margin, repeat, or low risk.',
+                    );
+                  }
                   return ListView.separated(
-                    itemCount: state.products.length + 1,
+                    itemCount: filteredProducts.length + 1,
                     separatorBuilder: (_, index) => SizedBox(
                       height: index == 0 ? 12 : 10,
                     ),
                     itemBuilder: (context, index) {
                       if (index == 0) {
-                        return Row(
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: AppColor.safe1,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: AppColor.safe),
-                              ),
-                              child: const AppHugeIcon(
-                                HugeIcons.strokeRoundedSearch01,
-                                size: 18,
-                                color: AppColor.primary,
-                              ),
+                            Text(
+                              '${filteredProducts.length} matches',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColor.text,
+                                  ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Quick results',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelSmall
-                                        ?.copyWith(
-                                          color: AppColor.neutral2,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${state.products.length} instant matches',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                          color: AppColor.text,
-                                        ),
-                                  ),
-                                ],
-                              ),
+                            const SizedBox(height: 10),
+                            _SearchDiscoveryModeStrip(
+                              current: _discoveryMode,
+                              onChanged: (mode) {
+                                setState(() {
+                                  _discoveryMode = mode;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                            _SearchContextHint(
+                              label: _modeHintLabel,
+                              icon: _modeHintIcon,
                             ),
                           ],
                         );
                       }
-
-                      final item = state.products[index - 1];
+                      final item = filteredProducts[index - 1];
+                      final mappedProduct = SearchToProductMapper.toProduct(item);
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 0),
                         child: InkWell(
                           onTap: () {
-                            final product = SearchToProductMapper.toProduct(item);
                             final hid = encodeId(item.id);
                             Navigator.of(context).push(
                               ProductDetailsScreen.route(
                                 hid: hid,
-                                product: product,
+                                product: mappedProduct,
                               ),
                             );
                           },
@@ -433,50 +487,38 @@ class _SearchScreenState extends State<SearchScreen> {
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColor.text,
-                                          height: 1.25,
-                                        ),
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColor.text,
+                                              height: 1.25,
+                                            ),
                                       ),
                                       const SizedBox(height: 8),
                                       Row(
                                         children: [
-                                          Text(
-                                            '৳ ${convertToBengaliNumber(item.price.toInt())}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelLarge
-                                                ?.copyWith(
-                                                  color: AppColor.text,
-                                                  fontWeight: FontWeight.w800,
-                                                ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: AppColor.safe1,
-                                              borderRadius: BorderRadius.circular(
-                                                999,
-                                              ),
-                                            ),
+                                          Expanded(
                                             child: Text(
-                                              'Quick match',
+                                              '৳ ${convertToBengaliNumber(item.price.toInt())}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: Theme.of(context)
                                                   .textTheme
-                                                  .labelSmall
+                                                  .labelLarge
                                                   ?.copyWith(
-                                                    color: AppColor.primary,
+                                                    color: AppColor.text,
                                                     fontWeight: FontWeight.w800,
                                                   ),
                                             ),
                                           ),
+                                          const SizedBox(width: 8),
+                                          _SearchCuePill(
+                                            label: _productCueLabel(mappedProduct),
+                                          ),
                                         ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      ProductViabilityCompactBlock(
+                                        product: mappedProduct,
+                                        maxLabels: 2,
                                       ),
                                     ],
                                   ),
@@ -507,6 +549,236 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _runShortcutSearch({
+    required String query,
+    required int siteId,
+    _SearchDiscoveryMode? mode,
+  }) {
+    _controller.text = query;
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: _controller.text.length),
+    );
+    if (mode != null) {
+      setState(() {
+        _discoveryMode = mode;
+      });
+    }
+    context.read<SearchCubit>().search(query, siteId: siteId);
+  }
+
+  List<dynamic> _filterQuickMatches(List<dynamic> items) {
+    return items.where((item) {
+      final product = SearchToProductMapper.toProduct(item);
+      final viability = ProductViabilityEngine.build(product);
+      switch (_discoveryMode) {
+        case _SearchDiscoveryMode.all:
+          return true;
+        case _SearchDiscoveryMode.whatsapp:
+          return !product.isOutOfStock &&
+              _hasLabel(viability, 'Good margin') &&
+              viability.shareabilityScore >= 68;
+        case _SearchDiscoveryMode.facebook:
+          return !product.isOutOfStock &&
+              (_hasLabel(viability, 'High repeat potential') ||
+                  viability.demandScore >= 72);
+        case _SearchDiscoveryMode.cod:
+          return !product.isOutOfStock &&
+              (product.price ?? 0) <= 2500 &&
+              _isLowRisk(viability);
+        case _SearchDiscoveryMode.lowRisk:
+          return !product.isOutOfStock && _isLowRisk(viability);
+        case _SearchDiscoveryMode.goodMargin:
+          return _hasLabel(viability, 'Good margin') ||
+              viability.maxMargin >= 150;
+        case _SearchDiscoveryMode.repeat:
+          return _hasLabel(viability, 'High repeat potential') ||
+              viability.shareabilityScore >= 74;
+      }
+    }).toList(growable: false);
+  }
+
+  String get _modeHintLabel {
+    switch (_discoveryMode) {
+      case _SearchDiscoveryMode.whatsapp:
+        return 'Quick replies and faster close';
+      case _SearchDiscoveryMode.facebook:
+        return 'Post-friendly picks for comment leads';
+      case _SearchDiscoveryMode.cod:
+        return 'Safer price band for COD buyers';
+      case _SearchDiscoveryMode.lowRisk:
+        return 'Lower fulfilment pressure picks';
+      case _SearchDiscoveryMode.goodMargin:
+        return 'Stronger spread before buyer negotiation';
+      case _SearchDiscoveryMode.repeat:
+        return 'Items easier to sell again nearby';
+      case _SearchDiscoveryMode.all:
+        return 'Compact reseller matches across active suppliers';
+    }
+  }
+
+  List<List<dynamic>> get _modeHintIcon {
+    switch (_discoveryMode) {
+      case _SearchDiscoveryMode.whatsapp:
+        return HugeIcons.strokeRoundedWhatsapp;
+      case _SearchDiscoveryMode.facebook:
+        return HugeIcons.strokeRoundedFacebook02;
+      case _SearchDiscoveryMode.cod:
+        return HugeIcons.strokeRoundedDeliveryTruck01;
+      case _SearchDiscoveryMode.lowRisk:
+        return HugeIcons.strokeRoundedShield01;
+      case _SearchDiscoveryMode.goodMargin:
+        return HugeIcons.strokeRoundedWallet02;
+      case _SearchDiscoveryMode.repeat:
+        return HugeIcons.strokeRoundedReload;
+      case _SearchDiscoveryMode.all:
+        return HugeIcons.strokeRoundedSparkles;
+    }
+  }
+
+  String _productCueLabel(product) {
+    final viability = ProductViabilityEngine.build(product);
+    switch (_discoveryMode) {
+      case _SearchDiscoveryMode.whatsapp:
+        return 'WhatsApp';
+      case _SearchDiscoveryMode.facebook:
+        return 'Facebook';
+      case _SearchDiscoveryMode.cod:
+        return 'COD';
+      case _SearchDiscoveryMode.lowRisk:
+        return 'Low risk';
+      case _SearchDiscoveryMode.goodMargin:
+        return viability.maxMargin >= 180 ? 'High margin' : 'Margin';
+      case _SearchDiscoveryMode.repeat:
+        return 'Repeat';
+      case _SearchDiscoveryMode.all:
+        if (_hasLabel(viability, 'High repeat potential')) {
+          return 'Repeat';
+        }
+        if (_hasLabel(viability, 'Good margin')) {
+          return 'Margin';
+        }
+        if (_isLowRisk(viability)) {
+          return 'Low risk';
+        }
+        return 'Fast match';
+    }
+  }
+
+  bool _hasLabel(ProductViabilityProfile viability, String label) {
+    return viability.labels.contains(label);
+  }
+
+  bool _isLowRisk(ProductViabilityProfile viability) {
+    return viability.deliveryRisk != ViabilityRiskLevel.high &&
+        viability.returnSensitivity != ViabilityRiskLevel.high;
+  }
+}
+
+class _SearchShortcutChip extends StatelessWidget {
+  const _SearchShortcutChip({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ActionChip(
+        backgroundColor: Colors.white,
+        side: const BorderSide(color: AppColor.safe),
+        label: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: AppColor.text,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        onPressed: onTap,
+      ),
+    );
+  }
+}
+
+class _SearchStartCard extends StatelessWidget {
+  const _SearchStartCard({required this.mode});
+
+  final _SearchDiscoveryMode mode;
+
+  String get _title {
+    switch (mode) {
+      case _SearchDiscoveryMode.whatsapp:
+        return 'WhatsApp selling mode';
+      case _SearchDiscoveryMode.facebook:
+        return 'Facebook selling mode';
+      case _SearchDiscoveryMode.cod:
+        return 'COD-safe search';
+      case _SearchDiscoveryMode.lowRisk:
+        return 'Lower-risk search';
+      case _SearchDiscoveryMode.goodMargin:
+        return 'Margin-first search';
+      case _SearchDiscoveryMode.repeat:
+        return 'Repeat-sell search';
+      case _SearchDiscoveryMode.all:
+        return 'Find products to sell';
+    }
+  }
+
+  String get _subtitle {
+    switch (mode) {
+      case _SearchDiscoveryMode.whatsapp:
+        return 'Pull fast-close products you can reply with in chat.';
+      case _SearchDiscoveryMode.facebook:
+        return 'Prioritize products that look strong in posts and captions.';
+      case _SearchDiscoveryMode.cod:
+        return 'Keep delivery promise and return risk easier to manage.';
+      case _SearchDiscoveryMode.lowRisk:
+        return 'Safer fulfilment is better when the buyer is uncertain.';
+      case _SearchDiscoveryMode.goodMargin:
+        return 'Start from profit, then narrow to what your buyers will accept.';
+      case _SearchDiscoveryMode.repeat:
+        return 'Look for products that neighbours can reorder later.';
+      case _SearchDiscoveryMode.all:
+        return 'Search the multivendor catalog with a clear reseller lens.';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColor.safe),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColor.text,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _subtitle,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColor.neutral2,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -563,109 +835,116 @@ class _SearchEmptyState extends StatelessWidget {
   }
 }
 
-class _SearchContextHero extends StatelessWidget {
-  const _SearchContextHero({
-    required this.hasQuery,
-    required this.query,
-    required this.recentCount,
+class _SearchDiscoveryModeStrip extends StatelessWidget {
+  const _SearchDiscoveryModeStrip({
+    required this.current,
+    required this.onChanged,
   });
 
-  final bool hasQuery;
-  final String query;
-  final int recentCount;
+  final _SearchDiscoveryMode current;
+  final ValueChanged<_SearchDiscoveryMode> onChanged;
+
+  static const List<(_SearchDiscoveryMode, String, List<List<dynamic>>)> _items = <
+      (_SearchDiscoveryMode, String, List<List<dynamic>>)>[
+    (_SearchDiscoveryMode.all, 'All', HugeIcons.strokeRoundedSparkles),
+    (_SearchDiscoveryMode.whatsapp, 'WhatsApp', HugeIcons.strokeRoundedWhatsapp),
+    (_SearchDiscoveryMode.facebook, 'Facebook', HugeIcons.strokeRoundedFacebook02),
+    (_SearchDiscoveryMode.cod, 'COD', HugeIcons.strokeRoundedDeliveryTruck01),
+    (_SearchDiscoveryMode.lowRisk, 'Low risk', HugeIcons.strokeRoundedShield01),
+    (_SearchDiscoveryMode.goodMargin, 'Margin', HugeIcons.strokeRoundedWallet02),
+    (_SearchDiscoveryMode.repeat, 'Repeat', HugeIcons.strokeRoundedReload),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final title = hasQuery ? query : 'Search the catalog';
-    final subtitle = hasQuery
-        ? 'Live results across products, brands, and categories'
-        : 'Fast lookup with recent searches and instant matches';
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: _items
+            .map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: InkWell(
+                  onTap: () => onChanged(item.$1),
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: current == item.$1
+                          ? AppColor.primarySoft
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: current == item.$1
+                            ? AppColor.primary
+                            : AppColor.safe,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppHugeIcon(
+                          item.$3,
+                          size: 13,
+                          color: current == item.$1
+                              ? AppColor.primary
+                              : AppColor.neutral2,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          item.$2,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: current == item.$1
+                                    ? AppColor.primary
+                                    : AppColor.text,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+            .toList(growable: false),
+      ),
+    );
+  }
+}
 
+class _SearchContextHint extends StatelessWidget {
+  const _SearchContextHint({
+    required this.label,
+    required this.icon,
+  });
+
+  final String label;
+  final List<List<dynamic>> icon;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColor.safe1,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColor.safe),
       ),
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColor.safe),
-            ),
-            child: const AppHugeIcon(
-              HugeIcons.strokeRoundedSearchVisual,
-              size: 20,
-              color: AppColor.primary,
-            ),
-          ),
-          const SizedBox(width: 12),
+          AppHugeIcon(icon, size: 14, color: AppColor.primary),
+          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  hasQuery ? 'Searching now' : 'Discover faster',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColor.neutral2,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: AppColor.text,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColor.neutral2,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColor.safe),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  '$recentCount',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColor.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  'Recent',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColor.neutral2,
                     fontWeight: FontWeight.w700,
                   ),
-                ),
-              ],
             ),
           ),
         ],
@@ -674,37 +953,25 @@ class _SearchContextHero extends StatelessWidget {
   }
 }
 
-class _ContextChip extends StatelessWidget {
-  const _ContextChip({
-    required this.icon,
-    required this.label,
-  });
+class _SearchCuePill extends StatelessWidget {
+  const _SearchCuePill({required this.label});
 
-  final List<List<dynamic>> icon;
   final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppColor.safe1,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColor.safe),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppHugeIcon(icon, size: 14, color: AppColor.primary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColor.neutral3,
-              fontWeight: FontWeight.w700,
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: AppColor.primary,
+              fontWeight: FontWeight.w800,
             ),
-          ),
-        ],
       ),
     );
   }
@@ -747,7 +1014,7 @@ class _HealthSearchFieldBar extends StatelessWidget {
         onSubmitted: onSubmit,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: 'Search store, brand, category, product',
+          hintText: 'Search product, category, keyword',
           prefixIcon: const Padding(
             padding: EdgeInsets.only(left: 8, right: 6),
             child: AppHugeIcon(

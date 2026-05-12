@@ -2,39 +2,39 @@
 
 ## One-Line Idea
 
-SellHub should feel like the fastest path from store discovery to completed order for any Bponi-powered shop.
+SellHub should feel like the fastest way to start and run a business without inventory.
 
 ## Product Thesis
 
 The app exists to solve one problem well:
 
-make mobile commerce inside the Bponi ecosystem clear, trustworthy, and conversion-friendly.
+make seller-led commerce inside the Bponi ecosystem instant, trustworthy, and easy to operate from a phone.
 
-That means a customer should be able to:
+That means a seller should be able to:
 
-- enter the right store quickly
-- understand what the store offers immediately
-- find products without friction
-- buy with confidence
-- return later without losing context
+- pick a product and start selling in minutes
+- understand margin and fulfillment responsibility clearly
+- share products across social channels without manual setup
+- place and track orders without holding stock
+- grow from solo selling into repeat, team-based selling
 
 ## What SellHub Is
 
 SellHub is:
 
-- a multi-store customer commerce app
-- a store-context-aware browsing shell
-- a product discovery and conversion app
-- an order continuity app
+- a seller-layer mobile app inside the Bponi commerce network
+- a supply-to-seller bridge powered by Bponi Store merchants
+- a zero-inventory selling shell for individuals and small teams
+- a trust and order-routing layer between supplier and buyer
 - a notification-aware and deep-link-aware mobile client
 
 ## What SellHub Is Not
 
 SellHub is not:
 
+- only a shopper storefront
 - a generic ecommerce UI playground
 - a back-office operations app
-- a copy of Suite HR or staff workflows
 - a place for non-commerce feature sprawl
 
 If a feature does not improve discovery, trust, conversion, order continuity, or retention, it should be questioned before it is added.
@@ -43,34 +43,34 @@ If a feature does not improve discovery, trust, conversion, order continuity, or
 
 The core journey should remain:
 
-`Select store -> Browse home -> Search or open category -> Open product -> Add to cart -> Checkout -> Order success -> Re-enter from profile, orders, or notifications`
+`Discover supplier products -> Tap Sell this -> Share product -> Capture buyer intent -> Route order -> Track fulfillment -> Re-sell and grow`
 
 Every screen in SellHub should support or shorten that journey.
 
 ## Product Pillars
 
-### 1. Store-first clarity
+### 1. Zero-friction selling
 
-- entering the wrong store should be hard
-- active-store context should be obvious
-- store switching should be fast and reversible
+- product import should feel instant
+- seller setup should stay near-zero
+- the app should make starting the first sale feel obvious
 
-### 2. Fast discovery
+### 2. Supply and discovery quality
 
-- home must surface useful categories, offers, brands, and product rails
-- category and search should reduce effort, not add steps
-- product cards should stay dense, readable, and scannable
+- suppliers and products should be easy to discover
+- categories and search should reduce time-to-first-share
+- product cards should make value, trust, and margin scannable
 
-### 3. Frictionless conversion
+### 3. Social-first conversion
 
-- the app should make buying feel low-risk and obvious
-- cart and checkout should remove hesitation
-- primary buying actions must stay visible and stable
+- the app should help sellers convert through WhatsApp, Facebook, and similar channels
+- primary share and order actions must stay visible and stable
+- seller actions should remove operational hesitation, not add setup work
 
-### 4. Order continuity
+### 4. Fulfillment trust
 
-- returning users should recover context quickly
-- order status should feel connected to the shopping flow, not bolted on
+- supplier reliability should be visible
+- order routing and delivery updates should feel connected to the selling flow
 - notifications and deep links should reopen the correct route cleanly
 
 ### 5. Platform reliability
@@ -142,14 +142,15 @@ The interface should look polished, but polish should never come from adding noi
 
 The valid long-term domains for SellHub are:
 
-- discovery
-- storefront
-- categories
-- search
-- product
-- favourite
-- cart
-- checkout
+- supplier discovery
+- seller dashboard
+- product import
+- pricing and margin
+- social sharing
+- lead and order capture
+- fulfillment tracking
+- trust and verification
+- team selling
 - orders
 - profile
 - notifications
@@ -169,21 +170,20 @@ Anything outside this list should justify itself in direct commerce terms.
 
 A SellHub change is only done when:
 
-- the end-to-end customer flow still works
+- the end-to-end seller flow still works
 - touched files are analyzer-clean
 - route behavior stays stable
 - loading, empty, error, and retry states remain explainable
-- the change improves commerce clarity instead of adding UI weight
+- the change improves seller speed, trust, or conversion instead of adding UI weight
 - the feature stays inside the product boundary
 
 ## Decision Filter
 
 Before shipping work in SellHub, ask:
 
-1. Does this make discovery, trust, conversion, order continuity, or retention better?
+1. Does this make starting, sharing, routing, or scaling sales better?
 2. Does it follow the shared architecture style instead of adding a one-off pattern?
-3. Is it clearly commerce-relevant?
+3. Is it clearly relevant to the seller-layer vision?
 4. Does it keep the app compact and predictable?
 
 If the answer is weak, narrow the work before building it.
-

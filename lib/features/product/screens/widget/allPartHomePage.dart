@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:sellhub/core/constants/app_color.dart';
+import 'package:sellhub/core/product_viability/product_viability.dart';
 import 'package:sellhub/core/store/store_scope.dart';
+import 'package:sellhub/core/utils/app_router.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
-import 'package:sellhub/core/widget/app_network_image.dart';
+import 'package:sellhub/features/categories/screen/sub_category_products_screen.dart';
 import 'package:sellhub/features/product/screens/new_arrival_product.dart';
-import 'package:sellhub/features/product/data/models/top_brand_res.dart';
 import 'package:sellhub/features/product/screens/widget/product_list_vertical.dart';
 import 'package:sellhub/features/product/screens/widget/product_list_view_horizontal.dart';
-import 'package:sellhub/features/categories/screen/sub_category_products_screen.dart';
 import 'package:sellhub/features/storefront/presentation/cubit/storefront_cubit.dart';
 import 'package:sellhub/features/storefront/presentation/cubit/storefront_state.dart';
 
@@ -19,118 +19,180 @@ class AllPartHomePage extends StatelessWidget {
     required this.flashSaleController,
     required this.newArrivalController,
     required this.storefrontState,
+    this.discoveryFocus = 'all',
   });
 
   final ScrollController flashSaleController;
   final ScrollController newArrivalController;
   final StorefrontState storefrontState;
+  final String discoveryFocus;
 
   static const double _sectionGap = 20;
   static const double _blockGap = 12;
 
   @override
   Widget build(BuildContext context) {
-    const visibleCount = 3;
+    const visibleCount = 2;
+    final allProducts = storefrontState.products;
+    final whatsappProducts = applyProductViability(
+      allProducts,
+      filter: ProductViabilityFilter.goodMargin,
+      sort: ProductViabilitySort.highestMargin,
+    );
+    final codProducts = applyProductViability(
+      allProducts,
+      filter: ProductViabilityFilter.beginnerFriendly,
+      sort: ProductViabilitySort.lowestRisk,
+    );
+    final repeatProducts = applyProductViability(
+      allProducts,
+      filter: ProductViabilityFilter.highRepeatPotential,
+      sort: ProductViabilitySort.highRepeatPotential,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _PromoPercentRail(),
-        const SizedBox(height: _sectionGap),
-        if (storefrontState.topBrand.isNotEmpty) ...[
-          _SectionPanel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionLead(
-                  icon: HugeIcons.strokeRoundedAward01,
-                  title: 'Brands',
-                  badge: storefrontState.topBrand.length.toString(),
-                ),
-                const SizedBox(height: _blockGap),
-                _TwoRowBrandRail(brands: storefrontState.topBrand),
-              ],
-            ),
+        if (allProducts.isNotEmpty) ...[
+          _DiscoveryMomentumStrip(chips: _chipsForFocus()),
+          const SizedBox(height: _sectionGap),
+          const _ResellerTaskRail(),
+          const SizedBox(height: _sectionGap),
+          const _ResellerTaskRail(
+            title: 'Student / housewife / social queue',
+            subtitle: 'Use the fastest BD-friendly moves for side-hustle sellers.',
+            tasks: [
+              _ResellerTaskItem(
+                title: 'Student sprint',
+                subtitle: 'Check quick COD replies between classes',
+                icon: HugeIcons.strokeRoundedInvoice03,
+                onTapRoute: _ResellerTaskRoute.orders,
+              ),
+              _ResellerTaskItem(
+                title: 'Housewife repeat',
+                subtitle: 'Warm buyer book for neighbour reorders',
+                icon: HugeIcons.strokeRoundedUserGroup,
+                onTapRoute: _ResellerTaskRoute.buyers,
+              ),
+              _ResellerTaskItem(
+                title: 'Social repost',
+                subtitle: 'Push saved winners back to Facebook and WhatsApp',
+                icon: HugeIcons.strokeRoundedFavourite,
+                onTapRoute: _ResellerTaskRoute.saved,
+              ),
+              _ResellerTaskItem(
+                title: 'Cash-out check',
+                subtitle: 'Track payout before the next buying cycle',
+                icon: HugeIcons.strokeRoundedWallet02,
+                onTapRoute: _ResellerTaskRoute.payouts,
+              ),
+            ],
           ),
           const SizedBox(height: _sectionGap),
         ],
-        if (storefrontState.newArrival.isNotEmpty) ...[
-          _SectionPanel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionLead(
-                  icon: HugeIcons.strokeRoundedSparkles,
-                  title: 'New',
-                  badge: storefrontState.newArrival.length.toString(),
-                  onTap: () {
-                    context.read<StorefrontCubit>().fetchNewArrival(
-                      StoreScope.siteIdFromState(storefrontState),
-                      16,
-                      0,
-                    );
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => NewArrivalProductScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: _blockGap),
-                ProductListViewHorizontal(
-                  products: storefrontState.newArrival,
-                  scrollController: newArrivalController,
-                  visibleCountOverride: visibleCount,
-                  horizontalInset: 0,
-                ),
-              ],
-            ),
+        if (_showWhatsAppRail && whatsappProducts.isNotEmpty) ...[
+          _SectionLead(
+            title: discoveryFocus == 'whatsapp'
+                ? 'WhatsApp quick sell'
+                : 'WhatsApp-ready picks',
+          ),
+          const SizedBox(height: _blockGap),
+          ProductListViewHorizontal(
+            products: whatsappProducts.take(12).toList(growable: false),
+            scrollController: flashSaleController,
+            visibleCountOverride: visibleCount,
+            horizontalInset: 0,
+          ),
+          const SizedBox(height: _sectionGap),
+        ],
+        if (_showCodRail && codProducts.isNotEmpty) ...[
+          _SectionLead(
+            title: discoveryFocus == 'cod'
+                ? 'COD-friendly picks'
+                : 'Lower-risk COD picks',
+          ),
+          const SizedBox(height: _blockGap),
+          ProductListViewHorizontal(
+            products: codProducts.take(12).toList(growable: false),
+            scrollController: flashSaleController,
+            visibleCountOverride: visibleCount,
+            horizontalInset: 0,
+          ),
+          const SizedBox(height: _sectionGap),
+        ],
+        if (storefrontState.flashSale.isNotEmpty) ...[
+          _SectionLead(title: _fastMoverTitle),
+          const SizedBox(height: _blockGap),
+          ProductListViewHorizontal(
+            products: storefrontState.flashSale
+                .take(12)
+                .toList(growable: false),
+            scrollController: flashSaleController,
+            visibleCountOverride: visibleCount,
+            horizontalInset: 0,
           ),
           const SizedBox(height: _sectionGap),
         ],
         if (storefrontState.products.isNotEmpty) ...[
-          _SectionPanel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionLead(
-                  icon: HugeIcons.strokeRoundedFire,
-                  title: 'Trending',
-                  badge: storefrontState.products.length.toString(),
+          _SectionLead(title: _easySellTitle),
+          const SizedBox(height: _blockGap),
+          ProductListViewHorizontal(
+            products: storefrontState.products
+                .take(12)
+                .toList(growable: false),
+            scrollController: flashSaleController,
+            visibleCountOverride: visibleCount,
+            horizontalInset: 0,
+          ),
+          const SizedBox(height: _sectionGap),
+        ],
+        if (storefrontState.newArrival.isNotEmpty) ...[
+          _SectionLead(
+            title: 'New supplier drops',
+            onTap: () {
+              context.read<StorefrontCubit>().fetchNewArrival(
+                StoreScope.siteIdFromState(storefrontState),
+                16,
+                0,
+              );
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => NewArrivalProductScreen(),
                 ),
-                const SizedBox(height: _blockGap),
-                ProductListViewHorizontal(
-                  products: storefrontState.products
-                      .take(12)
-                      .toList(growable: false),
-                  scrollController: flashSaleController,
-                  visibleCountOverride: visibleCount,
-                  horizontalInset: 0,
-                ),
-              ],
-            ),
+              );
+            },
+          ),
+          const SizedBox(height: _blockGap),
+          ProductListViewHorizontal(
+            products: storefrontState.newArrival,
+            scrollController: newArrivalController,
+            visibleCountOverride: visibleCount,
+            horizontalInset: 0,
+          ),
+          const SizedBox(height: _sectionGap),
+        ],
+        if (_showRepeatRail && repeatProducts.isNotEmpty) ...[
+          _SectionLead(
+            title: discoveryFocus == 'repeat'
+                ? 'Repeat buyer picks'
+                : 'Easy to repost',
+          ),
+          const SizedBox(height: _blockGap),
+          ProductListViewHorizontal(
+            products: repeatProducts.take(12).toList(growable: false),
+            visibleCountOverride: visibleCount,
+            horizontalInset: 0,
           ),
           const SizedBox(height: _sectionGap),
         ],
         ..._buildCategorySections(context, visibleCount),
         if (storefrontState.products.isNotEmpty) ...[
-          _SectionPanel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionLead(
-                  icon: HugeIcons.strokeRoundedShoppingBag01,
-                  title: 'More to explore',
-                  badge: storefrontState.products.length.toString(),
-                ),
-                const SizedBox(height: _blockGap),
-                ProductListViewVerical(
-                  products: storefrontState.products,
-                  emphasizeImage: true,
-                  denseMode: true,
-                  padding: EdgeInsets.zero,
-                ),
-              ],
-            ),
+          const _SectionLead(title: 'All products'),
+          const SizedBox(height: _blockGap),
+          ProductListViewVerical(
+            products: storefrontState.products,
+            emphasizeImage: true,
+            denseMode: true,
+            padding: EdgeInsets.zero,
           ),
           const SizedBox(height: _sectionGap),
         ],
@@ -153,35 +215,26 @@ class AllPartHomePage extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SectionPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SectionLead(
-                      icon: HugeIcons.strokeRoundedShoppingBag02,
-                      title: title,
-                      badge: products.length.toString(),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => SubCategoryProductsScreen(
-                              subCategoryId: -1,
-                              title: title,
-                              seeAll: true,
-                              categoryId: categoryId,
-                            ),
-                          ),
-                        );
-                      },
+              _SectionLead(
+                title: title,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SubCategoryProductsScreen(
+                        subCategoryId: -1,
+                        title: title,
+                        seeAll: true,
+                        categoryId: categoryId,
+                      ),
                     ),
-                    const SizedBox(height: _blockGap),
-                    ProductListViewHorizontal(
-                      products: products.take(12).toList(growable: false),
-                      visibleCountOverride: visibleCount,
-                      horizontalInset: 0,
-                    ),
-                  ],
-                ),
+                  );
+                },
+              ),
+              const SizedBox(height: _blockGap),
+              ProductListViewHorizontal(
+                products: products.take(12).toList(growable: false),
+                visibleCountOverride: visibleCount,
+                horizontalInset: 0,
               ),
               const SizedBox(height: _sectionGap),
             ],
@@ -201,243 +254,217 @@ class AllPartHomePage extends StatelessWidget {
 
     return sections;
   }
-}
 
-class _PromoPercentRail extends StatelessWidget {
-  const _PromoPercentRail();
-
-  static const List<int> _percents = <int>[20, 25, 30, 40, 50, 60];
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: _percents
-            .map(
-              (value) {
-                final tint = switch (value) {
-                  20 => const Color(0xFFF4FAE2),
-                  25 => const Color(0xFFFFF3E7),
-                  30 => const Color(0xFFEAF7F5),
-                  40 => const Color(0xFFF8F1FF),
-                  50 => const Color(0xFFFFF1F1),
-                  _ => const Color(0xFFEEF7FF),
-                };
-                return Container(
-                width: 118,
-                margin: const EdgeInsets.only(right: 12),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: tint,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColor.safe),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        'Offer',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColor.primary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: AppColor.primarySoft,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: const AppHugeIcon(
-                        HugeIcons.strokeRoundedDiscountTag01,
-                        size: 16,
-                        color: AppColor.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '$value%',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: AppColor.primary,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Save more',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Today picks',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColor.neutral2,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-              },
-            )
-            .toList(growable: false),
-      ),
-    );
+  List<_DiscoveryChipData> _chipsForFocus() {
+    const base = <String, _DiscoveryChipData>{
+      'all': _DiscoveryChipData(title: 'All', subtitle: 'Compact browse'),
+      'whatsapp': _DiscoveryChipData(title: 'WhatsApp', subtitle: 'Quick replies'),
+      'facebook': _DiscoveryChipData(title: 'Facebook', subtitle: 'Post-ready'),
+      'cod': _DiscoveryChipData(title: 'COD', subtitle: 'Low promise risk'),
+      'lowRisk': _DiscoveryChipData(title: 'Low risk', subtitle: 'Safer fulfilment'),
+      'goodMargin': _DiscoveryChipData(title: 'Margin', subtitle: 'Better spread'),
+      'repeat': _DiscoveryChipData(title: 'Repeat', subtitle: 'Neighbour demand'),
+    };
+    final ordered = {
+      discoveryFocus,
+      'whatsapp',
+      'facebook',
+      'cod',
+      'goodMargin',
+      'repeat',
+    };
+    return ordered
+        .map((key) => base[key] ?? base['all']!)
+        .take(4)
+        .toList(growable: false);
   }
-}
 
-class _SectionPanel extends StatelessWidget {
-  const _SectionPanel({required this.child});
+  bool get _showWhatsAppRail =>
+      discoveryFocus == 'all' ||
+      discoveryFocus == 'whatsapp' ||
+      discoveryFocus == 'facebook' ||
+      discoveryFocus == 'goodMargin';
 
-  final Widget child;
+  bool get _showCodRail =>
+      discoveryFocus == 'all' ||
+      discoveryFocus == 'cod' ||
+      discoveryFocus == 'lowRisk';
 
-  @override
-  Widget build(BuildContext context) {
-    return child;
-  }
-}
+  bool get _showRepeatRail =>
+      discoveryFocus == 'all' ||
+      discoveryFocus == 'repeat' ||
+      discoveryFocus == 'facebook';
 
-class _TwoRowBrandRail extends StatelessWidget {
-  const _TwoRowBrandRail({required this.brands});
-
-  final List<TopBrandRes> brands;
-
-  @override
-  Widget build(BuildContext context) {
-    final brandChunks = <List<TopBrandRes>>[];
-    for (var index = 0; index < brands.length; index += 10) {
-      final end = index + 10 < brands.length ? index + 10 : brands.length;
-      brandChunks.add(brands.sublist(index, end));
+  String get _fastMoverTitle {
+    switch (discoveryFocus) {
+      case 'facebook':
+        return 'Facebook fast movers';
+      case 'goodMargin':
+        return 'Fast margin movers';
+      case 'whatsapp':
+        return 'Chat-close fast movers';
+      default:
+        return 'Fast movers';
     }
+  }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: brandChunks.map((chunk) {
-          final firstRow = chunk.take(5).toList(growable: false);
-          final secondRow = chunk.skip(5).toList(growable: false);
-          return Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColor.safe1,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: AppColor.safe),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: firstRow
-                        .map((brand) => _BrandTile(brand: brand))
-                        .toList(growable: false),
-                  ),
-                  if (secondRow.isNotEmpty) const SizedBox(height: 10),
-                  if (secondRow.isNotEmpty)
-                    Row(
-                      children: secondRow
-                          .map((brand) => _BrandTile(brand: brand))
-                          .toList(growable: false),
-                    ),
-                ],
-              ),
-            ),
-          );
-        }).toList(growable: false),
+  String get _easySellTitle {
+    switch (discoveryFocus) {
+      case 'facebook':
+        return 'Facebook winners';
+      case 'cod':
+        return 'COD-friendly picks';
+      case 'lowRisk':
+        return 'Lower-risk picks';
+      case 'goodMargin':
+        return 'Good margin picks';
+      case 'repeat':
+        return 'Neighbour-demand picks';
+      default:
+        return 'Easy to sell';
+    }
+  }
+}
+
+enum _ResellerTaskRoute {
+  sellingList,
+  orders,
+  buyers,
+  payouts,
+  saved,
+}
+
+class _ResellerTaskRail extends StatelessWidget {
+  const _ResellerTaskRail({
+    this.title = 'Reseller quick queue',
+    this.subtitle = 'Start with the work that closes buyers fastest today.',
+    this.tasks = const [
+      _ResellerTaskItem(
+        title: 'Launch quick order',
+        subtitle: 'Open sell list and send quote fast',
+        icon: HugeIcons.strokeRoundedShoppingBag01,
+        onTapRoute: _ResellerTaskRoute.sellingList,
       ),
+      _ResellerTaskItem(
+        title: 'Order queue',
+        subtitle: 'Review placed and pending orders',
+        icon: HugeIcons.strokeRoundedInvoice03,
+        onTapRoute: _ResellerTaskRoute.orders,
+      ),
+      _ResellerTaskItem(
+        title: 'Buyer book',
+        subtitle: 'Follow up with repeat and warm leads',
+        icon: HugeIcons.strokeRoundedUserGroup,
+        onTapRoute: _ResellerTaskRoute.buyers,
+      ),
+    ],
+  });
+
+  final String title;
+  final String subtitle;
+  final List<_ResellerTaskItem> tasks;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: AppColor.text,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppColor.neutral2,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: tasks
+                .map(
+                  (task) => Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: _ResellerTaskCard(task: task),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _BrandTile extends StatelessWidget {
-  const _BrandTile({required this.brand});
+class _ResellerTaskItem {
+  const _ResellerTaskItem({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTapRoute,
+  });
 
-  final TopBrandRes brand;
+  final String title;
+  final String subtitle;
+  final List<List<dynamic>> icon;
+  final _ResellerTaskRoute onTapRoute;
+}
+
+class _ResellerTaskCard extends StatelessWidget {
+  const _ResellerTaskCard({required this.task});
+
+  final _ResellerTaskItem task;
 
   @override
   Widget build(BuildContext context) {
-    final brandId = brand.id;
-    final title = (brand.translation?.trim().isNotEmpty ?? false)
-        ? brand.translation!.trim()
-        : (brand.title ?? 'Brand');
     return InkWell(
-      onTap: brandId == null
-          ? null
-          : () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => SubCategoryProductsScreen(
-                    subCategoryId: -1,
-                    title: title,
-                    seeAll: false,
-                    categoryId: -1,
-                    brandId: brandId,
-                  ),
-                ),
-              );
-            },
+      onTap: () => _openTask(context, task.onTapRoute),
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        width: 74,
-        margin: const EdgeInsets.only(right: 10),
+        width: 190,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColor.safe),
+        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 64,
-              height: 64,
-              padding: const EdgeInsets.all(4),
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColor.safe),
+                color: AppColor.primarySoft,
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: AppNetworkImage(
-                  imageUrl: brand.image,
-                  fit: BoxFit.cover,
-                  backgroundColor: AppColor.safe1,
-                  icon: HugeIcons.strokeRoundedStore03,
-                ),
+              child: AppHugeIcon(
+                task.icon,
+                size: 18,
+                color: AppColor.primary,
               ),
             ),
-            const SizedBox(height: 7),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: AppColor.safe),
+            const SizedBox(height: 10),
+            Text(
+              task.title,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppColor.text,
+                fontWeight: FontWeight.w800,
               ),
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w700,
-                  height: 1.1,
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              task.subtitle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColor.neutral2,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -445,90 +472,117 @@ class _BrandTile extends StatelessWidget {
       ),
     );
   }
+
+  void _openTask(BuildContext context, _ResellerTaskRoute route) {
+    switch (route) {
+      case _ResellerTaskRoute.sellingList:
+        AppRouter.goToSellingList(context);
+        return;
+      case _ResellerTaskRoute.orders:
+        AppRouter.goToOrders(context);
+        return;
+      case _ResellerTaskRoute.buyers:
+        AppRouter.goToBuyerBook(context);
+        return;
+      case _ResellerTaskRoute.payouts:
+        AppRouter.goToPayouts(context);
+        return;
+      case _ResellerTaskRoute.saved:
+        AppRouter.goToSaved(context);
+        return;
+    }
+  }
+}
+
+class _DiscoveryMomentumStrip extends StatelessWidget {
+  const _DiscoveryMomentumStrip({required this.chips});
+
+  final List<_DiscoveryChipData> chips;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: chips
+            .map(
+              (chip) => Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColor.safe),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        chip.title,
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: AppColor.text,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        chip.subtitle,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColor.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+            .toList(growable: false),
+      ),
+    );
+  }
+}
+
+class _DiscoveryChipData {
+  const _DiscoveryChipData({
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String title;
+  final String subtitle;
 }
 
 class _SectionLead extends StatelessWidget {
   const _SectionLead({
-    required this.icon,
     required this.title,
-    this.badge,
     this.onTap,
   });
 
-  final List<List<dynamic>> icon;
   final String title;
-  final String? badge;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: AppColor.safe1,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: AppColor.safe),
-          ),
-          child: AppHugeIcon(icon, size: 16, color: AppColor.primary),
-        ),
-        const SizedBox(width: 10),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColor.text,
-                ),
-              ),
-            ],
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
-        if (badge != null) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: AppColor.safe),
-            ),
-            child: Text(
-              badge!,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColor.primary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-        ],
         if (onTap != null)
-          InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColor.safe1,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColor.safe),
-              ),
-              child: const AppHugeIcon(
-                HugeIcons.strokeRoundedArrowRight02,
-                size: 16,
-                color: AppColor.primary,
-              ),
-            ),
-          ),
+          TextButton(onPressed: onTap, child: const Text('See all')),
       ],
     );
   }

@@ -11,5 +11,20 @@ class CartItem extends HiveObject {
   @HiveField(1)
   int quantity;
 
-  CartItem({required this.product, required this.quantity});
+  @HiveField(2)
+  int sellPrice;
+
+  @HiveField(3)
+  int minSellPrice;
+
+  @HiveField(4)
+  int maxSellPrice;
+
+  CartItem({
+    required this.product,
+    required this.quantity,
+    required this.sellPrice,
+    required this.minSellPrice,
+    required this.maxSellPrice,
+  });
 }

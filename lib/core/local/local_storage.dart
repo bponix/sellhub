@@ -4,6 +4,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sellhub/core/store/active_store.dart';
 import 'package:sellhub/core/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sellhub/features/orders/data/models/order_issue_report.dart';
+import 'package:sellhub/features/profile/data/model/buyer_book_profile.dart';
+import 'package:sellhub/features/profile/data/model/repeat_sell_reminder.dart';
 
 import 'recent_product.dart';
 
@@ -15,6 +18,12 @@ class LocalStorage {
   static const String activeStoreKey = 'active_store';
   static const String recentStoresKey = 'recent_stores';
   static const String recentProductsKey = 'recent_products';
+  static const String pendingBuyerKey = 'pending_buyer';
+  static const String repeatSellRemindersKey = 'repeat_sell_reminders';
+  static const String resellerOnboardingProfileKey =
+      'reseller_onboarding_profile';
+  static const String orderIssueReportsKey = 'order_issue_reports';
+  static const String backendTruthModeKey = 'backend_truth_mode';
   factory LocalStorage() {
     return instance;
   }
@@ -181,7 +190,7 @@ class LocalStorage {
 
   static Future<List<RecentProduct>> getRecentProducts({int? siteId}) async {
     final products = await _getAllRecentProducts();
-    if (siteId == null) return products;
+    if (siteId == null || siteId <= 0) return products;
     return products
         .where((item) => item.siteId == siteId)
         .toList(growable: false);
@@ -205,5 +214,160 @@ class LocalStorage {
     } catch (_) {
       return const <RecentProduct>[];
     }
+  }
+
+  static Future<void> savePendingBuyer(BuyerBookProfile buyer) async {
+    await saveString(pendingBuyerKey, jsonEncode(buyer.toJson()));
+  }
+
+  static Future<BuyerBookProfile?> getPendingBuyer() async {
+    final raw = await getString(pendingBuyerKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      return BuyerBookProfile.fromJson(decoded);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> clearPendingBuyer() => remove(pendingBuyerKey);
+
+  static Future<List<RepeatSellReminder>> getRepeatSellReminders() async {
+    final raw = await getString(repeatSellRemindersKey);
+    if (raw == null || raw.isEmpty) return const <RepeatSellReminder>[];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const <RepeatSellReminder>[];
+      return decoded
+          .whereType<Map>()
+          .map(
+            (item) => RepeatSellReminder.fromJson(
+              item.map((key, value) => MapEntry(key.toString(), value)),
+            ),
+          )
+          .toList(growable: false);
+    } catch (_) {
+      return const <RepeatSellReminder>[];
+    }
+  }
+
+  static Future<void> saveRepeatSellReminders(
+    List<RepeatSellReminder> reminders,
+  ) async {
+    await saveString(
+      repeatSellRemindersKey,
+      jsonEncode(
+        reminders.map((item) => item.toJson()).toList(growable: false),
+      ),
+    );
+  }
+
+  static Future<void> saveResellerOnboardingProfile(
+    Map<String, dynamic> profile,
+  ) async {
+    await saveString(resellerOnboardingProfileKey, jsonEncode(profile));
+  }
+
+  static Future<Map<String, dynamic>?> getResellerOnboardingProfile() async {
+    final raw = await getString(resellerOnboardingProfileKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      return decoded;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> clearResellerOnboardingProfile() =>
+      remove(resellerOnboardingProfileKey);
+
+  static Future<void> saveBackendTruthMode(String mode) async {
+    await saveString(
+      backendTruthModeKey,
+      mode.trim().isEmpty ? 'local' : mode.trim(),
+    );
+  }
+
+  static Future<String> getBackendTruthMode() async {
+    final mode = await getString(backendTruthModeKey);
+    if (mode == null || mode.trim().isEmpty) return 'local';
+    return mode.trim();
+  }
+
+  static Future<List<OrderIssueReport>> getOrderIssueReports() async {
+    final raw = await getString(orderIssueReportsKey);
+    if (raw == null || raw.isEmpty) return const <OrderIssueReport>[];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const <OrderIssueReport>[];
+      return decoded
+          .whereType<Map>()
+          .map(
+            (item) => OrderIssueReport.fromJson(
+              item.map((key, value) => MapEntry(key.toString(), value)),
+            ),
+          )
+          .where((item) => item.orderId.isNotEmpty)
+          .toList(growable: false);
+    } catch (_) {
+      return const <OrderIssueReport>[];
+    }
+  }
+
+  static Future<void> saveOrderIssueReports(
+    List<OrderIssueReport> reports,
+  ) async {
+    await saveString(
+      orderIssueReportsKey,
+      jsonEncode(
+        reports.map((item) => item.toJson()).toList(growable: false),
+      ),
+    );
+  }
+
+  static Future<void> upsertOrderIssueReport(OrderIssueReport report) async {
+    final existing = await getOrderIssueReports();
+    final merged = <OrderIssueReport>[
+      report,
+      ...existing.where((item) => item.id != report.id),
+    ];
+    await saveOrderIssueReports(merged);
+  }
+
+  static Future<OrderIssueReport?> getLatestOrderIssueReport({
+    required int siteId,
+    required String orderId,
+  }) async {
+    final reports = await getOrderIssueReports();
+    final matches = reports
+        .where(
+          (item) =>
+              item.siteId == siteId &&
+              item.orderId.trim().toLowerCase() == orderId.trim().toLowerCase(),
+        )
+        .toList(growable: false);
+    if (matches.isEmpty) return null;
+    matches.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return matches.first;
+  }
+
+  static Future<void> upsertRepeatSellReminder(RepeatSellReminder reminder) async {
+    final reminders = await getRepeatSellReminders();
+    final updated = <RepeatSellReminder>[
+      reminder,
+      ...reminders.where((item) => item.id != reminder.id),
+    ];
+    await saveRepeatSellReminders(updated);
+  }
+
+  static Future<void> deleteRepeatSellReminder(String id) async {
+    final reminders = await getRepeatSellReminders();
+    await saveRepeatSellReminders(
+      reminders.where((item) => item.id != id).toList(growable: false),
+    );
   }
 }

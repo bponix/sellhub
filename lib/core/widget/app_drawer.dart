@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:sellhub/core/constants/app_color.dart';
+import 'package:sellhub/core/utils/app_router.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
-import 'package:sellhub/core/widget/app_network_image.dart';
 
 class AppDrawerFull extends StatelessWidget {
   const AppDrawerFull({
     super.key,
-    required this.logoUrl,
     required this.onOpenCategories,
   });
 
-  final String? logoUrl;
   final VoidCallback onOpenCategories;
 
   @override
@@ -22,144 +20,64 @@ class AppDrawerFull extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-              decoration: BoxDecoration(
-                color: AppColor.safe1,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColor.safe),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Store menu',
-                          style: TextStyle(
-                            color: AppColor.neutral2,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: AppColor.safe),
-                        ),
-                        child: const Text(
-                          'Browse',
-                          style: TextStyle(
-                            color: AppColor.primary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Container(
-                    width: 96,
-                    height: 96,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: AppColor.safe),
-                    ),
-                    child: AppNetworkImage(
-                      imageUrl: logoUrl,
-                      fit: BoxFit.contain,
-                      backgroundColor: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'Quick links for store discovery and shopping',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColor.neutral2,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Reseller menu',
+                style: TextStyle(
+                  color: AppColor.neutral2,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-            const SizedBox(height: 16),
             _DrawerItem(
-              icon: HugeIcons.strokeRoundedDashboardSquare01,
-              title: 'Campaigns',
-              tag: 'Offers',
-              onTap: () {},
+              icon: HugeIcons.strokeRoundedInvoice03,
+              title: 'Orders',
+              onTap: () {
+                Navigator.of(context).pop();
+                AppRouter.goToOrders(context);
+              },
             ),
             _DrawerItem(
-              icon: HugeIcons.strokeRoundedCollectionsBookmark,
-              title: 'Collections',
-              tag: 'Curated',
-              onTap: () {},
+              icon: HugeIcons.strokeRoundedUserGroup,
+              title: 'Buyers',
+              onTap: () {
+                Navigator.of(context).pop();
+                AppRouter.goToBuyerBook(context);
+              },
+            ),
+            _DrawerItem(
+              icon: HugeIcons.strokeRoundedWallet02,
+              title: 'Payouts',
+              onTap: () {
+                Navigator.of(context).pop();
+                AppRouter.goToPayouts(context);
+              },
             ),
             _DrawerItem(
               icon: HugeIcons.strokeRoundedFavourite,
-              title: 'Wishlist',
-              tag: 'Saved',
-              onTap: () {},
-            ),
-            _DrawerItem(
-              icon: HugeIcons.strokeRoundedShoppingCart01,
-              title: 'Cart',
-              tag: 'Bag',
-              onTap: () {},
+              title: 'Saved',
+              onTap: () {
+                Navigator.of(context).pop();
+                AppRouter.goToSaved(context);
+              },
             ),
             _DrawerItem(
               icon: HugeIcons.strokeRoundedGridView,
               title: 'Categories',
-              tag: 'Browse',
               onTap: () {
                 Navigator.of(context).pop();
                 onOpenCategories();
               },
             ),
             _DrawerItem(
-              icon: HugeIcons.strokeRoundedPackageDelivered,
-              title: 'New Arrival',
-              tag: 'Latest',
-              onTap: () {},
-            ),
-            _DrawerItem(
-              icon: HugeIcons.strokeRoundedFlash,
-              title: 'Flash Sale',
-              tag: 'Hot',
-              onTap: () {},
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDFF55A),
-                foregroundColor: AppColor.text,
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              onPressed: () {},
-              label: const Text(
-                'Sign in',
-                style: TextStyle(fontWeight: FontWeight.w800),
-              ),
-              icon: const AppHugeIcon(
-                HugeIcons.strokeRoundedLogin02,
-                color: AppColor.text,
-              ),
+              icon: HugeIcons.strokeRoundedUserAccount,
+              title: 'Profile',
+              onTap: () {
+                Navigator.of(context).pop();
+                AppRouter.goToProfile(context);
+              },
             ),
           ],
         ),
@@ -172,13 +90,11 @@ class _DrawerItem extends StatelessWidget {
   const _DrawerItem({
     required this.icon,
     required this.title,
-    required this.tag,
     required this.onTap,
   });
 
   final List<List<dynamic>> icon;
   final String title;
-  final String tag;
   final VoidCallback onTap;
 
   @override
@@ -217,20 +133,10 @@ class _DrawerItem extends StatelessWidget {
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColor.safe1,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  tag,
-                  style: const TextStyle(
-                    color: AppColor.neutral2,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+              const AppHugeIcon(
+                HugeIcons.strokeRoundedArrowRight01,
+                size: 16,
+                color: AppColor.neutral2,
               ),
             ],
           ),

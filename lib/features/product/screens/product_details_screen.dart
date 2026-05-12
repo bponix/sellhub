@@ -6,11 +6,15 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:sellhub/core/config/text_style.dart';
 import 'package:sellhub/core/constants/app_color.dart';
 import 'package:sellhub/core/local/local_storage.dart';
-import 'package:sellhub/core/local/recent_product.dart';
+import 'package:sellhub/core/product_viability/product_viability.dart';
+import 'package:sellhub/core/product_viability/product_viability_widgets.dart';
 import 'package:sellhub/core/store/store_industry.dart';
 import 'package:sellhub/core/store/store_context_cubit.dart';
 import 'package:sellhub/core/store/store_scope.dart';
+import 'package:sellhub/core/supplier_trust/supplier_trust_widgets.dart';
+import 'package:sellhub/core/supply_intelligence/supply_intelligence_widgets.dart';
 import 'package:sellhub/core/utils/app_router.dart';
+import 'package:sellhub/core/utils/convertBengaliNumber.dart';
 import 'package:sellhub/core/utils/route_names.dart';
 import 'package:sellhub/core/utils/custom_toast.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
@@ -21,18 +25,16 @@ import 'package:sellhub/features/auth/screens/login_screen.dart';
 import 'package:sellhub/features/cart/presentation/cubit/cart_cubit.dart';
 import 'package:sellhub/features/cart/presentation/cubit/cart_state.dart';
 import 'package:sellhub/features/cart/screens/checkout_screen.dart';
+import 'package:sellhub/features/cart/screens/widget/reseller_price_sheet.dart';
 import 'package:sellhub/features/product/data/models/customer_review_req.dart';
 import 'package:sellhub/features/product/data/models/product_res_common.dart';
 import 'package:sellhub/features/product/presentation/cubit/product_details_cubit.dart';
 import 'package:sellhub/features/product/presentation/cubit/product_details_state.dart';
-import 'package:sellhub/features/product/screens/widget/product details/customer_review_line.dart';
 import 'package:sellhub/features/product/screens/widget/product details/detailt_upper_part.dart';
 import 'package:sellhub/features/product/screens/widget/product details/image_part.dart';
 import 'package:sellhub/features/product/screens/widget/product details/middle_part.dart';
 import 'package:sellhub/features/product/screens/widget/product details/single_customer_review_card.dart';
-import 'package:sellhub/features/product/screens/widget/product_list_view_horizontal.dart';
 import 'package:sellhub/features/product/screens/widget/product_list_vertical.dart';
-import 'package:sellhub/features/favourite/presentation/cubit/favourite_cubit.dart';
 import 'package:sellhub/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:sellhub/features/shell/presentation/cubit/store_shell_cubit.dart';
 import 'package:sellhub/features/main_screen.dart';
@@ -87,24 +89,11 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
   final TextEditingController _feedbackController = TextEditingController();
   bool _isOpenReviewForm = false;
   double _ratingValue = 5;
-  List<RecentProduct> _recentProducts = const <RecentProduct>[];
-
-  String? _firstBrandLabel(List<dynamic> brands) {
-    if (brands.isEmpty) return null;
-    final raw = brands.first;
-    final value = raw?.toString().trim();
-    if (value == null || value.isEmpty || value == 'null') {
-      return null;
-    }
-    return value;
-  }
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _trackRecentView(widget.baseProduct);
-    _hydrateRecentProducts();
   }
 
   void _onScroll() {
@@ -122,44 +111,6 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
     super.dispose();
   }
 
-  Future<void> _trackRecentView(ProductResCommon product) {
-    final hid = product.hid?.trim() ?? '';
-    final title = (product.translation?.trim().isNotEmpty ?? false)
-        ? product.translation!.trim()
-        : (product.title ?? '').trim();
-    if (hid.isEmpty || title.isEmpty) {
-      return Future<void>.value();
-    }
-    return LocalStorage.pushRecentProduct(
-      RecentProduct(
-        hid: hid,
-        siteId: product.siteId ?? StoreScope.activeSiteId(context),
-        title: title,
-        thumbnail: (product.thumbnail ?? '').trim().isNotEmpty
-            ? product.thumbnail!.trim()
-            : product.images.isNotEmpty
-            ? (product.images.first.image ?? '').trim()
-            : '',
-        price: product.price ?? 0,
-        comparePrice: product.comparePrice ?? 0,
-        brand: product.brands.isNotEmpty ? product.brands.first.trim() : '',
-      ),
-    ).then((_) => _hydrateRecentProducts());
-  }
-
-  Future<void> _hydrateRecentProducts() async {
-    final recent = await LocalStorage.getRecentProducts(
-      siteId: StoreScope.activeSiteId(context),
-    );
-    if (!mounted) return;
-    setState(() {
-      _recentProducts = recent
-          .where((item) => item.hid != widget.hid)
-          .take(8)
-          .toList(growable: false);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ProductDetailsCubit, ProductDetailsState>(
@@ -175,14 +126,12 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
         final validImages = (product?.images ?? [])
             .where((item) => cubit.isValidImage(item.image))
             .toList();
-        final brandLabel = _firstBrandLabel(product?.brands ?? const []);
         final showLocalBottomNav = _shouldShowLocalBottomNav();
 
         return Scaffold(
           backgroundColor: Colors.white,
           appBar: SellHubTopAppBar(
             title: product?.title ?? 'Product Details',
-            subtitle: brandLabel ?? 'Product details',
             icon: HugeIcons.strokeRoundedPackageSearch01,
             showBackButton: true,
             actions: <Widget>[
@@ -264,10 +213,35 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                                   textTheme: Theme.of(context).textTheme,
                                 ),
                               ),
+                              if (state.supplierTrust != null)
+                                _sectionCard(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      SupplyIntelligenceCommitCard(
+                                        profile: state.supplierTrust!,
+                                        product:
+                                            state.baseProduct ??
+                                            widget.baseProduct,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      SupplierTrustDecisionCard(
+                                        profile: state.supplierTrust!,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      SupplierTrustMetricsCard(
+                                        profile: state.supplierTrust!,
+                                        title: 'Supplier trust breakdown',
+                                        subtitle:
+                                            'Use supplier quality, return pressure, delivery speed, and payout behavior before you push this product harder.',
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               _sectionCard(
-                                child: _buildHeroHighlights(
-                                  product: product,
-                                  common:
+                                child: ProductViabilityDetailCard(
+                                  product:
                                       state.baseProduct ?? widget.baseProduct,
                                 ),
                               ),
@@ -278,27 +252,6 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                                       state.baseProduct ?? widget.baseProduct,
                                 ),
                               ),
-                              _sectionCard(
-                                child: _buildShoppingSignals(
-                                  product: product,
-                                  common:
-                                      state.baseProduct ?? widget.baseProduct,
-                                ),
-                              ),
-                              _sectionCard(
-                                child: _buildTrustSnapshot(
-                                  context,
-                                  state,
-                                  common:
-                                      state.baseProduct ?? widget.baseProduct,
-                                ),
-                              ),
-                              _sectionCard(child: _buildReviewSummary(state)),
-                              if (_isOpenReviewForm)
-                                _sectionCard(child: _buildReviewForm(state)),
-                              _sectionCard(child: _buildReviewList(state)),
-                              if (_recentProducts.isNotEmpty)
-                                _sectionCard(child: _buildRecentViewsSection()),
                               if (state.relatedProducts.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
@@ -312,53 +265,9 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                                         ),
                                         child: Row(
                                           children: [
-                                            Container(
-                                              width: 36,
-                                              height: 36,
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius:
-                                                    BorderRadius.circular(14),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: AppColor.text
-                                                        .withValues(
-                                                          alpha: 0.03,
-                                                        ),
-                                                    blurRadius: 10,
-                                                    offset: const Offset(0, 3),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: const AppHugeIcon(
-                                                HugeIcons.strokeRoundedSparkles,
-                                                color: AppColor.primary,
-                                                size: 18,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Keep browsing',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .labelSmall
-                                                      ?.copyWith(
-                                                        color:
-                                                            AppColor.neutral2,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  'Related Products',
-                                                  style: kTextStyle.itemHead,
-                                                ),
-                                              ],
+                                            Text(
+                                              'Similar products',
+                                              style: kTextStyle.itemHead,
                                             ),
                                           ],
                                         ),
@@ -377,6 +286,9 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                                   padding: EdgeInsets.all(20),
                                   child: CircularProgressIndicator.adaptive(),
                                 ),
+                              if (_isOpenReviewForm)
+                                _sectionCard(child: _buildReviewForm(state)),
+                              _sectionCard(child: _buildReviewList(state)),
                               const SizedBox(height: 12),
                             ],
                           ),
@@ -391,7 +303,7 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                   ],
                 ),
           bottomNavigationBar: showLocalBottomNav
-              ? StoreBottomNavBar(
+              ? SellerBottomNavBar(
                   currentIndex: context
                       .watch<StoreShellCubit>()
                       .state
@@ -420,106 +332,6 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
     );
   }
 
-  Widget _buildTrustSnapshot(
-    BuildContext context,
-    ProductDetailsState state, {
-    required ProductResCommon common,
-  }) {
-    final reviewCount = state.customerReviews.length;
-    final isFavourite = context.select<FavouriteCubit, bool>(
-      (cubit) => cubit.state.favoriteIds.contains(common.id ?? 0),
-    );
-    final boughtCount = state.product?.sold ?? 0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _InlineSectionLead(
-          icon: HugeIcons.strokeRoundedFavourite,
-          eyebrow: 'Trust signals',
-          title: 'Shoppers are already using this product',
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _TrustMetric(
-                icon: HugeIcons.strokeRoundedStar,
-                label: 'Reviews',
-                value: reviewCount > 0 ? '$reviewCount' : 'New',
-                hint: reviewCount > 0
-                    ? '${state.averageRating.toStringAsFixed(1)} avg'
-                    : 'Be first to rate',
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _TrustMetric(
-                icon: HugeIcons.strokeRoundedFavourite,
-                label: 'Saved',
-                value: isFavourite ? 'Yes' : 'Tap',
-                hint: isFavourite ? 'In your favourites' : 'Save for later',
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _TrustMetric(
-                icon: HugeIcons.strokeRoundedShoppingBag01,
-                label: 'Demand',
-                value: boughtCount > 0 ? '$boughtCount' : 'Fresh',
-                hint: boughtCount > 0 ? 'Units sold' : 'New listing',
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRecentViewsSection() {
-    final recentProducts = _recentProducts
-        .map(_recentToProduct)
-        .where((item) => item.hid?.isNotEmpty == true)
-        .toList(growable: false);
-    if (recentProducts.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _InlineSectionLead(
-          icon: HugeIcons.strokeRoundedReload,
-          eyebrow: 'Quick return',
-          title: 'Recently viewed',
-        ),
-        const SizedBox(height: 12),
-        ProductListViewHorizontal(
-          products: recentProducts,
-          visibleCountOverride: 3,
-          horizontalInset: 0,
-        ),
-      ],
-    );
-  }
-
-  ProductResCommon _recentToProduct(RecentProduct item) {
-    return ProductResCommon(
-      brands: item.brand.isNotEmpty ? <String>[item.brand] : const <String>[],
-      comparePrice: item.comparePrice,
-      features: const <Feature>[],
-      hid: item.hid,
-      images: item.thumbnail.isNotEmpty
-          ? <ProductImage>[ProductImage(id: null, image: item.thumbnail)]
-          : const <ProductImage>[],
-      price: item.price,
-      siteId: item.siteId,
-      thumbnail: item.thumbnail,
-      title: item.title,
-      translation: item.title,
-      variants: const <Variant>[],
-      wholesale: const <dynamic>[],
-    );
-  }
-
   bool _shouldShowLocalBottomNav() {
     final path = AppRouter.router.routeInformationProvider.value.uri.path
         .toLowerCase();
@@ -534,331 +346,12 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
     );
   }
 
-  Widget _buildReviewSummary(ProductDetailsState state) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeading(
-          eyebrow: 'Customer feedback',
-          title: 'Customer Reviews',
-          icon: HugeIcons.strokeRoundedComment01,
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Text(
-              state.averageRating.toStringAsFixed(1),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 28),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: List.generate(
-                    5,
-                    (index) => AppHugeIcon(
-                      HugeIcons.strokeRoundedStar,
-                      color: index < state.averageRating.round()
-                          ? AppColor.primary
-                          : Colors.grey,
-                      secondaryColor: index < state.averageRating.round()
-                          ? AppColor.primary.withValues(alpha: 0.18)
-                          : null,
-                      size: 18,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${state.customerReviews.length} ratings',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: AppColor.neutral2,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ...List.generate(5, (index) {
-          final star = 5 - index;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 5),
-            child: CustomerReviewLineDraw(
-              number: '$star',
-              percent: state.ratingPercent(star),
-              isEnable: state.ratingBreakdown[star]! > 0,
-            ),
-          );
-        }),
-        const SizedBox(height: 8),
-        Divider(color: Colors.grey.withValues(alpha: 0.2)),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              _isOpenReviewForm = !_isOpenReviewForm;
-              _ratingValue = 5;
-            });
-          },
-          child: Container(
-            height: 42,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColor.safe1.withValues(alpha: 0.75),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Center(
-              child: Text(
-                _isOpenReviewForm
-                    ? 'Close Review Form'
-                    : 'Write a Customer Review',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColor.text,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildShoppingSignals({
-    required dynamic product,
-    required ProductResCommon common,
-  }) {
-    final discount = (product.discount ?? common.discount ?? 0).toDouble();
-    final comparePrice = (product.comparePrice ?? common.comparePrice ?? 0)
-        .toDouble();
-    final price = (product.price ?? common.price ?? 0).toDouble();
-    final deliveryTime = product.deliveryTime as int?;
-    final rewardPoints = (product.rewardPoints ?? common.rewardPoints ?? 0)
-        .toDouble();
-    final cashback = (product.cashback ?? common.cashback ?? 0).toDouble();
-    final brand = common.brands.isNotEmpty
-        ? common.brands.first
-        : 'Trusted brand';
-    final savings = comparePrice > price ? (comparePrice - price) : 0;
-    final promises = <({List<List<dynamic>> icon, String label})>[
-      (
-        icon: HugeIcons.strokeRoundedShield01,
-        label: deliveryTime != null && deliveryTime > 0
-            ? '$deliveryTime day delivery'
-            : 'Store delivery',
-      ),
-      (icon: HugeIcons.strokeRoundedAward01, label: brand),
-      (
-        icon: HugeIcons.strokeRoundedDiscountTag01,
-        label: savings > 0
-            ? 'Save ${savings.toStringAsFixed(0)}'
-            : '${discount.toStringAsFixed(0)}% offer',
-      ),
-      (
-        icon: HugeIcons.strokeRoundedGift,
-        label: rewardPoints > 0
-            ? '${rewardPoints.toStringAsFixed(0)} pts'
-            : cashback > 0
-            ? 'Cashback ${cashback.toStringAsFixed(0)}'
-            : 'Store perks',
-      ),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeading(
-          eyebrow: 'Shopping signals',
-          title: 'Why shoppers choose this',
-          icon: HugeIcons.strokeRoundedSparkles,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _SignalTile(
-                icon: HugeIcons.strokeRoundedDiscountTag01,
-                label: savings > 0 ? 'Save' : 'Offer',
-                value: savings > 0
-                    ? 'BDT ${savings.toStringAsFixed(0)}'
-                    : '${discount.toStringAsFixed(0)}%',
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _SignalTile(
-                icon: HugeIcons.strokeRoundedDeliveryTruck02,
-                label: 'Delivery',
-                value: deliveryTime != null && deliveryTime > 0
-                    ? '$deliveryTime day'
-                    : 'Active',
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: promises
-              .map(
-                (item) => Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColor.safe1.withValues(alpha: 0.58),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppHugeIcon(item.icon, size: 14, color: AppColor.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        item.label,
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
-                              color: AppColor.text,
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-        if (common.brands.isNotEmpty || rewardPoints > 0 || cashback > 0) ...[
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColor.text.withValues(alpha: 0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                if (common.brands.isNotEmpty)
-                  Expanded(
-                    child: _MiniStat(
-                      icon: HugeIcons.strokeRoundedAward01,
-                      title: common.brands.first,
-                    ),
-                  ),
-                if (common.brands.isNotEmpty &&
-                    (rewardPoints > 0 || cashback > 0))
-                  const SizedBox(width: 10),
-                if (rewardPoints > 0 || cashback > 0)
-                  Expanded(
-                    child: _MiniStat(
-                      icon: rewardPoints > 0
-                          ? HugeIcons.strokeRoundedGift
-                          : HugeIcons.strokeRoundedMoneyBag02,
-                      title: rewardPoints > 0
-                          ? '${rewardPoints.toStringAsFixed(0)} reward pts'
-                          : 'Cashback ${cashback.toStringAsFixed(0)}',
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildHeroHighlights({
-    required dynamic product,
-    required ProductResCommon common,
-  }) {
-    final comparePrice = (product.comparePrice ?? common.comparePrice ?? 0)
-        .toDouble();
-    final price = (product.price ?? common.price ?? 0).toDouble();
-    final savings = comparePrice > price ? comparePrice - price : 0;
-    final rewardPoints = (product.rewardPoints ?? common.rewardPoints ?? 0)
-        .toDouble();
-    final cashback = (product.cashback ?? common.cashback ?? 0).toDouble();
-    final hasStock = (product?.quantity ?? common.quantity ?? 0) > 0;
-    final brand = common.brands.isNotEmpty ? common.brands.first.trim() : '';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeading(
-          eyebrow: 'Quick take',
-          title: 'At a glance',
-          icon: HugeIcons.strokeRoundedSparkles,
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _HeroBadge(
-              icon: hasStock
-                  ? HugeIcons.strokeRoundedCheckmarkCircle02
-                  : HugeIcons.strokeRoundedAlert02,
-              label: hasStock ? 'Ready to order' : 'Limited stock',
-              emphasis: hasStock,
-            ),
-            if (savings > 0)
-              _HeroBadge(
-                icon: HugeIcons.strokeRoundedDiscountTag01,
-                label: 'Save BDT ${savings.toStringAsFixed(0)}',
-              ),
-            if (brand.isNotEmpty)
-              _HeroBadge(icon: HugeIcons.strokeRoundedAward01, label: brand),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _SignalTile(
-                icon: HugeIcons.strokeRoundedDeliveryTruck02,
-                label: 'Order flow',
-                value: hasStock ? 'Fast checkout' : 'Check with store',
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _SignalTile(
-                icon: rewardPoints > 0
-                    ? HugeIcons.strokeRoundedGift
-                    : HugeIcons.strokeRoundedMoneyBag02,
-                label: rewardPoints > 0 ? 'Rewards' : 'Store value',
-                value: rewardPoints > 0
-                    ? '${rewardPoints.toStringAsFixed(0)} pts'
-                    : cashback > 0
-                    ? 'Cashback ${cashback.toStringAsFixed(0)}'
-                    : 'Member perks',
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   Widget _buildReviewForm(ProductDetailsState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeading(
-          eyebrow: 'Leave feedback',
-          title: 'Add Your Review',
+          title: 'Add review',
           icon: HugeIcons.strokeRoundedEdit02,
         ),
         const SizedBox(height: 10),
@@ -1005,10 +498,24 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeading(
-          eyebrow: 'What buyers say',
-          title: 'Top Reviews (${state.customerReviews.length})',
-          icon: HugeIcons.strokeRoundedMessageMultiple01,
+        Row(
+          children: [
+            Expanded(
+              child: _buildSectionHeading(
+                title: '${state.customerReviews.length} reviews',
+                icon: HugeIcons.strokeRoundedMessageMultiple01,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _isOpenReviewForm = !_isOpenReviewForm;
+                  _ratingValue = 5;
+                });
+              },
+              child: Text(_isOpenReviewForm ? 'Close' : 'Add'),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         Divider(color: Colors.grey.withValues(alpha: 0.7), thickness: 0.6),
@@ -1026,16 +533,12 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'No Reviews Yet',
+                    'No reviews yet',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
                       color: Colors.grey,
                     ),
-                  ),
-                  Text(
-                    'Be the first to review this product!',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
@@ -1082,7 +585,6 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
   }
 
   Widget _buildSectionHeading({
-    required String eyebrow,
     required String title,
     required List<List<dynamic>> icon,
   }) {
@@ -1106,25 +608,12 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                eyebrow,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColor.text,
-                ),
-              ),
-            ],
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColor.text,
+            ),
           ),
         ),
       ],
@@ -1138,12 +627,7 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
   }) {
     final product = state.product;
     final common = state.baseProduct ?? widget.baseProduct;
-    final comparePrice =
-        product?.comparePrice?.toDouble() ??
-        common.comparePrice?.toDouble() ??
-        0;
-    final price = product?.price?.toDouble() ?? common.price?.toDouble() ?? 0;
-    final savings = comparePrice > price ? comparePrice - price : 0;
+    final viability = ProductViabilityEngine.build(common);
     return Container(
       padding: EdgeInsets.fromLTRB(
         16.w,
@@ -1167,73 +651,153 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
           final isCart = cartState.items.any(
             (item) => item.product.id == product?.id,
           );
+          final basePrice = product?.price?.toInt() ?? 0;
+          final trustScore =
+              (state.supplierTrust?.score ?? viability.trustScore).round();
+          final minSellPrice = common.minResellPrice?.round() ?? basePrice;
+          final maxSellPrice =
+              common.maxResellPrice?.round() ??
+              (minSellPrice > 0 ? minSellPrice : basePrice);
+          final minMargin = (minSellPrice - basePrice).clamp(0, 1 << 30);
+          final maxMargin = (maxSellPrice - basePrice).clamp(0, 1 << 30);
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColor.safe1,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: AppColor.safe.withValues(alpha: 0.9),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          'Price',
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                color: AppColor.neutral2,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          product?.price != null
-                              ? 'BDT ${product!.price!.toStringAsFixed(0)}'
-                              : 'Unavailable',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(
-                                color: AppColor.text,
-                                fontWeight: FontWeight.w800,
-                              ),
-                        ),
-                        if (savings > 0) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            'Save BDT ${savings.toStringAsFixed(0)} on this order',
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: AppColor.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                        Expanded(
+                          child: Text(
+                            product?.price != null
+                                ? 'Margin window ৳${convertToBengaliNumber(minMargin)}-${convertToBengaliNumber(maxMargin)}'
+                                : 'Base unavailable',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: AppColor.text,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ],
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isCart
+                                ? Colors.white
+                                : AppColor.primarySoft,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            isCart ? 'In selling list' : 'Ready to sell',
+                            style: TextStyle(
+                              color: isCart ? AppColor.primary : AppColor.text,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 7,
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _SellerSignalChip(
+                          icon: HugeIcons.strokeRoundedMoneyBag02,
+                          label: 'Base ৳${convertToBengaliNumber(basePrice)}',
+                        ),
+                        _SellerSignalChip(
+                          icon: HugeIcons.strokeRoundedShield01,
+                          label: 'Trust $trustScore',
+                        ),
+                        _SellerSignalChip(
+                          icon: HugeIcons.strokeRoundedShare08,
+                          label: 'Share ${viability.shareabilityScore.round()}',
+                        ),
+                        _SellerSignalChip(
+                          icon: HugeIcons.strokeRoundedAlert02,
+                          label:
+                              'Risk ${viabilityRiskLabel(viability.deliveryRisk)}',
+                        ),
+                      ],
                     ),
-                    decoration: BoxDecoration(
-                      color: isCart ? AppColor.safe1 : AppColor.primarySoft,
-                      borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Set a buyer price, share the product context, then place the supplier order when the buyer confirms.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
                     ),
-                    child: Text(
-                      isCart ? 'In cart' : 'Instant checkout',
-                      style: TextStyle(
-                        color: isCart ? AppColor.primary : AppColor.text,
-                        fontWeight: FontWeight.w800,
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 50.h,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColor.safe),
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          foregroundColor: AppColor.text,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        onPressed: () => _shareProduct(context, state),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final compactLabel = constraints.maxWidth < 110;
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const AppHugeIcon(
+                                  HugeIcons.strokeRoundedShare08,
+                                  size: 18,
+                                  color: AppColor.primary,
+                                ),
+                                SizedBox(width: compactLabel ? 4 : 8),
+                                Flexible(
+                                  child: Text(
+                                    compactLabel ? 'Share' : 'Share product',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: compactLabel ? 12.5 : 13.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
+                  const SizedBox(width: 10),
                   Expanded(
-                    flex: 2,
                     child: SizedBox(
                       height: 50.h,
                       child: OutlinedButton(
@@ -1251,12 +815,22 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                         ),
                         onPressed: product == null
                             ? null
-                            : () {
+                            : () async {
                                 if (isCart) {
-                                  CustomToast.info('Already in cart');
+                                  CustomToast.info('Already in selling list');
                                 } else {
-                                  context.read<CartCubit>().addToCart(common);
-                                  CustomToast.info('Added to cart');
+                                  final sellPrice = await showResellerPriceSheet(
+                                    context,
+                                    product: common,
+                                  );
+                                  if (sellPrice == null || !context.mounted) {
+                                    return;
+                                  }
+                                  await context.read<CartCubit>().addToCart(
+                                    common,
+                                    sellPrice: sellPrice,
+                                  );
+                                  CustomToast.info('Added to selling list');
                                 }
                               },
                         child: LayoutBuilder(
@@ -1276,10 +850,12 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                                 Flexible(
                                   child: Text(
                                     isCart
-                                        ? (compactLabel ? 'Added' : 'Added')
+                                        ? (compactLabel
+                                              ? 'Listed'
+                                              : 'In selling list')
                                         : (compactLabel
-                                              ? 'Cart'
-                                              : 'Add to cart'),
+                                              ? 'List'
+                                              : 'Add to list'),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -1295,9 +871,8 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
-                    flex: 3,
                     child: SizedBox(
                       height: 50.h,
                       child: ElevatedButton(
@@ -1324,6 +899,13 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                                           ?.toInt(),
                                       payPrice: product.price?.toInt(),
                                       savePrice: save,
+                                      minSellPrice: product.minResellPrice
+                                          ?.round(),
+                                      maxSellPrice: product.maxResellPrice
+                                          ?.round(),
+                                      thumbnail:
+                                          product.thumbnail ??
+                                          product.images.firstOrNull?.image,
                                       title:
                                           product.translation ??
                                           product.title ??
@@ -1333,12 +915,32 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                                   ),
                                 );
                               },
-                        child: const Text(
-                          'Buy now',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final compactLabel = constraints.maxWidth < 116;
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const AppHugeIcon(
+                                  HugeIcons.strokeRoundedZap,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: compactLabel ? 4 : 8),
+                                Flexible(
+                                  child: Text(
+                                    compactLabel ? 'Order' : 'Quick order',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: compactLabel ? 13 : 15,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -1353,97 +955,44 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
   }
 }
 
-class _SignalTile extends StatelessWidget {
-  const _SignalTile({
+class _SellerSignalChip extends StatelessWidget {
+  const _SellerSignalChip({
     required this.icon,
     required this.label,
-    required this.value,
   });
 
   final List<List<dynamic>> icon;
   final String label;
-  final String value;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 148,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColor.safe1.withValues(alpha: 0.48),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppHugeIcon(icon, size: 18, color: AppColor.primary),
-          const SizedBox(height: 10),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppColor.neutral2,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColor.text,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroBadge extends StatelessWidget {
-  const _HeroBadge({
-    required this.icon,
-    required this.label,
-    this.emphasis = false,
-  });
-
-  final List<List<dynamic>> icon;
-  final String label;
-  final bool emphasis;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: emphasis ? AppColor.safe1.withValues(alpha: 0.75) : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: AppColor.text.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        border: Border.all(color: AppColor.safe),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppHugeIcon(
-            icon,
-            size: 14,
-            color: emphasis ? AppColor.primary : AppColor.neutral2,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppColor.text,
-              fontWeight: FontWeight.w700,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 160),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppHugeIcon(icon, size: 14, color: AppColor.primary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColor.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1478,116 +1027,6 @@ class _ProductShareAction extends StatelessWidget {
   }
 }
 
-class _InlineSectionLead extends StatelessWidget {
-  const _InlineSectionLead({
-    required this.icon,
-    required this.eyebrow,
-    required this.title,
-  });
-
-  final List<List<dynamic>> icon;
-  final String eyebrow;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppColor.safe1,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColor.safe),
-          ),
-          child: AppHugeIcon(icon, size: 18, color: AppColor.primary),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                eyebrow,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TrustMetric extends StatelessWidget {
-  const _TrustMetric({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.hint,
-  });
-
-  final List<List<dynamic>> icon;
-  final String label;
-  final String value;
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColor.safe1,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColor.safe),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppHugeIcon(icon, size: 16, color: AppColor.primary),
-          const SizedBox(height: 10),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColor.neutral2,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppColor.text,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            hint,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColor.neutral2,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _ProductDetailsSkeleton extends StatelessWidget {
   const _ProductDetailsSkeleton();
@@ -1624,42 +1063,6 @@ class _ProductDetailsSkeleton extends StatelessWidget {
           AppSkeletonCard(child: AppSkeleton(height: 110, radius: 14)),
         ],
       ),
-    );
-  }
-}
-
-class _MiniStat extends StatelessWidget {
-  const _MiniStat({required this.icon, required this.title});
-
-  final List<List<dynamic>> icon;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: AppColor.safe1,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: AppHugeIcon(icon, size: 16, color: AppColor.primary),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppColor.text,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

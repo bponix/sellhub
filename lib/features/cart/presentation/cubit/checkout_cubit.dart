@@ -6,6 +6,7 @@ import 'package:sellhub/core/local/local_storage.dart';
 import 'package:sellhub/core/bloc/safe_cubit.dart';
 import 'package:sellhub/core/config/payment_config.dart';
 import 'package:sellhub/core/errors/app_failure.dart';
+import 'package:sellhub/core/pricing/smart_pricing.dart';
 import 'package:sellhub/features/cart/data/checkout_repository.dart';
 import 'package:sellhub/features/cart/data/models/order_create_req.dart';
 import 'package:sellhub/features/cart/data/models/order_create_res.dart';
@@ -14,6 +15,7 @@ import 'package:sellhub/features/cart/data/models/payment_method_res.dart';
 import 'package:sellhub/features/cart/data/models/payment_gateway_response.dart';
 import 'package:sellhub/features/cart/data/models/payment_success.dart';
 import 'package:sellhub/features/cart/data/models/paymentgateway_req.dart';
+import 'package:sellhub/features/cart/data/models/reseller_quote.dart';
 import 'package:sellhub/features/profile/data/model/store_customer_address.dart';
 import 'package:sellhub/features/cart/presentation/cubit/checkout_state.dart';
 
@@ -22,7 +24,9 @@ class CheckoutCubit extends SafeCubit<CheckoutState> {
 
   final CheckoutRepository _repository;
 
-  List<DeliveryPlaceRes> _sanitizeDeliveryPlaces(List<DeliveryPlaceRes> places) {
+  List<DeliveryPlaceRes> _sanitizeDeliveryPlaces(
+    List<DeliveryPlaceRes> places,
+  ) {
     return places
         .where(
           (place) =>
@@ -34,7 +38,9 @@ class CheckoutCubit extends SafeCubit<CheckoutState> {
         .toList(growable: false);
   }
 
-  List<PaymentMethodRes> _sanitizePaymentMethods(List<PaymentMethodRes> methods) {
+  List<PaymentMethodRes> _sanitizePaymentMethods(
+    List<PaymentMethodRes> methods,
+  ) {
     final filtered = methods
         .where(
           (method) =>
@@ -44,7 +50,9 @@ class CheckoutCubit extends SafeCubit<CheckoutState> {
               (method.title?.trim().isNotEmpty ?? false),
         )
         .toList(growable: false);
-    filtered.sort((a, b) => (a.priority ?? 1 << 30).compareTo(b.priority ?? 1 << 30));
+    filtered.sort(
+      (a, b) => (a.priority ?? 1 << 30).compareTo(b.priority ?? 1 << 30),
+    );
     return filtered;
   }
 
@@ -144,6 +152,33 @@ class CheckoutCubit extends SafeCubit<CheckoutState> {
     }
   }
 
+  Future<Map<int, ProductPricingMemory>> fetchPricingMemories({
+    required int userId,
+    required int siteId,
+    required List<int> productIds,
+  }) {
+    return _repository.fetchPricingMemories(
+      userId: userId,
+      siteId: siteId,
+      productIds: productIds,
+    );
+  }
+
+  Future<ResellerQuote> createQuote(ResellerQuote quote) {
+    return _repository.createQuote(quote);
+  }
+
+  Future<void> markQuoteConverted({
+    required String quoteId,
+    required String orderId,
+  }) {
+    return _repository.markQuoteConverted(quoteId: quoteId, orderId: orderId);
+  }
+
+  Future<bool> deleteQuote(String quoteId) {
+    return _repository.deleteQuote(quoteId);
+  }
+
   Future<void> hydrateCustomerContext({
     required int userId,
     required int siteId,
@@ -221,6 +256,267 @@ class CheckoutCubit extends SafeCubit<CheckoutState> {
       );
       return false;
     }
+  }
+
+  void setQuickOrderDraft(Map<String, dynamic>? draft) {
+    emit(
+      state.copyWith(
+        quickOrderDraftStatus: draft == null
+            ? CheckoutResourceStatus.initial
+            : CheckoutResourceStatus.success,
+        quickOrderDraft: draft,
+        clearQuickOrderDraft: draft == null,
+        clearError: true,
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>?> loadQuickOrderDraft({
+    required int userId,
+    required int siteId,
+    String? draftId,
+  }) async {
+    emit(
+      state.copyWith(
+        quickOrderDraftStatus: CheckoutResourceStatus.loading,
+        clearError: true,
+      ),
+    );
+    try {
+      final draft = await _repository.fetchQuickOrderDraft(
+        userId: userId,
+        siteId: siteId,
+        draftId: draftId,
+      );
+      emit(
+        state.copyWith(
+          quickOrderDraftStatus: CheckoutResourceStatus.success,
+          quickOrderDraft: draft,
+          clearQuickOrderDraft: draft == null,
+          clearError: true,
+        ),
+      );
+      return draft;
+    } catch (error) {
+      emit(
+        state.copyWith(
+          quickOrderDraftStatus: CheckoutResourceStatus.failure,
+          error: AppFailure.fromObject(
+            error,
+            fallbackTitle: 'Unable to load quick-order draft.',
+          ),
+        ),
+      );
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>> saveQuickOrderDraft({
+    required int userId,
+    required int siteId,
+    required Map<String, dynamic> draft,
+  }) async {
+    emit(
+      state.copyWith(
+        quickOrderDraftStatus: CheckoutResourceStatus.loading,
+        clearError: true,
+      ),
+    );
+    try {
+      final savedDraft = await _repository.saveQuickOrderDraft(
+        userId: userId,
+        siteId: siteId,
+        draft: draft,
+      );
+      emit(
+        state.copyWith(
+          quickOrderDraftStatus: CheckoutResourceStatus.success,
+          quickOrderDraft: savedDraft,
+          clearError: true,
+        ),
+      );
+      return savedDraft;
+    } catch (error) {
+      emit(
+        state.copyWith(
+          quickOrderDraftStatus: CheckoutResourceStatus.failure,
+          error: AppFailure.fromObject(
+            error,
+            fallbackTitle: 'Unable to save quick-order draft.',
+          ),
+        ),
+      );
+      rethrow;
+    }
+  }
+
+  Future<bool> deleteQuickOrderDraft({
+    required int userId,
+    required int siteId,
+    String? draftId,
+  }) async {
+    emit(
+      state.copyWith(
+        quickOrderDraftStatus: CheckoutResourceStatus.loading,
+        clearError: true,
+      ),
+    );
+    try {
+      final deleted = await _repository.deleteQuickOrderDraft(
+        userId: userId,
+        siteId: siteId,
+        draftId: draftId,
+      );
+      emit(
+        state.copyWith(
+          quickOrderDraftStatus: deleted
+              ? CheckoutResourceStatus.initial
+              : CheckoutResourceStatus.success,
+          clearQuickOrderDraft: deleted,
+          clearError: true,
+        ),
+      );
+      return deleted;
+    } catch (error) {
+      emit(
+        state.copyWith(
+          quickOrderDraftStatus: CheckoutResourceStatus.failure,
+          error: AppFailure.fromObject(
+            error,
+            fallbackTitle: 'Unable to delete quick-order draft.',
+          ),
+        ),
+      );
+      return false;
+    }
+  }
+
+  void clearQuickOrderDraftState({bool resetStatus = true}) {
+    emit(
+      state.copyWith(
+        quickOrderDraftStatus: resetStatus
+            ? CheckoutResourceStatus.initial
+            : state.quickOrderDraftStatus,
+        clearQuickOrderDraft: true,
+        clearError: true,
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> fetchBuyerRiskDecision({
+    required int userId,
+    required int siteId,
+    required String buyerPhone,
+    String? buyerName,
+    String? buyerAddress,
+    double? orderTotal,
+    int? itemCount,
+    Map<String, dynamic>? context,
+  }) async {
+    emit(
+      state.copyWith(
+        buyerRiskDecisionStatus: CheckoutResourceStatus.loading,
+        clearError: true,
+      ),
+    );
+    try {
+      final decision = await _repository.fetchBuyerRiskDecision(
+        userId: userId,
+        siteId: siteId,
+        buyerPhone: buyerPhone,
+        buyerName: buyerName,
+        buyerAddress: buyerAddress,
+        orderTotal: orderTotal,
+        itemCount: itemCount,
+        context: context,
+      );
+      emit(
+        state.copyWith(
+          buyerRiskDecisionStatus: CheckoutResourceStatus.success,
+          buyerRiskDecision: decision,
+          clearError: true,
+        ),
+      );
+      return decision;
+    } catch (error) {
+      emit(
+        state.copyWith(
+          buyerRiskDecisionStatus: CheckoutResourceStatus.failure,
+          error: AppFailure.fromObject(
+            error,
+            fallbackTitle: 'Unable to evaluate buyer risk.',
+          ),
+        ),
+      );
+      rethrow;
+    }
+  }
+
+  void clearBuyerRiskDecisionState({bool resetStatus = true}) {
+    emit(
+      state.copyWith(
+        buyerRiskDecisionStatus: resetStatus
+            ? CheckoutResourceStatus.initial
+            : state.buyerRiskDecisionStatus,
+        clearBuyerRiskDecision: true,
+        clearError: true,
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> previewSupplierSplit({
+    required int userId,
+    required int siteId,
+    required List<Map<String, dynamic>> lines,
+    Map<String, dynamic>? draft,
+    List<Map<String, dynamic>> supplierHints = const <Map<String, dynamic>>[],
+  }) async {
+    emit(
+      state.copyWith(
+        supplierSplitPreviewStatus: CheckoutResourceStatus.loading,
+        clearError: true,
+      ),
+    );
+    try {
+      final preview = await _repository.previewSupplierSplit(
+        userId: userId,
+        siteId: siteId,
+        lines: lines,
+        draft: draft,
+        supplierHints: supplierHints,
+      );
+      emit(
+        state.copyWith(
+          supplierSplitPreviewStatus: CheckoutResourceStatus.success,
+          supplierSplitPreview: preview,
+          clearError: true,
+        ),
+      );
+      return preview;
+    } catch (error) {
+      emit(
+        state.copyWith(
+          supplierSplitPreviewStatus: CheckoutResourceStatus.failure,
+          error: AppFailure.fromObject(
+            error,
+            fallbackTitle: 'Unable to preview supplier grouping.',
+          ),
+        ),
+      );
+      rethrow;
+    }
+  }
+
+  void clearSupplierSplitPreviewState({bool resetStatus = true}) {
+    emit(
+      state.copyWith(
+        supplierSplitPreviewStatus: resetStatus
+            ? CheckoutResourceStatus.initial
+            : state.supplierSplitPreviewStatus,
+        clearSupplierSplitPreview: true,
+        clearError: true,
+      ),
+    );
   }
 
   Future<void> applyVoucher({
@@ -306,7 +602,9 @@ class CheckoutCubit extends SafeCubit<CheckoutState> {
     }
   }
 
-  Future<PaymentGatewayResponse> paymentGatewayRequest(PaymentGatewayReq model) {
+  Future<PaymentGatewayResponse> paymentGatewayRequest(
+    PaymentGatewayReq model,
+  ) {
     return _repository.paymentGatewayRequest(model);
   }
 

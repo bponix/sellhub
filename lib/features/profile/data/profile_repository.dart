@@ -1,229 +1,310 @@
-import 'package:flutter/cupertino.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:sellhub/core/local_seed/sellhub_commerce_local_store.dart';
+import 'package:sellhub/features/profile/data/model/buyer_book_profile.dart';
 import 'package:sellhub/features/profile/data/model/order_res_model.dart';
+import 'package:sellhub/features/profile/data/model/payout_adjustment_entry.dart';
+import 'package:sellhub/features/profile/data/model/payout_batch_entry.dart';
+import 'package:sellhub/features/profile/data/model/payout_dispute_entry.dart';
 import 'package:sellhub/features/profile/data/model/profile_res-Model.dart';
 import 'package:sellhub/features/profile/data/model/reseller_response_model.dart';
 import 'package:sellhub/features/profile/data/model/self_store_customer.dart';
 import 'package:sellhub/features/profile/data/model/store_customer_address.dart';
-import 'package:sellhub/features/profile/mutation/customer_address_mutations.dart';
-import 'package:sellhub/features/profile/mutation/customer_favorite_mutations.dart';
-import 'package:sellhub/features/profile/mutation/request_reseller.dart';
-import 'package:sellhub/features/profile/mutation/user_password_update.dart';
-import 'package:sellhub/features/profile/query/order_query.dart';
-import 'package:sellhub/features/profile/query/profile_query.dart';
-import 'package:sellhub/features/profile/query/reseller_query.dart';
-import 'package:sellhub/features/profile/query/self_store_customer.dart';
+import 'package:sellhub/features/profile/data/model/team_member_entry.dart';
+import 'package:sellhub/features/profile/data/model/team_shared_list_entry.dart';
+import 'package:sellhub/features/profile/data/model/team_selling_overview.dart';
+import 'package:sellhub/features/profile/data/model/workflow_automation_overview.dart';
+import 'package:sellhub/features/profile/data/model/workflow_buyer_segment.dart';
+import 'package:sellhub/features/profile/data/model/workflow_pricing_template.dart';
+import 'package:sellhub/features/profile/data/model/workflow_supplier_bundle.dart';
+import 'package:sellhub/features/cart/data/models/reseller_quote.dart';
 
 class ProfileRepository {
-  final GraphQLClient _client;
-  ProfileRepository(this._client);
+  ProfileRepository(Object? client, this._commerceStore);
 
-  // get profile data
-  Future<ProfileResModel?>? fetchProfileDetails(int id) async {
-    //print('user id is: ${id}');
-    final QueryResult result = await _client
-        .query(
-          QueryOptions(
-            document: gql(FETCHPROFILE),
-            variables: {"id": id},
-            fetchPolicy: FetchPolicy.networkOnly,
-          ),
-        )
-        .timeout(Duration(seconds: 10)); // it's good practice to add timeout
+  final SellHubCommerceLocalStore _commerceStore;
 
-    if (result.hasException) {
-      // print('has Eception');
-      // // check network error
-      // if (result.exception!.linkException is NetworkException) {
-      //   print('Network Error: Please check your internet');
-      // }
-      throw Exception(result.exception.toString());
-    }
-    //log(result.data.toString());
-    if (result.data != null) {
-      final edges = result.data?['storeCustomer'];
-      return ProfileResModel.fromJson(edges);
-    } else {
-      return null;
-    }
+  Future<ProfileResModel?>? fetchProfileDetails(int id) {
+    return _commerceStore.fetchProfileDetails(id);
   }
 
-  // order history
   Future<List<OrderHistoryResModelProfile>> fetchOrderHistory(
     int siteId,
     int customerId,
-  ) async {
-    //print('user id is: ${customerId}');
-    // print('Call Fetch Order History');
-    // print(siteId);
-    // print(customerId);
-    final QueryResult result = await _client.query(
-      QueryOptions(
-        document: gql(FETCHORDERHISTORY),
-        variables: {
-          "siteId": siteId,
-          "customerId": customerId,
-          "referId": null,
-          "after": null,
-        },
-        fetchPolicy: FetchPolicy.networkOnly,
-      ),
-    );
-
-    if (result.hasException) {
-      // print('Has Exception');
-      throw Exception(result.exception.toString());
-    }
-    // print('Data is >>>>');
-    // print(result.data);
-    if (result.data != null && result.data?['storeOrders']['edges'] != null) {
-      final List edges = result.data?['storeOrders']['edges'];
-      return edges
-          .map((e) => OrderHistoryResModelProfile.fromJson(e['node']))
-          .toList();
-    } else {
-      return [];
-    }
+  ) {
+    return _commerceStore.fetchOrderHistory(siteId, customerId);
   }
 
-  // get reseller info
-  Future<ResellerResModelProfile?> fetchResellerInformation(int id) async {
-    final QueryResult result = await _client.query(
-      QueryOptions(
-        document: gql(FETCHRESELLERINFORMATION),
-        variables: {"id": id},
-        fetchPolicy: FetchPolicy.networkOnly,
-      ),
-    );
-    if (result.hasException) {
-      throw Exception(result.exception.toString());
-    }
-    if (result.data != null && result.data?['storeCustomer'] != null) {
-      return ResellerResModelProfile.fromJson(result.data?['storeCustomer']);
-    } else {
-      return null;
-    }
+  Future<List<BuyerBookProfile>> fetchBuyerBook({
+    required int userId,
+    required int siteId,
+  }) {
+    return _commerceStore.fetchBuyerBook(userId: userId, siteId: siteId);
   }
 
-  // request for reselling
+  Future<List<PayoutBatchEntry>> fetchPayoutBatches({
+    required int userId,
+    required int siteId,
+  }) {
+    return _commerceStore.fetchPayoutBatches(userId: userId, siteId: siteId);
+  }
+
+  Future<PayoutBatchEntry> upsertPayoutBatch(PayoutBatchEntry entry) {
+    return _commerceStore.upsertPayoutBatch(entry);
+  }
+
+  Future<bool> deletePayoutBatch(String id) {
+    return _commerceStore.deletePayoutBatch(id);
+  }
+
+  Future<List<PayoutAdjustmentEntry>> fetchPayoutAdjustments({
+    required int userId,
+    required int siteId,
+  }) {
+    return _commerceStore.fetchPayoutAdjustments(
+      userId: userId,
+      siteId: siteId,
+    );
+  }
+
+  Future<PayoutAdjustmentEntry> upsertPayoutAdjustment(
+    PayoutAdjustmentEntry entry,
+  ) {
+    return _commerceStore.upsertPayoutAdjustment(entry);
+  }
+
+  Future<bool> deletePayoutAdjustment(String id) {
+    return _commerceStore.deletePayoutAdjustment(id);
+  }
+
+  Future<List<PayoutDisputeEntry>> fetchPayoutDisputes({
+    required int userId,
+    required int siteId,
+  }) {
+    return _commerceStore.fetchPayoutDisputes(userId: userId, siteId: siteId);
+  }
+
+  Future<List<ResellerQuote>> fetchQuotes({
+    required int userId,
+    required int siteId,
+  }) {
+    return _commerceStore.fetchQuotes(userId: userId, siteId: siteId);
+  }
+
+  Future<bool> deleteQuote(String quoteId) {
+    return _commerceStore.deleteQuote(quoteId);
+  }
+
+  Future<PayoutDisputeEntry> upsertPayoutDispute(PayoutDisputeEntry entry) {
+    return _commerceStore.upsertPayoutDispute(entry);
+  }
+
+  Future<bool> deletePayoutDispute(String id) {
+    return _commerceStore.deletePayoutDispute(id);
+  }
+
+  Future<PayoutDisputeEntry> reportPayoutDispute({
+    required int userId,
+    required int siteId,
+    required String orderId,
+    String? batchId,
+    required String reason,
+    required String note,
+  }) {
+    return _commerceStore.reportPayoutDispute(
+      userId: userId,
+      siteId: siteId,
+      orderId: orderId,
+      batchId: batchId,
+      reason: reason,
+      note: note,
+    );
+  }
+
+  Future<bool> saveBuyerProfileMeta({
+    required String buyerId,
+    required String buyerName,
+    required String buyerPhone,
+    required int userId,
+    required int siteId,
+    required String note,
+    required String sourceTag,
+    required bool isRisky,
+    required bool isBlocked,
+  }) {
+    return _commerceStore.saveBuyerProfileMeta(
+      buyerId: buyerId,
+      buyerName: buyerName,
+      buyerPhone: buyerPhone,
+      userId: userId,
+      siteId: siteId,
+      note: note,
+      sourceTag: sourceTag,
+      isRisky: isRisky,
+      isBlocked: isBlocked,
+    );
+  }
+
+  Future<bool> deleteBuyerProfileMeta(String buyerId) {
+    return _commerceStore.deleteBuyerProfileMeta(buyerId);
+  }
+
+  Future<WorkflowAutomationOverview> fetchWorkflowAutomationOverview({
+    required int userId,
+    required int siteId,
+  }) {
+    return _commerceStore.fetchWorkflowAutomationOverview(
+      userId: userId,
+      siteId: siteId,
+    );
+  }
+
+  Future<WorkflowPricingTemplate> upsertWorkflowPricingTemplate(
+    WorkflowPricingTemplate template,
+  ) {
+    return _commerceStore.upsertWorkflowPricingTemplate(template);
+  }
+
+  Future<bool> deleteWorkflowPricingTemplate(String id) {
+    return _commerceStore.deleteWorkflowPricingTemplate(id);
+  }
+
+  Future<WorkflowSupplierBundle> upsertWorkflowSupplierBundle(
+    WorkflowSupplierBundle bundle,
+  ) {
+    return _commerceStore.upsertWorkflowSupplierBundle(bundle);
+  }
+
+  Future<bool> deleteWorkflowSupplierBundle(String id) {
+    return _commerceStore.deleteWorkflowSupplierBundle(id);
+  }
+
+  Future<WorkflowBuyerSegment> upsertWorkflowBuyerSegment(
+    WorkflowBuyerSegment segment,
+  ) {
+    return _commerceStore.upsertWorkflowBuyerSegment(segment);
+  }
+
+  Future<bool> deleteWorkflowBuyerSegment(String id) {
+    return _commerceStore.deleteWorkflowBuyerSegment(id);
+  }
+
+  Future<TeamSellingOverview> fetchTeamSellingOverview({
+    required int userId,
+    required int siteId,
+  }) {
+    return _commerceStore.fetchTeamSellingOverview(userId: userId, siteId: siteId);
+  }
+
+  Future<void> upsertTeamConfig({
+    required int userId,
+    required int siteId,
+    required String teamId,
+    required String teamName,
+    required String ownerName,
+    required double overridePercent,
+  }) {
+    return _commerceStore.upsertTeamConfig(
+      userId: userId,
+      siteId: siteId,
+      teamId: teamId,
+      teamName: teamName,
+      ownerName: ownerName,
+      overridePercent: overridePercent,
+    );
+  }
+
+  Future<TeamMemberEntry> upsertTeamMember(TeamMemberEntry member) {
+    return _commerceStore.upsertTeamMember(member);
+  }
+
+  Future<TeamMemberEntry?> fetchTeamMember(String id) {
+    return _commerceStore.fetchTeamMember(id);
+  }
+
+  Future<TeamMemberEntry> acceptTeamInvite({
+    required String memberId,
+    required String teamId,
+    required int ownerUserId,
+    required int siteId,
+    String? sellerName,
+    String? sellerPhone,
+  }) {
+    return _commerceStore.acceptTeamInvite(
+      memberId: memberId,
+      teamId: teamId,
+      ownerUserId: ownerUserId,
+      siteId: siteId,
+      sellerName: sellerName,
+      sellerPhone: sellerPhone,
+    );
+  }
+
+  Future<bool> deleteTeamMember(String id) {
+    return _commerceStore.deleteTeamMember(id);
+  }
+
+  Future<TeamSharedListEntry> upsertTeamSharedList(TeamSharedListEntry entry) {
+    return _commerceStore.upsertTeamSharedList(entry);
+  }
+
+  Future<bool> deleteTeamSharedList(String id) {
+    return _commerceStore.deleteTeamSharedList(id);
+  }
+
+  Future<ResellerResModelProfile?> fetchResellerInformation(int id) {
+    return _commerceStore.fetchResellerInformation(id);
+  }
+
   Future<bool> makeResellerRequest(
     int userId,
     int customerId,
     String title,
     String paymentTitle,
     String paymentNo,
-  ) async {
-    final QueryResult result = await _client.mutate(
-      MutationOptions(
-        document: gql(RESELLERREQUEST),
-        variables: {
-          "userId": userId,
-          "customerId": customerId,
-          "title": title,
-          "customerType": [2],
-          "paymentTitle": paymentTitle,
-          "paymentNo": paymentNo,
-          "note": [],
-        },
-        fetchPolicy: FetchPolicy.networkOnly,
-      ),
+  ) {
+    return _commerceStore.makeResellerRequest(
+      userId: userId,
+      customerId: customerId,
+      title: title,
+      paymentTitle: paymentTitle,
+      paymentNo: paymentNo,
     );
-    if (result.hasException) {
-      debugPrint(result.exception.toString());
-      //throw Exception(result.exception.toString());
-      return false;
-    }
-    if (result.data != null) {
-      return true;
-    } else {
-      return false;
-    }
   }
 
-  // self store customer info fetch
-  Future<SelfStoreCustomerRes?> fetchSelfStoreCustomer(
-    int userId,
-    int siteID,
-  ) async {
-    final QueryResult result = await _client.query(
-      QueryOptions(
-        document: gql(FETCHSELFSTORECUSTOMER),
-        variables: {
-          "userId": userId,
-          "siteId": siteID,
-          "isActive": true,
-          "isReseller": false,
-          "iswholesale": false,
-        },
-        fetchPolicy: FetchPolicy.networkOnly,
-      ),
-    );
-    if (result.hasException) {
-      throw Exception(result.exception.toString());
-    }
-    //print(result.data);
-    if (result.data != null && result.data?['selfStoreCustomer'] != null) {
-      return SelfStoreCustomerRes.fromJson(result.data?['selfStoreCustomer']);
-    } else {
-      return null;
-    }
+  Future<SelfStoreCustomerRes?> fetchSelfStoreCustomer(int userId, int siteID) {
+    return _commerceStore.fetchSelfStoreCustomer(userId, siteID);
   }
 
   Future<bool> addFavorite({
     required int userId,
     required int customerId,
     required int productId,
-  }) async {
-    final result = await _client.mutate(
-      MutationOptions(
-        document: gql(ADD_STORE_CUSTOMER_FAVORITE),
-        variables: <String, dynamic>{
-          'userId': userId,
-          'customerId': customerId,
-          'productId': productId,
-        },
-        fetchPolicy: FetchPolicy.networkOnly,
-      ),
+  }) {
+    return _commerceStore.addFavorite(
+      userId: userId,
+      customerId: customerId,
+      productId: productId,
     );
-
-    if (result.hasException) {
-      throw Exception(result.exception.toString());
-    }
-    return result.data?['selfStoreCustomerAddFavorite'] == true;
   }
 
   Future<bool> removeFavorite({
     required int userId,
     required int customerId,
     required int productId,
-  }) async {
-    final result = await _client.mutate(
-      MutationOptions(
-        document: gql(REMOVE_STORE_CUSTOMER_FAVORITE),
-        variables: <String, dynamic>{
-          'userId': userId,
-          'customerId': customerId,
-          'productId': productId,
-        },
-        fetchPolicy: FetchPolicy.networkOnly,
-      ),
+  }) {
+    return _commerceStore.removeFavorite(
+      userId: userId,
+      customerId: customerId,
+      productId: productId,
     );
-
-    if (result.hasException) {
-      throw Exception(result.exception.toString());
-    }
-    return result.data?['selfStoreCustomerRemoveFavorite'] == true;
   }
 
   Future<bool> addShippingAddress({
     required int customerId,
     required StoreCustomerAddressModel address,
   }) {
-    return _addressMutation(
-      document: ADD_STORE_CUSTOMER_SHIPPING_ADDRESS,
+    return _commerceStore.addShippingAddress(
       customerId: customerId,
       address: address,
-      resultKey: 'storeCustomerAddShippingAddress',
     );
   }
 
@@ -231,11 +312,9 @@ class ProfileRepository {
     required int customerId,
     required StoreCustomerAddressModel address,
   }) {
-    return _addressMutation(
-      document: REMOVE_STORE_CUSTOMER_SHIPPING_ADDRESS,
+    return _commerceStore.removeShippingAddress(
       customerId: customerId,
       address: address,
-      resultKey: 'storeCustomerRemoveShippingAddress',
     );
   }
 
@@ -243,11 +322,9 @@ class ProfileRepository {
     required int customerId,
     required StoreCustomerAddressModel address,
   }) {
-    return _addressMutation(
-      document: ADD_STORE_CUSTOMER_BILLING_ADDRESS,
+    return _commerceStore.addBillingAddress(
       customerId: customerId,
       address: address,
-      resultKey: 'storeCustomerAddBillingAddress',
     );
   }
 
@@ -255,70 +332,13 @@ class ProfileRepository {
     required int customerId,
     required StoreCustomerAddressModel address,
   }) {
-    return _addressMutation(
-      document: REMOVE_STORE_CUSTOMER_BILLING_ADDRESS,
+    return _commerceStore.removeBillingAddress(
       customerId: customerId,
       address: address,
-      resultKey: 'storeCustomerRemoveBillingAddress',
     );
   }
 
-  Future<bool> _addressMutation({
-    required String document,
-    required int customerId,
-    required StoreCustomerAddressModel address,
-    required String resultKey,
-  }) async {
-    final result = await _client.mutate(
-      MutationOptions(
-        document: gql(document),
-        variables: <String, dynamic>{
-          'customerId': customerId,
-          'id': address.id,
-          'address': address.address,
-          'formattedAddress': address.formattedAddress,
-          'latitude': address.latitude,
-          'longitude': address.longitude,
-        },
-        fetchPolicy: FetchPolicy.networkOnly,
-      ),
-    );
-
-    if (result.hasException) {
-      throw Exception(result.exception.toString());
-    }
-    return result.data?[resultKey] == true;
-  }
-
-  // password change
-  Future<bool> passwordChange(
-    int id,
-    String oldPassword,
-    String newPassword,
-  ) async {
-    //  print(id);
-    final QueryResult result = await _client.mutate(
-      MutationOptions(
-        document: gql(USER_PASSWORD_UPDATE),
-        variables: {
-          "id": id,
-          "email": "hfccoyt314978@bponi.com",
-          "new": newPassword,
-          "old": oldPassword,
-        },
-        fetchPolicy: FetchPolicy.networkOnly,
-      ),
-    );
-    if (result.hasException) {
-      // print(result.exception);
-      // print('Has Exception');
-      return false;
-    }
-    //  print(result.data);
-    if (result.data != null && result.data?['userPasswordUpdate'] != null) {
-      return true;
-    } else {
-      return false;
-    }
+  Future<bool> passwordChange(int id, String oldPassword, String newPassword) {
+    return _commerceStore.passwordChange(id, oldPassword, newPassword);
   }
 }

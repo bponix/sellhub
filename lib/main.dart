@@ -205,7 +205,7 @@ class _MyAppState extends State<MyApp> {
                                       if (showPersistentNav)
                                         Align(
                                           alignment: Alignment.bottomCenter,
-                                          child: StoreBottomNavBar(
+                                          child: SellerBottomNavBar(
                                             currentIndex:
                                                 shellState.currentIndex,
                                           ),
@@ -236,12 +236,7 @@ bool _shouldShowPersistentStoreNav({
 }) {
   final path = AppRouter.router.routeInformationProvider.value.uri.path
       .toLowerCase();
-  const hiddenRoutes = <String>{
-    '/${RouteNames.splash}',
-    '/${RouteNames.home}',
-    '/${RouteNames.storeSelector}',
-    '/${RouteNames.storeScanner}',
-  };
+  const hiddenRoutes = <String>{'/${RouteNames.splash}', '/${RouteNames.home}'};
 
   return !hiddenRoutes.contains(path);
 }

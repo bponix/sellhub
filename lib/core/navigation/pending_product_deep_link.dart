@@ -168,11 +168,7 @@ class PendingProductDeepLinkHandler {
       return true;
     }
 
-    AppRouter.goToStoreSelector(
-      context,
-      returnTo: '/${RouteNames.home}',
-      shellIndex: 0,
-    );
+    AppRouter.goToHome(context);
     return true;
   }
 

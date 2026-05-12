@@ -3,6 +3,7 @@ import 'package:sellhub/core/share/sellhub_share_payload_codec.dart';
 import 'package:sellhub/core/utils/route_names.dart';
 import 'package:sellhub/features/cart/data/models/cart_item_model.dart';
 import 'package:sellhub/features/cart/data/models/order_create_res.dart';
+import 'package:sellhub/features/cart/data/models/reseller_quote.dart';
 import 'package:sellhub/features/product/data/models/product_res_common.dart';
 
 class SellHubShareLinkBuilder {
@@ -45,7 +46,7 @@ class SellHubShareLinkBuilder {
     return buildStoreUri(store: store).replace(
       queryParameters: <String, String>{
         ...buildStoreUri(store: store).queryParameters,
-        'routeName': RouteNames.cart,
+        'routeName': RouteNames.sellingList,
         'cartItems': SellHubSharePayloadCodec.encodeCartItems(sharedItems),
       },
     );
@@ -66,8 +67,8 @@ class SellHubShareLinkBuilder {
         ? store.title!.trim()
         : store.domain;
     final intro = titles.isEmpty
-        ? 'Open this shared cart from $storeLabel.'
-        : 'Shop this shared cart from $storeLabel: ${titles.join(', ')}';
+        ? 'Open this shared selling list from $storeLabel.'
+        : 'Open this shared selling list from $storeLabel: ${titles.join(', ')}';
     return '$intro\n${buildCartUri(store: store, items: items)}';
   }
 
@@ -109,9 +110,27 @@ class SellHubShareLinkBuilder {
         .where((value) => value.isNotEmpty)
         .toList(growable: false);
     final intro = lines.isEmpty
-        ? 'I just placed an order from ${store.title?.trim().isNotEmpty == true ? store.title!.trim() : store.domain}.'
-        : 'I just ordered ${lines.join(', ')} from ${store.title?.trim().isNotEmpty == true ? store.title!.trim() : store.domain}.';
-    return '$intro\nTrack store and shop again:\n$uri';
+        ? 'I just created an order from ${store.title?.trim().isNotEmpty == true ? store.title!.trim() : store.domain}.'
+        : 'I just created an order for ${lines.join(', ')} from ${store.title?.trim().isNotEmpty == true ? store.title!.trim() : store.domain}.';
+    return '$intro\nOpen the same supplier context again:\n$uri';
+  }
+
+  static String buildQuoteShareText({
+    required ActiveStore store,
+    required ResellerQuote quote,
+  }) {
+    final storeLabel = store.title?.trim().isNotEmpty == true
+        ? store.title!.trim()
+        : store.domain;
+    final titles = quote.lines
+        .take(3)
+        .map((line) => line.title.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+    final intro = titles.isEmpty
+        ? 'Quote from $storeLabel'
+        : 'Quote from $storeLabel: ${titles.join(', ')}';
+    return '$intro\nBuyer total: ৳${quote.total}\nDelivery: ${quote.deliveryLabel} (${quote.deliveryEstimate})\nExpected profit: ৳${quote.profit}\nBuyer: ${quote.buyerName}\nContact: ${quote.buyerPhone}\n${buildStoreUri(store: store)}';
   }
 
   static Uri buildReferralUri({
@@ -155,7 +174,55 @@ class SellHubShareLinkBuilder {
     final rewardCopy = rewardLabel?.trim().isNotEmpty == true
         ? '${rewardLabel!.trim()}\n'
         : '';
-    return 'Shop on $storeLabel with my referral code.\n${rewardCopy}Referral code: $referCode\n${buildReferralUri(store: store, referCode: referCode)}';
+    return 'Sell from $storeLabel with my referral code.\n${rewardCopy}Referral code: $referCode\n${buildReferralUri(store: store, referCode: referCode)}';
+  }
+
+  static Uri buildTeamInviteUri({
+    required ActiveStore store,
+    required String teamId,
+    required String memberId,
+    required int ownerUserId,
+    required int siteId,
+    required String teamName,
+    required String ownerName,
+    required double overridePercent,
+  }) {
+    return buildStoreUri(store: store).replace(
+      queryParameters: <String, String>{
+        ...buildStoreUri(store: store).queryParameters,
+        'routeName': RouteNames.teamInvite,
+        'teamId': teamId,
+        'memberId': memberId,
+        'ownerUserId': '$ownerUserId',
+        'siteId': '$siteId',
+        'teamName': teamName,
+        'ownerName': ownerName,
+        'override': overridePercent.toStringAsFixed(0),
+      },
+    );
+  }
+
+  static String buildTeamInviteShareText({
+    required ActiveStore store,
+    required String teamId,
+    required String memberId,
+    required int ownerUserId,
+    required int siteId,
+    required String teamName,
+    required String ownerName,
+    required double overridePercent,
+  }) {
+    final uri = buildTeamInviteUri(
+      store: store,
+      teamId: teamId,
+      memberId: memberId,
+      ownerUserId: ownerUserId,
+      siteId: siteId,
+      teamName: teamName,
+      ownerName: ownerName,
+      overridePercent: overridePercent,
+    );
+    return 'Join $teamName on SellHub.\nOwner: $ownerName\nDirect override: ${overridePercent.toStringAsFixed(0)}% on shipped team sales.\nOpen this invite to accept:\n$uri';
   }
 
   static Uri _orderPrimaryProductUri({

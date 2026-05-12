@@ -11,17 +11,17 @@ import 'package:sellhub/core/utils/constants.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
 import 'package:sellhub/core/widget/app_drawer.dart';
 import 'package:sellhub/core/widget/sellhub_top_app_bar.dart';
-import 'package:sellhub/features/cart/presentation/cubit/cart_cubit.dart';
-import 'package:sellhub/features/cart/presentation/cubit/cart_state.dart';
-import 'package:sellhub/features/cart/screens/cart_screen.dart';
-import 'package:sellhub/features/favourite/presentation/cubit/favourite_cubit.dart';
-import 'package:sellhub/features/favourite/presentation/cubit/favourite_state.dart';
 import 'package:sellhub/features/categories/screen/category_screen.dart';
-import 'package:sellhub/features/favourite/screens/favourite_screen.dart';
 import 'package:sellhub/features/product/screens/home_screen.dart';
 import 'package:sellhub/features/profile/screens/profile_screen.dart';
+import 'package:sellhub/features/saved/presentation/cubit/saved_cubit.dart';
+import 'package:sellhub/features/saved/presentation/cubit/saved_state.dart';
+import 'package:sellhub/features/saved/screens/saved_screen.dart';
 import 'package:sellhub/features/shell/presentation/cubit/store_shell_cubit.dart';
 import 'package:sellhub/features/shell/presentation/cubit/store_shell_state.dart';
+import 'package:sellhub/features/selling_list/presentation/cubit/selling_list_cubit.dart';
+import 'package:sellhub/features/selling_list/presentation/cubit/selling_list_state.dart';
+import 'package:sellhub/features/selling_list/screens/selling_list_screen.dart';
 import 'package:sellhub/features/storefront/presentation/cubit/storefront_state.dart';
 
 import 'storefront/presentation/cubit/storefront_cubit.dart';
@@ -37,13 +37,48 @@ class _MainScreenState extends State<MainScreen> {
   static const List<Widget> _screens = <Widget>[
     HomeScreen(),
     CategoryScreen(),
-    FavouriteScreen(),
-    CartScreen(),
+    SavedScreen(),
+    SellingListScreen(),
     ProfileScreen(),
   ];
 
   bool _handledPendingProductLink = false;
   bool _handledPendingDeepLink = false;
+
+  _TabAppBarData _tabAppBarDataForIndex(int index) {
+    switch (index) {
+      case 1:
+        return const _TabAppBarData(
+          title: 'Categories',
+          subtitle: 'Browse supplier catalog fast',
+          icon: HugeIcons.strokeRoundedGridView,
+        );
+      case 2:
+        return const _TabAppBarData(
+          title: 'Saved',
+          subtitle: 'Products you want to reuse',
+          icon: HugeIcons.strokeRoundedFavourite,
+        );
+      case 3:
+        return const _TabAppBarData(
+          title: 'Selling list',
+          subtitle: 'Price, quote, and place the order',
+          icon: HugeIcons.strokeRoundedShoppingCart01,
+        );
+      case 4:
+        return const _TabAppBarData(
+          title: 'Profile',
+          subtitle: 'Buyer book, payouts, and team',
+          icon: HugeIcons.strokeRoundedUser,
+        );
+      default:
+        return const _TabAppBarData(
+          title: AppText.appName,
+          subtitle: 'Find products and sell fast',
+          icon: HugeIcons.strokeRoundedShoppingBag03,
+        );
+    }
+  }
 
   @override
   void initState() {
@@ -76,31 +111,22 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return BlocBuilder<StoreShellCubit, StoreShellState>(
       builder: (context, shellState) {
+        final appBarData = _tabAppBarDataForIndex(shellState.currentIndex);
         return BlocBuilder<StorefrontCubit, StorefrontState>(
           builder: (context, storefrontState) {
-            final title =
-                storefrontState.siteDetails?.title?.trim().isNotEmpty == true
-                ? storefrontState.siteDetails!.title!.trim()
-                : AppText.appName;
             return Scaffold(
               appBar: SellHubTopAppBar(
-                title: title,
-                subtitle: storefrontState.siteDetails?.domain,
+                title: appBarData.title,
+                subtitle: appBarData.subtitle,
                 showSubtitle: true,
-                icon: HugeIcons.strokeRoundedStore03,
-                showStoreActions: true,
+                icon: appBarData.icon,
               ),
               endDrawer: AppDrawerFull(
-                logoUrl: storefrontState.siteDetails?.phoneLogo,
                 onOpenCategories: () =>
                     context.read<StoreShellCubit>().setIndex(1),
               ),
               body: Column(
                 children: [
-                  if (storefrontState.degradedSections.isNotEmpty)
-                    _StorefrontNotice(
-                      sections: storefrontState.degradedSections,
-                    ),
                   Expanded(
                     child: IndexedStack(
                       index: shellState.currentIndex,
@@ -129,7 +155,7 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                 ],
               ),
-              bottomNavigationBar: StoreBottomNavBar(
+              bottomNavigationBar: SellerBottomNavBar(
                 currentIndex: shellState.currentIndex,
               ),
             );
@@ -140,99 +166,16 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-class _StorefrontNotice extends StatelessWidget {
-  const _StorefrontNotice({required this.sections});
+class _TabAppBarData {
+  const _TabAppBarData({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
 
-  final List<String> sections;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFBF2),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColor.safe),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColor.safe),
-            ),
-            child: const AppHugeIcon(
-              HugeIcons.strokeRoundedAlert02,
-              size: 16,
-              color: AppColor.alert,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Some sections are unavailable',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColor.text,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  sections.map(_labelForSection).join(', '),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppColor.neutral2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: AppColor.safe),
-            ),
-            child: Text(
-              '${sections.length}',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: AppColor.alert,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static String _labelForSection(String section) {
-    switch (section) {
-      case 'flash_sale':
-        return 'Flash Sale';
-      case 'new_arrival':
-        return 'New Arrival';
-      case 'top_brand':
-        return 'Top Brands';
-      case 'sliders':
-        return 'Banners';
-      case 'categories':
-        return 'Categories';
-      default:
-        return section.replaceAll('_', ' ');
-    }
-  }
+  final String title;
+  final String subtitle;
+  final List<List<dynamic>> icon;
 }
 
 class _StorefrontBootstrapError extends StatelessWidget {
@@ -247,10 +190,10 @@ class _StorefrontBootstrapError extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
           decoration: BoxDecoration(
             color: const Color(0xFFFFF4F4),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColor.safe),
           ),
           child: Row(
@@ -275,7 +218,7 @@ class _StorefrontBootstrapError extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Store refresh failed',
+                      'Catalog refresh failed',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: AppColor.text,
@@ -283,7 +226,7 @@ class _StorefrontBootstrapError extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Cached content may still be visible until the next successful reload.',
+                      'Showing saved data until refresh works again.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColor.neutral2,
                         fontWeight: FontWeight.w600,
@@ -302,8 +245,8 @@ class _StorefrontBootstrapError extends StatelessWidget {
   }
 }
 
-class StoreBottomNavBar extends StatelessWidget {
-  const StoreBottomNavBar({super.key, required this.currentIndex});
+class SellerBottomNavBar extends StatelessWidget {
+  const SellerBottomNavBar({super.key, required this.currentIndex});
 
   final int currentIndex;
 
@@ -318,12 +261,12 @@ class StoreBottomNavBar extends StatelessWidget {
     ),
     _BottomNavItemData(
       icon: HugeIcons.strokeRoundedFavourite,
-      semanticLabel: 'Favourites',
+      semanticLabel: 'Saved',
       useFavouriteBadge: true,
     ),
     _BottomNavItemData(
       icon: HugeIcons.strokeRoundedShoppingCart01,
-      semanticLabel: 'Cart',
+      semanticLabel: 'Selling list',
       useCartBadge: true,
     ),
     _BottomNavItemData(
@@ -337,11 +280,11 @@ class StoreBottomNavBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColor.safe.withValues(alpha: 0.95)),
             boxShadow: [
               BoxShadow(
@@ -352,7 +295,7 @@ class StoreBottomNavBar extends StatelessWidget {
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+            padding: const EdgeInsets.fromLTRB(6, 4, 6, 4),
             child: Row(
               children: List.generate(_items.length, (index) {
                 final item = _items[index];
@@ -402,10 +345,10 @@ class _BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CartCubit, CartState>(
+    return BlocBuilder<SellingListCubit, SellingListState>(
       buildWhen: (_, __) => data.useCartBadge,
       builder: (context, cartState) {
-        return BlocBuilder<FavouriteCubit, FavouriteState>(
+        return BlocBuilder<SavedCubit, SavedState>(
           buildWhen: (_, __) => data.useFavouriteBadge,
           builder: (context, favouriteState) {
             final badgeCount = data.useCartBadge

@@ -13,6 +13,18 @@ class CartState extends Equatable {
     );
   }
 
+  double get totalSellAmount {
+    return items.fold(0, (sum, item) => sum + (item.sellPrice * item.quantity));
+  }
+
+  double get totalProfitAmount {
+    return items.fold(
+      0,
+      (sum, item) =>
+          sum + ((item.sellPrice - (item.product.price?.round() ?? 0)) * item.quantity),
+    );
+  }
+
   double get totalCompareAmount {
     return items.fold(
       0,

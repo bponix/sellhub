@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:sellhub/core/errors/app_failure.dart';
+import 'package:sellhub/core/supplier_trust/supplier_trust_model.dart';
 import 'package:sellhub/features/product/data/models/customer_review_res.dart';
 import 'package:sellhub/features/product/data/models/product_details.dart';
 import 'package:sellhub/features/product/data/models/product_res_common.dart';
@@ -18,6 +19,7 @@ class ProductDetailsState extends Equatable {
     this.hasMoreRelated = true,
     this.relatedOffset = 0,
     this.error,
+    this.supplierTrust,
   });
 
   final ProductDetailsRes? product;
@@ -32,6 +34,7 @@ class ProductDetailsState extends Equatable {
   final bool hasMoreRelated;
   final int relatedOffset;
   final AppFailure? error;
+  final SupplierTrustProfile? supplierTrust;
 
   double get averageRating {
     if (customerReviews.isEmpty) return 0;
@@ -71,6 +74,7 @@ class ProductDetailsState extends Equatable {
     bool? hasMoreRelated,
     int? relatedOffset,
     AppFailure? error,
+    SupplierTrustProfile? supplierTrust,
     bool clearError = false,
   }) {
     return ProductDetailsState(
@@ -87,6 +91,7 @@ class ProductDetailsState extends Equatable {
       hasMoreRelated: hasMoreRelated ?? this.hasMoreRelated,
       relatedOffset: relatedOffset ?? this.relatedOffset,
       error: clearError ? null : error ?? this.error,
+      supplierTrust: supplierTrust ?? this.supplierTrust,
     );
   }
 
@@ -104,5 +109,6 @@ class ProductDetailsState extends Equatable {
     hasMoreRelated,
     relatedOffset,
     error,
+    supplierTrust,
   ];
 }

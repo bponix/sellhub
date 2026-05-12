@@ -41,13 +41,13 @@ class GuestProfileView extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Sign in for a better shopping flow',
+                    'Sign in for a stronger reseller flow',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Keep track of orders, save favourites, and recover your shopping history.',
+                    'Track orders, save products, reuse buyers, and keep your reseller activity in sync.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -112,7 +112,7 @@ class GuestProfileView extends StatelessWidget {
                     ),
                     SizedBox(width: 8),
                     Text(
-                      'Continue to account',
+                      'Open reseller account',
                       style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ],
@@ -143,7 +143,7 @@ class _GuestBenefitRow extends StatelessWidget {
         Expanded(
           child: _GuestBenefitTile(
             icon: HugeIcons.strokeRoundedFavourite,
-            title: 'Favourites',
+            title: 'Saved',
           ),
         ),
         SizedBox(width: 10),

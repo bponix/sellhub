@@ -18,19 +18,21 @@ class SellHubSharedRouteHandler {
     required String routeName,
     Map<String, String>? routeParams,
   }) async {
-    if (routeName != RouteNames.cart) return false;
+    if (routeName != RouteNames.sellingList && routeName != RouteNames.cart) {
+      return false;
+    }
     final sharedItems = SellHubSharePayloadCodec.decodeCartItems(
       routeParams?['cartItems'],
     );
     if (sharedItems.isEmpty) return false;
 
     final imported = await _importSharedCart(context, sharedItems);
-    AppRouter.goNamed(RouteNames.cart);
+    AppRouter.goNamed(RouteNames.sellingList);
     if (!context.mounted) return true;
     if (imported > 0) {
-      CustomToast.success('Shared cart loaded');
+      CustomToast.success('Shared selling list loaded');
     } else {
-      CustomToast.info('Could not load shared cart items');
+      CustomToast.info('Could not load shared selling list');
     }
     return true;
   }

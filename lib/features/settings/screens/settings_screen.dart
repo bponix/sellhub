@@ -4,7 +4,6 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:sellhub/core/constants/app_color.dart';
 import 'package:sellhub/core/store/store_context_cubit.dart';
 import 'package:sellhub/core/store/store_context_state.dart';
-import 'package:sellhub/core/utils/app_router.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
 import 'package:sellhub/core/widget/sellhub_top_app_bar.dart';
 import 'package:sellhub/features/settings/presentation/cubit/settings_cubit.dart';
@@ -36,41 +35,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, storeState) {
           return BlocBuilder<SettingsCubit, SettingsState>(
             builder: (context, state) {
+              final activeStore = storeState.activeStore;
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  _SettingsHero(
-                    storeTitle: storeState.activeStore?.title?.trim().isNotEmpty == true
-                        ? storeState.activeStore!.title!.trim()
-                        : storeState.activeStore?.domain,
+                  _SettingsOverviewCard(
+                    storeName: activeStore?.title?.trim().isNotEmpty == true
+                        ? activeStore!.title!.trim()
+                        : 'Default supplier context',
+                    domain: activeStore?.domain ?? 'sellhub.bponi.com',
                   ),
-                  const SizedBox(height: 14),
-                  if (storeState.activeStore != null) ...[
-                    _SettingsSection(
-                      title: 'Current store',
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          storeState.activeStore!.title?.trim().isNotEmpty == true
-                              ? storeState.activeStore!.title!.trim()
-                              : storeState.activeStore!.domain,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          storeState.activeStore!.domain,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: const AppHugeIcon(
-                          HugeIcons.strokeRoundedStore01,
-                          size: 20,
-                          color: AppColor.neutral2,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                  ],
+                  const SizedBox(height: 12),
+                  const _SettingsOperatorCard(),
+                  const SizedBox(height: 12),
                   _SettingsSection(
                     title: 'Preferences',
                     child: Column(
@@ -78,24 +55,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         SwitchListTile.adaptive(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Notification inbox'),
-                          subtitle: const Text(
-                            'Keep SellHub campaign and order alerts enabled',
-                          ),
                           value: state.notificationOptIn,
-                          onChanged: context.read<SettingsCubit>().setNotificationOptIn,
+                          onChanged: context
+                              .read<SettingsCubit>()
+                              .setNotificationOptIn,
                         ),
                         const Divider(height: 1),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Notification permission'),
                           subtitle: Text(
-                            !state.notificationAvailable
-                                ? 'Unavailable until SellHub Firebase is configured'
-                                : state.notificationGranted
-                                ? 'Granted'
-                                : 'Not granted',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            state.notificationGranted ? 'Granted' : 'Not granted',
                           ),
                           trailing: const AppHugeIcon(
                             HugeIcons.strokeRoundedNotificationSquare,
@@ -104,8 +74,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           onTap: state.notificationAvailable
                               ? () => context
-                                  .read<SettingsCubit>()
-                                  .requestNotificationPermission()
+                                    .read<SettingsCubit>()
+                                    .requestNotificationPermission()
                               : null,
                         ),
                         const Divider(height: 1),
@@ -127,27 +97,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   _SettingsSection(
-                    title: 'Store',
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Reset selected store'),
-                          subtitle: const Text(
-                            'Return to shop discovery and clear the current store context',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                    title: 'Supplier context',
+                    child: Column(
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Active supplier'),
+                          subtitle: Text(
+                            activeStore?.title?.trim().isNotEmpty == true
+                                ? activeStore!.title!.trim()
+                                : 'Default supplier context',
                           ),
-                      trailing: const AppHugeIcon(
-                        HugeIcons.strokeRoundedArrowRight01,
-                        size: 20,
-                        color: AppColor.neutral2,
-                      ),
-                      onTap: () async {
-                        await context.read<StoreContextCubit>().clear();
-                        if (!context.mounted) return;
-                        AppRouter.goToStoreSelector(context);
-                      },
+                          trailing: const AppHugeIcon(
+                            HugeIcons.strokeRoundedStore01,
+                            size: 20,
+                            color: AppColor.neutral2,
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Domain'),
+                          subtitle: Text(activeStore?.domain ?? 'sellhub.bponi.com'),
+                          trailing: const AppHugeIcon(
+                            HugeIcons.strokeRoundedGlobe02,
+                            size: 20,
+                            color: AppColor.neutral2,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -155,6 +135,105 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _SettingsOverviewCard extends StatelessWidget {
+  const _SettingsOverviewCard({
+    required this.storeName,
+    required this.domain,
+  });
+
+  final String storeName;
+  final String domain;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColor.safe),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: AppColor.safe1,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColor.safe),
+            ),
+            child: const AppHugeIcon(
+              HugeIcons.strokeRoundedSettings02,
+              size: 22,
+              color: AppColor.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Device and supplier settings',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$storeName • $domain',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColor.neutral2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsOperatorCard extends StatelessWidget {
+  const _SettingsOperatorCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColor.safe),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Keep this page practical',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColor.text,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Only device permissions and active supplier context should live here. Operational selling actions belong in the main app routes.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColor.neutral2,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -195,25 +274,12 @@ class _SettingsSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Settings section',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColor.neutral2,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColor.text,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColor.text,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ],
           ),
@@ -226,7 +292,8 @@ class _SettingsSection extends StatelessWidget {
 
   List<List<dynamic>> _iconForTitle(String title) {
     switch (title) {
-      case 'Current store':
+      case 'Supplier context':
+      case 'Marketplace context':
         return HugeIcons.strokeRoundedStore01;
       case 'Preferences':
         return HugeIcons.strokeRoundedSettings02;
@@ -235,68 +302,5 @@ class _SettingsSection extends StatelessWidget {
       default:
         return HugeIcons.strokeRoundedDashboardSquare03;
     }
-  }
-}
-
-class _SettingsHero extends StatelessWidget {
-  const _SettingsHero({this.storeTitle});
-
-  final String? storeTitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColor.safe),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColor.safe1,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const AppHugeIcon(
-              HugeIcons.strokeRoundedSettings02,
-              size: 18,
-              color: AppColor.primary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Store preferences',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  storeTitle == null
-                      ? 'Permissions, alerts, and store behavior live here.'
-                      : 'Managing preferences for $storeTitle',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColor.neutral2,
-                        fontWeight: FontWeight.w600,
-                        height: 1.35,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

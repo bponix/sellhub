@@ -1,14 +1,17 @@
 import 'package:geolocator/geolocator.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:sellhub/core/local_seed/sellhub_catalog_local_store.dart';
+import 'package:sellhub/core/supplier_trust/supplier_trust.dart';
 import 'package:sellhub/features/discovery/data/models/store_summary.dart';
-import 'package:sellhub/features/discovery/query/fetch_sites.dart';
-import 'package:sellhub/features/product/data/models/site_information.dart';
-import 'package:sellhub/features/product/query/site_information.dart';
 
 class StoreDiscoveryRepository {
-  StoreDiscoveryRepository(this._client);
+  StoreDiscoveryRepository(
+    Object? client,
+    this._trustStore,
+    this._catalogStore,
+  );
 
-  final GraphQLClient _client;
+  final SupplierTrustLocalStore _trustStore;
+  final SellHubCatalogLocalStore _catalogStore;
 
   Future<List<StoreSummary>> fetchStores({
     String? search,
@@ -18,67 +21,105 @@ class StoreDiscoveryRepository {
     int first = 24,
     int offset = 0,
   }) async {
-    final result = await _client.query(
-      QueryOptions(
-        document: gql(fetchSitesQuery),
-        variables: <String, dynamic>{
-          'siteType': 'store',
-          'search': search?.trim().isEmpty == true ? null : search?.trim(),
-          'queryType': queryType,
-          'latitude': latitude,
-          'longitude': longitude,
-          'first': first,
-          'offset': offset,
-          'isActive': true,
-          'isVerified': true,
-        },
-        fetchPolicy: FetchPolicy.networkOnly,
-      ),
+    final normalizedSearch = search?.trim().toLowerCase();
+    final stores = await _catalogStore.loadSuppliers();
+    final filtered = stores.where((store) {
+      if (store.domain.trim().isEmpty) return false;
+      if (normalizedSearch == null || normalizedSearch.isEmpty) return true;
+      final haystacks = <String>[
+        store.title,
+        store.domain,
+        store.address ?? '',
+      ].map((value) => value.toLowerCase()).toList(growable: false);
+      return haystacks.any((value) => value.contains(normalizedSearch));
+    }).toList(growable: false);
+    final withTrust = await _attachTrustProfiles(filtered);
+    final sorted = _sortStoresByContext(
+      withTrust,
+      latitude: latitude,
+      longitude: longitude,
+      queryType: queryType,
     );
-
-    if (result.hasException) {
-      throw Exception(result.exception.toString());
-    }
-
-    final edges = result.data?['sites']?['edges'] as List<dynamic>? ?? <dynamic>[];
-    return edges
-        .map((dynamic edge) => StoreSummary.fromJson(edge['node'] as Map<String, dynamic>))
-        .where((StoreSummary site) => site.domain.trim().isNotEmpty)
-        .toList();
+    return sorted.skip(offset).take(first).toList(growable: false);
   }
 
   Future<StoreSummary> resolveByDomain(String domain) async {
-    final result = await _client.query(
-      QueryOptions(
-        document: gql(FETCHSITEINFORMATION),
-        variables: <String, dynamic>{'domain': domain.trim()},
-        fetchPolicy: FetchPolicy.networkOnly,
-      ),
-    );
-    if (result.hasException) {
-      throw Exception(result.exception.toString());
-    }
-    final raw = result.data?['site'];
-    if (raw == null) {
+    final store = await _catalogStore.resolveSupplierByDomain(domain);
+    if (store == null) {
       throw Exception('Store not found.');
     }
-    final site = SiteInformationRes.fromJson(Map<String, dynamic>.from(raw));
-    final siteId = site.id;
-    final siteDomain = site.domain?.trim();
-    if (siteId == null || siteDomain == null || siteDomain.isEmpty) {
-      throw Exception('Store configuration is incomplete.');
-    }
-    return StoreSummary(
-      siteId: siteId,
-      domain: siteDomain,
-      title: (site.title?.trim().isNotEmpty ?? false) ? site.title!.trim() : siteDomain,
-      logoUrl: site.phoneLogo,
-      coverImage: site.coverImage,
-      address: site.address,
-      latitude: site.latitude,
-      longitude: site.longitude,
-      whiteLabelUrl: site.whiteLabelUrl,
+    return store.copyWith(
+      trustProfile: await fetchSupplierTrustSummary(
+        store.siteId,
+        domain: store.domain,
+        title: store.title,
+      ),
     );
+  }
+
+  Future<SupplierTrustProfile?> fetchSupplierTrustSummary(
+    int siteId, {
+    String domain = '',
+    String title = '',
+  }) async {
+    return _trustStore.loadProfile(siteId: siteId, domain: domain, title: title);
+  }
+
+  Future<List<StoreSummary>> _attachTrustProfiles(List<StoreSummary> stores) async {
+    if (stores.isEmpty) return stores;
+    final trustBySiteId = await _trustStore.loadProfiles(
+      stores
+          .map(
+            (store) => SupplierTrustSeedInput(
+              siteId: store.siteId,
+              domain: store.domain,
+              title: store.title,
+            ),
+          )
+          .toList(growable: false),
+    );
+    return stores
+        .map((store) => store.copyWith(trustProfile: trustBySiteId[store.siteId]))
+        .toList(growable: false);
+  }
+
+  List<StoreSummary> _sortStoresByContext(
+    List<StoreSummary> stores, {
+    required String queryType,
+    double? latitude,
+    double? longitude,
+  }) {
+    final ranked = List<StoreSummary>.from(stores);
+    ranked.sort((a, b) {
+      final trustCompare = _trustScoreOf(b).compareTo(_trustScoreOf(a));
+      if (queryType == 'nearest' && latitude != null && longitude != null) {
+        final aDistance = _distanceOrMax(a, latitude, longitude);
+        final bDistance = _distanceOrMax(b, latitude, longitude);
+        final distanceCompare = aDistance.compareTo(bDistance);
+        if (distanceCompare != 0) return distanceCompare;
+      }
+      if (trustCompare != 0) return trustCompare;
+      return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+    });
+    return ranked;
+  }
+
+  double _distanceOrMax(StoreSummary store, double latitude, double longitude) {
+    final storeLatitude = store.latitude;
+    final storeLongitude = store.longitude;
+    if (storeLatitude == null || storeLongitude == null) {
+      return double.maxFinite;
+    }
+    return Geolocator.distanceBetween(
+      latitude,
+      longitude,
+      storeLatitude,
+      storeLongitude,
+    );
+  }
+
+  double _trustScoreOf(StoreSummary store) {
+    return store.trustProfile?.score ?? 0;
   }
 
   Future<Position?> resolveCurrentPosition() async {

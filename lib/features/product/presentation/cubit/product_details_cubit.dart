@@ -26,6 +26,7 @@ class ProductDetailsCubit extends SafeCubit<ProductDetailsState> {
         relatedOffset: 0,
         relatedProducts: const <ProductResCommon>[],
         customerReviews: const [],
+        supplierTrust: null,
         imageIndex: 0,
         variantIndex: 0,
         clearError: true,
@@ -38,6 +39,15 @@ class ProductDetailsCubit extends SafeCubit<ProductDetailsState> {
       }
       final reviews = await _repository.FetchCustomerReview(product.id ?? 0, 16);
       final merged = baseProduct.mergeDetails(product);
+      final supplierTrust = (() async {
+        try {
+          return await _repository.fetchSupplierTrustSummary(
+            product.siteId ?? siteId,
+          );
+        } catch (_) {
+          return null;
+        }
+      })();
 
       final categoryId = product.categories.isNotEmpty
           ? product.categories.first
@@ -64,6 +74,7 @@ class ProductDetailsCubit extends SafeCubit<ProductDetailsState> {
           relatedProducts: related,
           relatedOffset: related.length,
           hasMoreRelated: related.length >= _pageSize,
+          supplierTrust: await supplierTrust,
           loading: false,
           relatedLoading: false,
           clearError: true,

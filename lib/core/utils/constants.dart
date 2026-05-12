@@ -3,10 +3,10 @@ import 'package:sellhub/core/store/store_registry.dart';
 /// Want to show another seller
 /// Change Site ID and Domain Name
 class AppConstants {
-  static int get kDefaultSiteId => StoreRegistry.currentStore?.siteId ?? 11984;
+  static int get kDefaultSiteId => StoreRegistry.currentStore?.siteId ?? 0;
   static const int kDefaultFirst = 16;
   static String get kDefaultDomain =>
-      StoreRegistry.currentStore?.domain ?? 'www.anammart.com';
+      StoreRegistry.currentStore?.domain ?? 'sellhub.bponi.com';
   static const String kBaseUrl = 'https://api.bponi.com/x';
   static const String kApiKey = 'admin';
   static const String kFallbackToken =

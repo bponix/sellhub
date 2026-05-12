@@ -6,8 +6,11 @@ class OrderHistoryResModelProfile {
     required this.customerName,
     required this.customerNote,
     required this.customerPhone,
+    required this.buyerContacted,
+    required this.supportIssue,
     required this.id,
     required this.isSettle,
+    required this.logisticsText,
     required this.orderId,
     required this.paid,
     required this.profit,
@@ -23,8 +26,11 @@ class OrderHistoryResModelProfile {
   final String? customerName;
   final String? customerNote;
   final int? customerPhone;
+  final bool buyerContacted;
+  final bool supportIssue;
   final int? id;
   final bool? isSettle;
+  final String? logisticsText;
   final String? orderId;
   final double? paid;
   final double? profit;
@@ -41,8 +47,11 @@ class OrderHistoryResModelProfile {
       customerName: json["customerName"],
       customerNote: json["customerNote"],
       customerPhone: json["customerPhone"],
+      buyerContacted: json["buyerContacted"] == true,
+      supportIssue: json["supportIssue"] == true,
       id: json["id"],
       isSettle: json["isSettle"],
+      logisticsText: json["logisticsText"],
       orderId: json["orderId"],
       paid: json["paid"],
       profit: json["profit"],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sellhub/core/product_viability/product_viability.dart';
 import 'package:sellhub/core/utils/convertBengaliNumber.dart';
 import '../../../../../core/widget/app_huge_icon.dart';
 import '../../../../../core/constants/app_color.dart';
@@ -21,6 +22,18 @@ class titlePriceColor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<ProductDetailsCubit>().state;
+    final viability = state.baseProduct == null
+        ? null
+        : ProductViabilityEngine.build(state.baseProduct!);
+    final basePrice = product?.price?.toInt() ?? 0;
+    final minSellPrice =
+        state.baseProduct?.minResellPrice?.round() ??
+        product?.minResellPrice?.round() ??
+        basePrice;
+    final maxSellPrice =
+        state.baseProduct?.maxResellPrice?.round() ??
+        product?.maxResellPrice?.round() ??
+        minSellPrice;
     //print(jsonEncode(product?.variants));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,29 +86,37 @@ class titlePriceColor extends StatelessWidget {
               SizedBox(height: 12.h),
               Row(
                 children: [
-                  Text(
-                    (product?.isFlash ?? false)
-                        ? '৳${convertToBengaliNumber(product?.flashPrice?.toInt() ?? 0)}'
-                        : '৳${convertToBengaliNumber(product?.price?.toInt() ?? 0)}',
-                    style: textTheme.titleSmall?.copyWith(
-                      color: AppColor.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  SizedBox(width: 10.w),
-                  if ((product?.comparePrice ?? 0) > 0)
-                    Text(
-                      '৳${convertToBengaliNumber(product?.comparePrice?.toInt() ?? 0)}',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: AppColor.secondary,
+                  Expanded(
+                    child: Text(
+                      (product?.isFlash ?? false)
+                          ? '৳${convertToBengaliNumber(product?.flashPrice?.toInt() ?? 0)}'
+                          : '৳${convertToBengaliNumber(product?.price?.toInt() ?? 0)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleSmall?.copyWith(
+                        color: AppColor.primary,
                         fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.lineThrough,
-                        decorationColor: AppColor.primary,
-                        fontSize: 11,
+                        fontSize: 16,
                       ),
                     ),
-                  const Spacer(),
+                  ),
+                  SizedBox(width: 8.w),
+                  if ((product?.comparePrice ?? 0) > 0)
+                    Flexible(
+                      child: Text(
+                        '৳${convertToBengaliNumber(product?.comparePrice?.toInt() ?? 0)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: AppColor.secondary,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.lineThrough,
+                          decorationColor: AppColor.primary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  SizedBox(width: 8.w),
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: 8.w,
@@ -114,6 +135,68 @@ class titlePriceColor extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              SizedBox(height: 12.h),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(12.r),
+                decoration: BoxDecoration(
+                  color: AppColor.safe1,
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(
+                    color: AppColor.safe.withValues(alpha: 0.9),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Seller snapshot',
+                      style: textTheme.labelMedium?.copyWith(
+                        color: AppColor.text,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _DecisionPill(
+                          icon: HugeIcons.strokeRoundedMoneyBag02,
+                          label:
+                              'Margin ৳${convertToBengaliNumber((minSellPrice - basePrice).clamp(0, 1 << 30))}-${convertToBengaliNumber((maxSellPrice - basePrice).clamp(0, 1 << 30))}',
+                        ),
+                        if (viability != null)
+                          _DecisionPill(
+                            icon: HugeIcons.strokeRoundedShield01,
+                            label: 'Trust ${viability.trustScore.round()}',
+                          ),
+                        if (viability != null)
+                          _DecisionPill(
+                            icon: HugeIcons.strokeRoundedShare08,
+                            label:
+                                'Share ${viability.shareabilityScore.round()}',
+                          ),
+                        if (viability != null)
+                          _DecisionPill(
+                            icon: HugeIcons.strokeRoundedAlert02,
+                            label:
+                                'Risk ${viabilityRiskLabel(viability.deliveryRisk)}',
+                          ),
+                      ],
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      'Quick-order friendly when your buyer price stays inside the allowed sell window.',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColor.secondary,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -194,6 +277,49 @@ class titlePriceColor extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _DecisionPill extends StatelessWidget {
+  const _DecisionPill({
+    required this.icon,
+    required this.label,
+  });
+
+  final List<List<dynamic>> icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColor.safe),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 160),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppHugeIcon(icon, size: 14, color: AppColor.primary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColor.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -9,6 +9,7 @@ import 'package:sellhub/core/store/store_scope.dart';
 import 'package:sellhub/core/utils/app_router.dart';
 import 'package:sellhub/core/utils/custom_toast.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
+import 'package:sellhub/core/widget/sellhub_brand_mark.dart';
 import 'package:sellhub/core/widget/sellhub_top_app_bar.dart';
 import 'package:sellhub/features/auth/data/models/sign_up_req.dart';
 import 'package:sellhub/features/auth/presentation/cubit/auth_cubit.dart';
@@ -22,11 +23,13 @@ class AuthScreen extends StatefulWidget {
     this.preferredCountryCode,
     this.startInForgotMode = false,
     this.initialIdentifier,
+    this.onAuthenticatedLocation,
   });
 
   final String? preferredCountryCode;
   final bool startInForgotMode;
   final String? initialIdentifier;
+  final String? onAuthenticatedLocation;
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -321,7 +324,7 @@ class _AuthScreenState extends State<AuthScreen> {
           return;
         }
         if (didLogin) {
-          AppRouter.goToHome(context);
+          _goAfterAuth();
           await DeepLinkService.consumePendingLink();
         }
       }
@@ -351,6 +354,15 @@ class _AuthScreenState extends State<AuthScreen> {
         _resetFlow();
       }
     }
+  }
+
+  void _goAfterAuth() {
+    final target = widget.onAuthenticatedLocation?.trim();
+    if (target != null && target.isNotEmpty) {
+      AppRouter.go(target);
+      return;
+    }
+    AppRouter.goToHome(context);
   }
 
   List<List<dynamic>> _stageIcon(AuthState state) {
@@ -387,7 +399,7 @@ class _AuthScreenState extends State<AuthScreen> {
     if (state.isRegisterMode()) return 'Finish setting up your account';
     if (state.isForgotMode(_isForgotMode)) return 'Send a recovery code';
     if (state.isLoginMode(_isForgotMode)) {
-      return 'Sign in to continue shopping';
+      return 'Sign in to continue selling';
     }
     return 'Use email or phone to continue';
   }
@@ -400,13 +412,13 @@ class _AuthScreenState extends State<AuthScreen> {
       return 'Choose a fresh password to restore access without leaving the app.';
     }
     if (state.isRegisterMode()) {
-      return 'Your account stays linked to orders, favourites, and notifications.';
+      return 'Your account stays linked to orders, saved products, and notifications.';
     }
     if (state.isForgotMode(_isForgotMode)) {
       return 'We will send a code to the same identifier used on your account.';
     }
     if (state.isLoginMode(_isForgotMode)) {
-      return 'Your cart, orders, and saved products stay connected to this account.';
+      return 'Your selling list, orders, and saved products stay connected to this account.';
     }
     return 'Start with the identifier you already use for Bponi stores.';
   }
@@ -453,7 +465,7 @@ class _AuthScreenState extends State<AuthScreen> {
             setState(() => _isNavigating = true);
           }
           try {
-            AppRouter.goToHome(context);
+            _goAfterAuth();
             await DeepLinkService.consumePendingLink();
           } finally {
             if (mounted) {
@@ -592,7 +604,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                     : HugeIcons.strokeRoundedShoppingBag02,
                                 title: state.isOtpMode(_isForgotMode)
                                     ? 'Use the 6-digit code'
-                                    : 'Recover cart and orders',
+                                    : 'Recover selling list and orders',
                               ),
                               const SizedBox(height: 14),
                               Container(
@@ -923,8 +935,6 @@ class _AuthLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: size,
-          height: size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: cs.surface,
@@ -932,8 +942,8 @@ class _AuthLogo extends StatelessWidget {
               color: cs.outlineVariant.withValues(alpha: 0.35),
             ),
           ),
-          padding: EdgeInsets.all(size * 0.18),
-          child: Image.asset('assets/sellhub_logo.png', fit: BoxFit.contain),
+          padding: EdgeInsets.all(size * 0.14),
+          child: SellHubBrandMark(size: size * 0.72),
         ),
         if (showWordmark) ...[
           const SizedBox(height: 10),
