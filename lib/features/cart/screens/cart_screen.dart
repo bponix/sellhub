@@ -113,7 +113,8 @@ class CartScreen extends StatelessWidget {
                         const SizedBox(height: 8),
                         _SummaryRow(
                           label: 'Profit',
-                          value: '৳ ${convertToBengaliNumber(totalProfitAmount)}',
+                          value:
+                              '৳ ${convertToBengaliNumber(totalProfitAmount)}',
                         ),
                         if (savedAmount > 0) ...[
                           const SizedBox(height: 8),
@@ -149,10 +150,11 @@ class CartScreen extends StatelessWidget {
                               ? 'Buyer is ready. Address and final supplier order come next.'
                               : 'Buyer, address, and final supplier order come next.',
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColor.neutral2,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: AppColor.neutral2,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
@@ -257,7 +259,9 @@ class CartScreen extends StatelessWidget {
                               Expanded(
                                 child: _EmptyCartHint(
                                   icon: HugeIcons.strokeRoundedShoppingBag02,
-                                  title: pendingBuyer == null ? 'Browse' : 'Find',
+                                  title: pendingBuyer == null
+                                      ? 'Browse'
+                                      : 'Find',
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -266,7 +270,9 @@ class CartScreen extends StatelessWidget {
                                   icon: pendingBuyer == null
                                       ? HugeIcons.strokeRoundedFavourite
                                       : HugeIcons.strokeRoundedInvoice03,
-                                  title: pendingBuyer == null ? 'Save' : 'Quote',
+                                  title: pendingBuyer == null
+                                      ? 'Save'
+                                      : 'Quote',
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -357,15 +363,12 @@ class CartScreen extends StatelessWidget {
     );
     await Share.share(text, subject: 'Shared selling list');
   }
-
 }
 
 void _openCartCheckout(BuildContext context) {
   Navigator.push(
     context,
-    MaterialPageRoute(
-      builder: (context) => const CheckoutScreen(isCart: true),
-    ),
+    MaterialPageRoute(builder: (context) => const CheckoutScreen(isCart: true)),
   );
 }
 
@@ -590,7 +593,9 @@ class _QuickSellFlowCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                hasPendingBuyer ? 'Buyer-ready flow' : 'Quote-first selling flow',
+                hasPendingBuyer
+                    ? 'Buyer-ready flow'
+                    : 'Quote-first selling flow',
                 style: const TextStyle(
                   color: AppColor.text,
                   fontWeight: FontWeight.w800,
@@ -684,28 +689,29 @@ class _QuickSellStep extends StatelessWidget {
 
 List<_CartSupplierGroup> _groupCartItems(List<CartItem> items) {
   final grouped = <int, List<CartItem>>{};
-  final names = <int, String>{};
   for (final item in items) {
     final siteId = item.product.siteId ?? 0;
     grouped.putIfAbsent(siteId, () => <CartItem>[]).add(item);
-    names[siteId] = ProductViabilityEngine.build(item.product).supplierName;
   }
-  return grouped.entries
+  final entries = grouped.entries.toList(growable: false)
+    ..sort((a, b) => a.key.compareTo(b.key));
+  return entries
+      .asMap()
+      .entries
       .map((entry) {
-        final itemList = entry.value;
+        final itemList = entry.value.value;
         final baseAmount = itemList.fold<int>(
           0,
           (sum, item) =>
               sum + ((item.product.price ?? 0).round() * item.quantity),
         );
         return _CartSupplierGroup(
-          supplierName: names[entry.key] ?? 'Supplier',
+          supplierName: 'Anonymous supply source ${entry.key + 1}',
           items: itemList,
           baseAmount: baseAmount,
         );
       })
-      .toList(growable: false)
-    ..sort((a, b) => a.supplierName.compareTo(b.supplierName));
+      .toList(growable: false);
 }
 
 class _CartSupplierGroup {
@@ -1129,6 +1135,7 @@ class _CartItemCard extends StatelessWidget {
                                 SellHubShareLinkBuilder.buildProductShareText(
                                   store: activeStore,
                                   product: item.product,
+                                  sellPrice: item.sellPrice,
                                 ),
                                 subject: item.product.title ?? 'Shared item',
                               );

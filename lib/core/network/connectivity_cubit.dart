@@ -44,11 +44,14 @@ class ConnectivityCubit extends SafeCubit<ConnectivityState> {
 
   void _emitStatus(List<ConnectivityResult> results) {
     final unique = results.toSet().toList();
-    final isOffline = unique.isEmpty ||
+    final isOffline =
+        unique.isEmpty ||
         unique.every((result) => result == ConnectivityResult.none);
     emit(
       state.copyWith(
-        status: isOffline ? ConnectivityStatus.offline : ConnectivityStatus.online,
+        status: isOffline
+            ? ConnectivityStatus.offline
+            : ConnectivityStatus.online,
         activeConnections: unique,
       ),
     );

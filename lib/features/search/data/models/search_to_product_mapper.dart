@@ -1,4 +1,5 @@
 import 'package:sellhub/core/config/id_encoder.dart';
+import 'package:sellhub/core/store/store_registry.dart';
 import 'package:sellhub/features/product/data/models/product_res_common.dart';
 import 'package:sellhub/features/search/data/models/search_product_res.dart';
 
@@ -34,7 +35,7 @@ class SearchToProductMapper {
       wholesale: const [],
 
       // OPTIONAL / NULL
-      currency: "BDT",
+      currency: StoreRegistry.currentStore?.market.currencyCode ?? "BDT",
       quantity: 1,
       isActive: true,
       isVariant: false,

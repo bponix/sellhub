@@ -318,7 +318,8 @@ List<_SupplySignal> _buildSignals({
     final viability = ProductViabilityEngine.build(product);
     signals.add(
       _SupplySignal(
-        label: 'Sellability ${viability.demandScore.round()}/${viability.shareabilityScore.round()}',
+        label:
+            'Sellability ${viability.demandScore.round()}/${viability.shareabilityScore.round()}',
         color: AppColor.primary,
         backgroundColor: AppColor.safe1,
       ),

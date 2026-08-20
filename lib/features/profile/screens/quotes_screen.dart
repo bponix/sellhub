@@ -31,10 +31,14 @@ class _QuotesScreenState extends State<QuotesScreen> {
   }
 
   Future<List<ResellerQuote>> _loadQuotes() async {
+    final siteId =
+        context.read<StoreContextCubit>().state.activeStore?.siteId ?? 0;
     final userId = await LocalStorage.getUserID() ?? 0;
-    final siteId = context.read<StoreContextCubit>().state.activeStore?.siteId ?? 0;
     if (userId <= 0 || siteId <= 0) return const <ResellerQuote>[];
-    return di.sl<ProfileRepository>().fetchQuotes(userId: userId, siteId: siteId);
+    return di.sl<ProfileRepository>().fetchQuotes(
+      userId: userId,
+      siteId: siteId,
+    );
   }
 
   Future<void> _refresh() async {
@@ -125,8 +129,10 @@ class _QuotesScreenState extends State<QuotesScreen> {
                           );
                         },
                         onShare: () async {
-                          final activeStore =
-                              context.read<StoreContextCubit>().state.activeStore;
+                          final activeStore = context
+                              .read<StoreContextCubit>()
+                              .state
+                              .activeStore;
                           if (activeStore == null) return;
                           await Share.share(
                             SellHubShareLinkBuilder.buildQuoteShareText(
@@ -136,9 +142,11 @@ class _QuotesScreenState extends State<QuotesScreen> {
                             subject: 'Quote ${quote.id}',
                           );
                         },
-                        onDelete: () async {
-                          await _deleteQuote(quote.id);
-                        },
+                        onDelete: quote.status == 'offline'
+                            ? () async {
+                                await _deleteQuote(quote.id);
+                              }
+                            : null,
                       ),
                     ),
                   ),
@@ -186,17 +194,17 @@ class _QuotesHero extends StatelessWidget {
                 Text(
                   'Quote desk',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Reopen a buyer quote, share it again, or verify that it converted into an order.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColor.neutral2,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: AppColor.neutral2,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -240,17 +248,17 @@ class _QuotesEmptyState extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColor.neutral2,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColor.neutral2),
               ),
               const SizedBox(height: 14),
               OutlinedButton(
@@ -270,17 +278,18 @@ class _QuoteCard extends StatelessWidget {
     required this.quote,
     required this.onOpen,
     required this.onShare,
-    required this.onDelete,
+    this.onDelete,
   });
 
   final ResellerQuote quote;
   final VoidCallback onOpen;
   final VoidCallback onShare;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final isConverted = quote.status.toLowerCase() == 'converted';
+    final isOffline = quote.status.toLowerCase() == 'offline';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -295,16 +304,22 @@ class _QuoteCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  quote.buyerName.trim().isEmpty ? 'Buyer quote' : quote.buyerName,
+                  quote.buyerName.trim().isEmpty
+                      ? 'Buyer quote'
+                      : quote.buyerName,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               _StatusPill(
-                label: isConverted ? 'Converted' : 'Draft',
-                color: isConverted ? AppColor.primary : AppColor.neutral2,
+                label: isConverted
+                    ? 'Converted'
+                    : (isOffline ? 'Offline draft' : 'Store draft'),
+                color: isConverted
+                    ? AppColor.primary
+                    : (isOffline ? AppColor.alert : AppColor.neutral2),
               ),
             ],
           ),
@@ -324,17 +339,17 @@ class _QuoteCard extends StatelessWidget {
           Text(
             '${quote.buyerPhone} • ${quote.deliveryLabel}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             'Saved ${formatDateTime(quote.createdAt)}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 14),
           Row(
@@ -352,14 +367,16 @@ class _QuoteCard extends StatelessWidget {
                   child: const Text('Share'),
                 ),
               ),
-              IconButton(
-                onPressed: onDelete,
-                icon: const AppHugeIcon(
-                  HugeIcons.strokeRoundedDelete02,
-                  size: 18,
-                  color: AppColor.alert,
+              if (onDelete != null)
+                IconButton(
+                  onPressed: onDelete,
+                  tooltip: 'Delete offline draft',
+                  icon: const AppHugeIcon(
+                    HugeIcons.strokeRoundedDelete02,
+                    size: 18,
+                    color: AppColor.alert,
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -384,9 +401,9 @@ class _MetaPill extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColor.primary,
-              fontWeight: FontWeight.w800,
-            ),
+          color: AppColor.primary,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -409,9 +426,9 @@ class _StatusPill extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w800,
-            ),
+          color: color,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }

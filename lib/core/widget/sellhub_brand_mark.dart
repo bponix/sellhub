@@ -22,7 +22,8 @@ class SellHubBrandMark extends StatelessWidget {
       builder: (context, constraints) {
         final maxWidth = constraints.maxWidth;
         final canShowWordmark =
-            showWordmark && (maxWidth.isInfinite || maxWidth >= badgeSize * 2.5);
+            showWordmark &&
+            (maxWidth.isInfinite || maxWidth >= badgeSize * 2.5);
 
         return Row(
           mainAxisSize: MainAxisSize.min,
@@ -30,16 +31,14 @@ class SellHubBrandMark extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(badgeSize * 0.28),
               child: Container(
-              width: badgeSize,
-              height: badgeSize,
-              decoration: BoxDecoration(
-                color: Colors.white,
+                width: badgeSize,
+                height: badgeSize,
+                decoration: BoxDecoration(color: Colors.white),
+                child: Image.asset(
+                  'assets/sellhub_logo.png',
+                  fit: BoxFit.contain,
+                ),
               ),
-              child: Image.asset(
-                'assets/sellhub_logo.png',
-                fit: BoxFit.contain,
-              ),
-            ),
             ),
             if (canShowWordmark) ...[
               SizedBox(width: size * 0.22),

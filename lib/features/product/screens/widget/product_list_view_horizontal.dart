@@ -173,7 +173,7 @@ class ProductListViewHorizontal extends StatelessWidget {
     }
 
     return _RailCardPreset(
-        mediaHeight: 146,
+      mediaHeight: 146,
       bodyHeight: visualCatalog ? 114 : 114,
       cardRadius: 22,
       innerPadding: 12,
@@ -422,7 +422,8 @@ class ProductListViewHorizontal extends StatelessWidget {
                                       ),
                                       borderRadius: BorderRadius.circular(999),
                                       border: Border.all(
-                                        color: viability.deliveryRisk ==
+                                        color:
+                                            viability.deliveryRisk ==
                                                 ViabilityRiskLevel.high
                                             ? const Color(0xFFF1C9B8)
                                             : AppColor.safe.withValues(
@@ -435,7 +436,8 @@ class ProductListViewHorizontal extends StatelessWidget {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        color: viability.deliveryRisk ==
+                                        color:
+                                            viability.deliveryRisk ==
                                                 ViabilityRiskLevel.high
                                             ? const Color(0xFFA85A2A)
                                             : AppColor.text,
@@ -487,7 +489,8 @@ class ProductListViewHorizontal extends StatelessWidget {
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
-                                                    fontSize: preset.priceFontSize.sp,
+                                                  fontSize:
+                                                      preset.priceFontSize.sp,
                                                   color: AppColor.text,
                                                   fontWeight: FontWeight.w900,
                                                 ),
@@ -587,36 +590,35 @@ class ProductListViewHorizontal extends StatelessWidget {
                                                         context,
                                                       ).push(
                                                         MaterialPageRoute(
-                                                          builder: (context) =>
-                                                              CheckoutScreen(
-                                                                isCart: false,
-                                                                comparePrice: product
-                                                                    .comparePrice
-                                                                    ?.toInt(),
-                                                                payPrice: product
-                                                                    .price
-                                                                    ?.toInt(),
-                                                                savePrice: save,
-                                                                minSellPrice: product
-                                                                    .minResellPrice
-                                                                    ?.round(),
-                                                                maxSellPrice: product
-                                                                    .maxResellPrice
-                                                                    ?.round(),
-                                                                thumbnail:
-                                                                    product.thumbnail ??
-                                                                    product.images.firstOrNull?.image,
-                                                                title:
-                                                                    product
-                                                                        .translation ??
-                                                                    product
-                                                                        .title ??
-                                                                    '',
-                                                                id:
-                                                                    product
-                                                                        .id ??
-                                                                    0,
-                                                              ),
+                                                          builder: (context) => CheckoutScreen(
+                                                            isCart: false,
+                                                            comparePrice: product
+                                                                .comparePrice
+                                                                ?.toInt(),
+                                                            payPrice: product
+                                                                .price
+                                                                ?.toInt(),
+                                                            savePrice: save,
+                                                            minSellPrice: product
+                                                                .minResellPrice
+                                                                ?.round(),
+                                                            maxSellPrice: product
+                                                                .maxResellPrice
+                                                                ?.round(),
+                                                            thumbnail:
+                                                                product
+                                                                    .thumbnail ??
+                                                                product
+                                                                    .images
+                                                                    .firstOrNull
+                                                                    ?.image,
+                                                            title:
+                                                                product
+                                                                    .translation ??
+                                                                product.title ??
+                                                                '',
+                                                            id: product.id ?? 0,
+                                                          ),
                                                         ),
                                                       );
                                                     },

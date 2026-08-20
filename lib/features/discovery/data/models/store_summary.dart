@@ -56,9 +56,7 @@ class StoreSummary {
     trustProfile: trustProfile,
   );
 
-  StoreSummary copyWith({
-    SupplierTrustProfile? trustProfile,
-  }) {
+  StoreSummary copyWith({SupplierTrustProfile? trustProfile}) {
     return StoreSummary(
       siteId: siteId,
       domain: domain,

@@ -19,6 +19,7 @@ class TeamInviteScreen extends StatefulWidget {
     required this.memberId,
     required this.ownerUserId,
     required this.siteId,
+    this.inviteCode,
     this.teamName,
     this.ownerName,
     this.overridePercent = 0,
@@ -26,6 +27,7 @@ class TeamInviteScreen extends StatefulWidget {
 
   final String teamId;
   final String memberId;
+  final String? inviteCode;
   final int ownerUserId;
   final int siteId;
   final String? teamName;
@@ -37,8 +39,14 @@ class TeamInviteScreen extends StatefulWidget {
 }
 
 class _TeamInviteScreenState extends State<TeamInviteScreen> {
-  Future<({TeamSellingOverview? overview, TeamMemberEntry? member, SelfStoreCustomerRes? customer})>?
-      _future;
+  Future<
+    ({
+      TeamSellingOverview? overview,
+      TeamMemberEntry? member,
+      SelfStoreCustomerRes? customer,
+    })
+  >?
+  _future;
   bool _accepting = false;
 
   @override
@@ -48,13 +56,20 @@ class _TeamInviteScreenState extends State<TeamInviteScreen> {
   }
 
   bool get _isValidInvite =>
-      widget.memberId.trim().isNotEmpty &&
+      (widget.memberId.trim().isNotEmpty ||
+          (widget.inviteCode?.trim().isNotEmpty ?? false)) &&
       widget.teamId.trim().isNotEmpty &&
       widget.ownerUserId > 0 &&
       widget.siteId > 0;
 
-  Future<({TeamSellingOverview? overview, TeamMemberEntry? member, SelfStoreCustomerRes? customer})>
-      _load() async {
+  Future<
+    ({
+      TeamSellingOverview? overview,
+      TeamMemberEntry? member,
+      SelfStoreCustomerRes? customer,
+    })
+  >
+  _load() async {
     if (!_isValidInvite) {
       return (overview: null, member: null, customer: null);
     }
@@ -64,7 +79,20 @@ class _TeamInviteScreenState extends State<TeamInviteScreen> {
       userId: widget.ownerUserId,
       siteId: widget.siteId,
     );
-    final member = await repo.fetchTeamMember(widget.memberId);
+    final localMember = widget.memberId.trim().isEmpty
+        ? null
+        : await repo.fetchTeamMember(widget.memberId);
+    final inviteCode = widget.inviteCode?.trim();
+    final member =
+        localMember ??
+        overview.members.cast<TeamMemberEntry?>().firstWhere(
+          (member) =>
+              member?.id == widget.memberId ||
+              (inviteCode?.isNotEmpty == true &&
+                  member?.inviteCode.toLowerCase() ==
+                      inviteCode!.toLowerCase()),
+          orElse: () => null,
+        );
     final customer = currentUserId > 0
         ? await repo.fetchSelfStoreCustomer(currentUserId, widget.siteId)
         : null;
@@ -89,16 +117,22 @@ class _TeamInviteScreenState extends State<TeamInviteScreen> {
       _accepting = true;
     });
     try {
+      final currentUserId = await LocalStorage.getUserID() ?? 0;
+      final customerTitle = customer?.title?.trim();
+      final customerPhone = customer?.phone?.toString().trim();
       await di.sl<ProfileRepository>().acceptTeamInvite(
         memberId: widget.memberId,
+        inviteCode: widget.inviteCode,
         teamId: widget.teamId,
         ownerUserId: widget.ownerUserId,
+        currentUserId: currentUserId,
         siteId: widget.siteId,
-        sellerName: customer?.name?.trim().isNotEmpty == true
-            ? customer!.name!.trim()
+        memberCustomerId: customer?.id,
+        sellerName: customerTitle?.isNotEmpty == true
+            ? customerTitle
             : member?.name,
-        sellerPhone: customer?.phone?.trim().isNotEmpty == true
-            ? customer!.phone!.trim()
+        sellerPhone: customerPhone?.isNotEmpty == true
+            ? customerPhone
             : member?.phone,
       );
       if (!mounted) return;
@@ -128,95 +162,110 @@ class _TeamInviteScreenState extends State<TeamInviteScreen> {
         icon: HugeIcons.strokeRoundedUserMultiple02,
         showBackButton: true,
       ),
-      body: FutureBuilder<({TeamSellingOverview? overview, TeamMemberEntry? member, SelfStoreCustomerRes? customer})>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final payload = snapshot.data;
-          final overview = payload?.overview;
-          final member = payload?.member;
-          final customer = payload?.customer;
-          final isAccepted = member?.isActive == true;
-          if (!_isValidInvite) {
-            return const _InviteEmptyState(
-              title: 'Invite link is incomplete',
-              subtitle: 'Ask the team owner to send the invite again.',
-            );
-          }
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _InviteHero(
-                teamName: overview?.teamName ?? widget.teamName ?? 'SellHub Team',
-                ownerName: overview?.ownerName ?? widget.ownerName ?? 'Team owner',
-                overridePercent: overview?.overridePercent ?? widget.overridePercent,
-              ),
-              const SizedBox(height: 16),
-              _InviteFactCard(
-                label: 'Invite status',
-                value: isAccepted
-                    ? 'Accepted'
-                    : member?.isPending == true
-                    ? 'Pending'
-                    : 'Ready to accept',
-              ),
-              const SizedBox(height: 12),
-              _InviteFactCard(
-                label: 'Direct payout rule',
-                value: overview?.transparentPayoutRule ??
-                    'Override applies only to direct team sales.',
-              ),
-              const SizedBox(height: 12),
-              _InviteFactCard(
-                label: 'Your seller record',
-                value: customer?.name?.trim().isNotEmpty == true
-                    ? '${customer!.name!.trim()} • ${customer.phone ?? ''}'
-                    : member?.name ?? 'Seller record will attach on accept',
-              ),
-              if (overview != null) ...[
-                const SizedBox(height: 12),
-                _InviteFactCard(
-                  label: 'Current team output',
-                  value:
-                      '${overview.activeMembers} active sellers • ৳${overview.teamOrderVolume.toStringAsFixed(0)} team volume',
-                ),
-              ],
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: isAccepted
-                      ? null
-                      : () => _acceptInvite(overview, member, customer),
-                  child: Text(_accepting
-                      ? 'Accepting...'
-                      : isAccepted
-                      ? 'Invite accepted'
-                      : 'Accept invite'),
-                ),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton(
-                onPressed: () => AppRouter.goToHome(context),
-                child: const Text('Back to home'),
-              ),
-              if (member?.lastActiveAt != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'Latest team activity ${formatDateTime(member!.lastActiveAt)}',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+      body:
+          FutureBuilder<
+            ({
+              TeamSellingOverview? overview,
+              TeamMemberEntry? member,
+              SelfStoreCustomerRes? customer,
+            })
+          >(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final payload = snapshot.data;
+              final overview = payload?.overview;
+              final member = payload?.member;
+              final customer = payload?.customer;
+              final customerTitle = customer?.title?.trim();
+              final customerPhone = customer?.phone?.toString().trim();
+              final isAccepted = member?.isActive == true;
+              if (!_isValidInvite) {
+                return const _InviteEmptyState(
+                  title: 'Invite link is incomplete',
+                  subtitle: 'Ask the team owner to send the invite again.',
+                );
+              }
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _InviteHero(
+                    teamName:
+                        overview?.teamName ?? widget.teamName ?? 'SellHub Team',
+                    ownerName:
+                        overview?.ownerName ?? widget.ownerName ?? 'Team owner',
+                    overridePercent:
+                        overview?.overridePercent ?? widget.overridePercent,
+                  ),
+                  const SizedBox(height: 16),
+                  _InviteFactCard(
+                    label: 'Invite status',
+                    value: isAccepted
+                        ? 'Accepted'
+                        : member?.isPending == true
+                        ? 'Pending'
+                        : 'Ready to accept',
+                  ),
+                  const SizedBox(height: 12),
+                  _InviteFactCard(
+                    label: 'Direct payout rule',
+                    value:
+                        overview?.transparentPayoutRule ??
+                        'Override applies only to direct team sales.',
+                  ),
+                  const SizedBox(height: 12),
+                  _InviteFactCard(
+                    label: 'Your seller record',
+                    value: customerTitle?.isNotEmpty == true
+                        ? '$customerTitle • ${customerPhone ?? ''}'
+                        : member?.name ?? 'Seller record will attach on accept',
+                  ),
+                  if (overview != null) ...[
+                    const SizedBox(height: 12),
+                    _InviteFactCard(
+                      label: 'Current team output',
+                      value:
+                          '${overview.activeMembers} active sellers • ৳${overview.teamOrderVolume.toStringAsFixed(0)} team volume',
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: isAccepted
+                          ? null
+                          : () => _acceptInvite(overview, member, customer),
+                      child: Text(
+                        _accepting
+                            ? 'Accepting...'
+                            : isAccepted
+                            ? 'Invite accepted'
+                            : 'Accept invite',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton(
+                    onPressed: () => AppRouter.goToHome(context),
+                    child: const Text('Back to home'),
+                  ),
+                  if (member?.lastActiveAt != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Latest team activity ${formatDateTime(member!.lastActiveAt)}',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColor.neutral2,
                         fontWeight: FontWeight.w600,
                       ),
-                ),
-              ],
-            ],
-          );
-        },
-      ),
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
     );
   }
 }
@@ -247,24 +296,26 @@ class _InviteHero extends StatelessWidget {
           Text(
             teamName,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: AppColor.text,
-                ),
+              fontWeight: FontWeight.w900,
+              color: AppColor.text,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             'Owner: $ownerName',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _GuardrailPill(label: '${overridePercent.toStringAsFixed(0)}% direct override'),
+              _GuardrailPill(
+                label: '${overridePercent.toStringAsFixed(0)}% direct override',
+              ),
               const _GuardrailPill(label: 'No MLM chain'),
               const _GuardrailPill(label: 'Direct seller only'),
             ],
@@ -297,17 +348,17 @@ class _InviteFactCard extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -331,19 +382,16 @@ class _GuardrailPill extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColor.primary,
-              fontWeight: FontWeight.w800,
-            ),
+          color: AppColor.primary,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
 }
 
 class _InviteEmptyState extends StatelessWidget {
-  const _InviteEmptyState({
-    required this.title,
-    required this.subtitle,
-  });
+  const _InviteEmptyState({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
@@ -372,17 +420,17 @@ class _InviteEmptyState extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColor.neutral2,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColor.neutral2),
               ),
             ],
           ),

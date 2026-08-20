@@ -41,6 +41,7 @@ dependencies:
   # Network
   graphql_flutter: ^5.1.2
   dio: ^5.7.0
+  crypto: ^3.0.7
   connectivity_plus: ^6.1.5
   firebase_core: ^4.4.0
   firebase_analytics: ^12.0.1

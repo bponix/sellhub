@@ -22,6 +22,11 @@ class BuyerBookProfile {
     required this.district,
     required this.deliveryZone,
     required this.lastOrderId,
+    this.followUpAt,
+    this.followUpStatus = 'none',
+    this.followUpCompletedAt,
+    this.followUpReminderCount = 0,
+    this.storeBuyerBookId,
   });
 
   final String id;
@@ -46,6 +51,11 @@ class BuyerBookProfile {
   final String district;
   final String deliveryZone;
   final String? lastOrderId;
+  final DateTime? followUpAt;
+  final String followUpStatus;
+  final DateTime? followUpCompletedAt;
+  final int followUpReminderCount;
+  final String? storeBuyerBookId;
 
   double get returnRate =>
       totalOrders <= 0 ? 0 : (returnCount / totalOrders) * 100;
@@ -88,6 +98,14 @@ class BuyerBookProfile {
       district: (json['district'] as String?) ?? '',
       deliveryZone: (json['deliveryZone'] as String?) ?? '',
       lastOrderId: json['lastOrderId'] as String?,
+      followUpAt: DateTime.tryParse((json['followUpAt'] as String?) ?? ''),
+      followUpStatus: (json['followUpStatus'] as String?) ?? 'none',
+      followUpCompletedAt: DateTime.tryParse(
+        (json['followUpCompletedAt'] as String?) ?? '',
+      ),
+      followUpReminderCount:
+          (json['followUpReminderCount'] as num?)?.toInt() ?? 0,
+      storeBuyerBookId: json['storeBuyerBookId'] as String?,
     );
   }
 
@@ -115,6 +133,11 @@ class BuyerBookProfile {
       'district': district,
       'deliveryZone': deliveryZone,
       'lastOrderId': lastOrderId,
+      'followUpAt': followUpAt?.toIso8601String(),
+      'followUpStatus': followUpStatus,
+      'followUpCompletedAt': followUpCompletedAt?.toIso8601String(),
+      'followUpReminderCount': followUpReminderCount,
+      'storeBuyerBookId': storeBuyerBookId,
     };
   }
 }

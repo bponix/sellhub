@@ -13,6 +13,10 @@ class TeamMemberEntry {
     required this.topProduct,
     required this.joinedAt,
     required this.lastActiveAt,
+    this.inviteCode = '',
+    this.buyerReachCount = 0,
+    this.anonymousSupplierCount = 0,
+    this.payoutImpact = 0,
   });
 
   final String id;
@@ -28,9 +32,20 @@ class TeamMemberEntry {
   final String topProduct;
   final DateTime? joinedAt;
   final DateTime? lastActiveAt;
+  final String inviteCode;
+  final int buyerReachCount;
+  final int anonymousSupplierCount;
+  final double payoutImpact;
 
-  bool get isActive => status.toLowerCase() == 'active';
-  bool get isPending => status.toLowerCase() == 'pending';
+  bool get isActive {
+    final value = status.toLowerCase();
+    return value == 'active' || value == 'accepted';
+  }
+
+  bool get isPending {
+    final value = status.toLowerCase();
+    return value == 'pending' || value == 'invited';
+  }
 
   factory TeamMemberEntry.fromJson(Map<String, dynamic> json) {
     return TeamMemberEntry(
@@ -43,11 +58,15 @@ class TeamMemberEntry {
       status: (json['status'] as String?) ?? 'pending',
       role: (json['role'] as String?) ?? 'team_seller',
       orderVolume: (json['orderVolume'] as num?)?.toDouble() ?? 0,
-      overrideGenerated:
-          (json['overrideGenerated'] as num?)?.toDouble() ?? 0,
+      overrideGenerated: (json['overrideGenerated'] as num?)?.toDouble() ?? 0,
       topProduct: (json['topProduct'] as String?) ?? '',
       joinedAt: DateTime.tryParse((json['joinedAt'] as String?) ?? ''),
       lastActiveAt: DateTime.tryParse((json['lastActiveAt'] as String?) ?? ''),
+      inviteCode: (json['inviteCode'] as String?) ?? '',
+      buyerReachCount: (json['buyerReachCount'] as num?)?.toInt() ?? 0,
+      anonymousSupplierCount:
+          (json['anonymousSupplierCount'] as num?)?.toInt() ?? 0,
+      payoutImpact: (json['payoutImpact'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -65,5 +84,9 @@ class TeamMemberEntry {
     'topProduct': topProduct,
     'joinedAt': joinedAt?.toIso8601String(),
     'lastActiveAt': lastActiveAt?.toIso8601String(),
+    'inviteCode': inviteCode,
+    'buyerReachCount': buyerReachCount,
+    'anonymousSupplierCount': anonymousSupplierCount,
+    'payoutImpact': payoutImpact,
   };
 }

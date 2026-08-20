@@ -36,7 +36,7 @@ class SellHubCatalogLocalStore {
   static const String _productsCollection = 'catalog_products';
   static const String _productDetailsCollection = 'catalog_product_details';
   static const int _marketplaceSiteId = 0;
-  static const String _marketplaceDomain = 'sellhub.bponi.com';
+  static const String _marketplaceDomain = 'reseller.store.bponi.com';
   static const String _seedRevision = 'v4';
 
   static final String _seedVersion =
@@ -204,50 +204,54 @@ class SellHubCatalogLocalStore {
     final requestedBrandTitle = brandId == null
         ? null
         : _brandTitleForId(brands, brandId);
-    return items.where((item) {
-      if (siteId > 0 && item.siteId != siteId) return false;
-      if (isFlash == true && item.isFlash != true) return false;
-      if (isNew == true && !SellHubCatalogSeed.isNewProduct(item)) {
-        return false;
-      }
-      if (normalizedSearch.isNotEmpty &&
-          ![
-            item.title ?? '',
-            item.translation ?? '',
-            ...item.brands,
-            ...item.features.map((feature) => '${feature.key} ${feature.value}'),
-          ].join(' ').toLowerCase().contains(normalizedSearch)) {
-        return false;
-      }
-      if (categoryId != null) {
-        if (!_matchesCategory(
-          item,
-          categoryId,
-          requestedCategoryTitle: requestedCategoryTitle,
-        )) {
-          return false;
-        }
-      }
-      if (subCategoryId != null) {
-        if (!_matchesSubCategory(
-          item,
-          subCategoryId,
-          requestedSubCategoryTitle: requestedSubCategoryTitle,
-        )) {
-          return false;
-        }
-      }
-      if (brandId != null) {
-        if (!_matchesBrand(
-          item,
-          brandId,
-          requestedBrandTitle: requestedBrandTitle,
-        )) {
-          return false;
-        }
-      }
-      return true;
-    }).toList(growable: false);
+    return items
+        .where((item) {
+          if (siteId > 0 && item.siteId != siteId) return false;
+          if (isFlash == true && item.isFlash != true) return false;
+          if (isNew == true && !SellHubCatalogSeed.isNewProduct(item)) {
+            return false;
+          }
+          if (normalizedSearch.isNotEmpty &&
+              ![
+                item.title ?? '',
+                item.translation ?? '',
+                ...item.brands,
+                ...item.features.map(
+                  (feature) => '${feature.key} ${feature.value}',
+                ),
+              ].join(' ').toLowerCase().contains(normalizedSearch)) {
+            return false;
+          }
+          if (categoryId != null) {
+            if (!_matchesCategory(
+              item,
+              categoryId,
+              requestedCategoryTitle: requestedCategoryTitle,
+            )) {
+              return false;
+            }
+          }
+          if (subCategoryId != null) {
+            if (!_matchesSubCategory(
+              item,
+              subCategoryId,
+              requestedSubCategoryTitle: requestedSubCategoryTitle,
+            )) {
+              return false;
+            }
+          }
+          if (brandId != null) {
+            if (!_matchesBrand(
+              item,
+              brandId,
+              requestedBrandTitle: requestedBrandTitle,
+            )) {
+              return false;
+            }
+          }
+          return true;
+        })
+        .toList(growable: false);
   }
 
   Future<ProductDetailsRes?> loadProductDetails(String hid) async {
@@ -275,7 +279,10 @@ class SellHubCatalogLocalStore {
     return null;
   }
 
-  Future<List<SearchProductRes>> searchProducts(String query, int siteId) async {
+  Future<List<SearchProductRes>> searchProducts(
+    String query,
+    int siteId,
+  ) async {
     final items = await loadProducts(siteId: siteId, search: query);
     return items
         .map(
@@ -402,7 +409,11 @@ class SellHubCatalogLocalStore {
       toJson: (item) => item.value.toJson(),
       idOf: (item) => item.key,
     );
-    await saveLocalSeedVersion(_client, seedKey: _seedKey, version: _seedVersion);
+    await saveLocalSeedVersion(
+      _client,
+      seedKey: _seedKey,
+      version: _seedVersion,
+    );
   }
 
   Future<bool> _hasSeedData() async {
@@ -438,12 +449,16 @@ class SellHubCatalogLocalStore {
         .toList(growable: false);
   }
 
-  Future<List<Map<String, dynamic>>> _listRawCollection(String collection) async {
+  Future<List<Map<String, dynamic>>> _listRawCollection(
+    String collection,
+  ) async {
     await ensureSeeded();
     return _queryRawCollection(collection);
   }
 
-  Future<List<Map<String, dynamic>>> _queryRawCollection(String collection) async {
+  Future<List<Map<String, dynamic>>> _queryRawCollection(
+    String collection,
+  ) async {
     final result = await _client.query(
       QueryOptions(
         document: _listCollectionDocument,
@@ -454,7 +469,8 @@ class SellHubCatalogLocalStore {
     if (result.hasException) {
       throw result.exception!;
     }
-    return (result.data?['listCollection'] as List<dynamic>? ?? const <dynamic>[])
+    return (result.data?['listCollection'] as List<dynamic>? ??
+            const <dynamic>[])
         .whereType<Map<String, dynamic>>()
         .toList(growable: false);
   }
@@ -596,7 +612,8 @@ class SellHubCatalogLocalStore {
     if (exact == subCategoryId) return true;
     if (requestedSubCategoryTitle == null) return false;
     return _normalizedLabel(
-          _featureValue(item, 'Subcategory') ?? _featureValue(item, 'SubCategory'),
+          _featureValue(item, 'Subcategory') ??
+              _featureValue(item, 'SubCategory'),
         ) ==
         _normalizedLabel(requestedSubCategoryTitle);
   }
@@ -608,7 +625,8 @@ class SellHubCatalogLocalStore {
   }) {
     if (requestedBrandTitle == null) return false;
     return item.brands.any(
-      (brand) => _normalizedLabel(brand) == _normalizedLabel(requestedBrandTitle),
+      (brand) =>
+          _normalizedLabel(brand) == _normalizedLabel(requestedBrandTitle),
     );
   }
 

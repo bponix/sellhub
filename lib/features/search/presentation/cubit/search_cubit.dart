@@ -38,13 +38,7 @@ class SearchCubit extends SafeCubit<SearchState> {
     emit(state.copyWith(loading: true, siteId: siteId, clearError: true));
     try {
       final products = await _repository.searchProduct(text, siteId);
-      emit(
-        state.copyWith(
-          products: products,
-          loading: false,
-          siteId: siteId,
-        ),
-      );
+      emit(state.copyWith(products: products, loading: false, siteId: siteId));
     } catch (error) {
       emit(
         state.copyWith(

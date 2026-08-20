@@ -20,6 +20,9 @@ class PendingProductDeepLink {
     this.imageUrl,
     this.brand,
     this.price,
+    this.sellPrice,
+    this.minSellPrice,
+    this.maxSellPrice,
   });
 
   final String hid;
@@ -28,6 +31,9 @@ class PendingProductDeepLink {
   final String? imageUrl;
   final String? brand;
   final double? price;
+  final double? sellPrice;
+  final double? minSellPrice;
+  final double? maxSellPrice;
 
   factory PendingProductDeepLink.fromJson(Map<String, dynamic> json) {
     return PendingProductDeepLink(
@@ -37,6 +43,9 @@ class PendingProductDeepLink {
       imageUrl: (json['imageUrl'] as String?)?.trim(),
       brand: (json['brand'] as String?)?.trim(),
       price: (json['price'] as num?)?.toDouble(),
+      sellPrice: (json['sellPrice'] as num?)?.toDouble(),
+      minSellPrice: (json['minSellPrice'] as num?)?.toDouble(),
+      maxSellPrice: (json['maxSellPrice'] as num?)?.toDouble(),
     );
   }
 
@@ -48,6 +57,15 @@ class PendingProductDeepLink {
       imageUrl: uri.queryParameters['productImage']?.trim(),
       brand: uri.queryParameters['brand']?.trim(),
       price: double.tryParse(uri.queryParameters['price']?.trim() ?? ''),
+      sellPrice: double.tryParse(
+        uri.queryParameters['sellPrice']?.trim() ?? '',
+      ),
+      minSellPrice: double.tryParse(
+        uri.queryParameters['minSellPrice']?.trim() ?? '',
+      ),
+      maxSellPrice: double.tryParse(
+        uri.queryParameters['maxSellPrice']?.trim() ?? '',
+      ),
     );
   }
 
@@ -59,6 +77,9 @@ class PendingProductDeepLink {
       imageUrl: params['productImage']?.trim(),
       brand: params['brand']?.trim(),
       price: double.tryParse(params['price']?.trim() ?? ''),
+      sellPrice: double.tryParse(params['sellPrice']?.trim() ?? ''),
+      minSellPrice: double.tryParse(params['minSellPrice']?.trim() ?? ''),
+      maxSellPrice: double.tryParse(params['maxSellPrice']?.trim() ?? ''),
     );
   }
 
@@ -69,6 +90,9 @@ class PendingProductDeepLink {
     'imageUrl': imageUrl,
     'brand': brand,
     'price': price,
+    'sellPrice': sellPrice,
+    'minSellPrice': minSellPrice,
+    'maxSellPrice': maxSellPrice,
   };
 
   bool get isValid => hid.isNotEmpty && siteId > 0;
@@ -83,6 +107,8 @@ class PendingProductDeepLink {
           ? <ProductImage>[ProductImage(id: null, image: imageUrl)]
           : const <ProductImage>[],
       price: price,
+      minResellPrice: minSellPrice ?? sellPrice,
+      maxResellPrice: maxSellPrice ?? sellPrice,
       siteId: siteId,
       thumbnail: imageUrl,
       title: title,
@@ -101,7 +127,9 @@ class PendingProductDeepLinkHandler {
     await persist(payload);
   }
 
-  static Future<void> persistFromRouteParams(Map<String, String>? params) async {
+  static Future<void> persistFromRouteParams(
+    Map<String, String>? params,
+  ) async {
     if (params == null || params.isEmpty) {
       await LocalStorage.remove(LocalStorage.pendingProductLinkKey);
       return;

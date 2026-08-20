@@ -145,7 +145,8 @@ class _OrdersControlCenterState extends State<_OrdersControlCenter> {
       final reportUpdated = report.updatedAt ?? report.createdAt;
       if (current == null ||
           (reportUpdated != null &&
-              (currentUpdated == null || reportUpdated.isAfter(currentUpdated)))) {
+              (currentUpdated == null ||
+                  reportUpdated.isAfter(currentUpdated)))) {
         latest[orderKey] = report;
       }
     }
@@ -299,7 +300,9 @@ class _OrdersControlCenterState extends State<_OrdersControlCenter> {
       return 'Dispute hold';
     }
     if (_isDelivered(order) && order.isSettle == true) return 'Paid out';
-    if (_isDelivered(order) && order.isSettle != true) return 'Ready for payout';
+    if (_isDelivered(order) && order.isSettle != true) {
+      return 'Ready for payout';
+    }
     if ((order.status ?? 0) >= 3) return 'Clearing now';
     return 'Delivery lock';
   }
@@ -354,7 +357,8 @@ class _OrdersControlCenterState extends State<_OrdersControlCenter> {
     final profitable = (order.profit ?? 0) > 0;
     final highProfit = (order.profit ?? 0) >= 200;
     final needsBuyerContact = !delivered && !order.buyerContacted;
-    final atRisk = _hasActiveIssue(order, issueReport) ||
+    final atRisk =
+        _hasActiveIssue(order, issueReport) ||
         _hasActivePayoutDispute(order, payoutDispute) ||
         delayed ||
         ((order.status ?? 0) >= 7 && !delivered);
@@ -415,12 +419,6 @@ class _OrdersControlCenterState extends State<_OrdersControlCenter> {
 
   @override
   Widget build(BuildContext context) {
-    final supplierName = context
-        .read<StorefrontCubit>()
-        .state
-        .siteDetails
-        ?.title
-        ?.trim();
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const SellHubTopAppBar(
@@ -488,18 +486,15 @@ class _OrdersControlCenterState extends State<_OrdersControlCenter> {
                     title: 'No orders in this queue',
                   )
                 else
-                  ...queueOrders.map(
-                    (order) {
-                      final profile = _executionProfile(order);
-                      final issueReport = _issueReportFor(order);
-                      final payoutDispute = _payoutDisputeFor(order);
-                      return _OrderQueueCard(
+                  ...queueOrders.map((order) {
+                    final profile = _executionProfile(order);
+                    final issueReport = _issueReportFor(order);
+                    final payoutDispute = _payoutDisputeFor(order);
+                    return _OrderQueueCard(
                       order: order,
                       issueReport: issueReport,
                       payoutDispute: payoutDispute,
-                      supplierName: (supplierName?.isNotEmpty ?? false)
-                          ? supplierName!
-                          : 'Active supplier',
+                      supplierName: 'Anonymous fulfillment source',
                       cashState: _queueCashState(order, payoutDispute),
                       payoutStatus: _payoutStatus(order),
                       fulfillmentStatus: _fulfillmentStatus(order),
@@ -553,8 +548,7 @@ class _OrdersControlCenterState extends State<_OrdersControlCenter> {
                         }
                       },
                     );
-                    },
-                  ),
+                  }),
               ],
             ),
           );
@@ -604,10 +598,7 @@ class _QueueTabs extends StatelessWidget {
 }
 
 class _OrderQueueOverviewCard extends StatelessWidget {
-  const _OrderQueueOverviewCard({
-    required this.tab,
-    required this.count,
-  });
+  const _OrderQueueOverviewCard({required this.tab, required this.count});
 
   final _OrderQueueTab tab;
   final int count;
@@ -670,17 +661,17 @@ class _OrderQueueOverviewCard extends StatelessWidget {
           Text(
             _title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             _subtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 12),
           Container(
@@ -692,9 +683,9 @@ class _OrderQueueOverviewCard extends StatelessWidget {
             child: Text(
               '$count order${count == 1 ? '' : 's'} in this queue',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColor.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: AppColor.primary,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
@@ -778,18 +769,18 @@ class _SupplierQueueSignalCard extends StatelessWidget {
                     Text(
                       _headline,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: AppColor.text,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        color: AppColor.text,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       _subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColor.neutral2,
-                            fontWeight: FontWeight.w600,
-                            height: 1.35,
-                          ),
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
                     ),
                   ],
                 ),
@@ -919,14 +910,16 @@ class _OrderQueueCard extends StatelessWidget {
                       _StatusPill(
                         label: issueReport == null
                             ? 'Issue flagged'
-                            : issueReport!.status.trim().toLowerCase() == 'closed'
-                                ? 'Issue closed'
-                                : issueReport!.issueType,
+                            : issueReport!.status.trim().toLowerCase() ==
+                                  'closed'
+                            ? 'Issue closed'
+                            : issueReport!.issueType,
                         tone: _OrderPillTone.alert,
                       ),
                     if (payoutDispute != null)
                       _StatusPill(
-                        label: payoutDispute!.status.trim().toLowerCase() ==
+                        label:
+                            payoutDispute!.status.trim().toLowerCase() ==
                                 'resolved'
                             ? 'Payout resolved'
                             : 'Payout dispute',
@@ -959,8 +952,8 @@ class _OrderQueueCard extends StatelessWidget {
                   tone: cashState == 'Paid out'
                       ? _OrderPillTone.good
                       : cashState == 'Dispute hold'
-                          ? _OrderPillTone.alert
-                          : _OrderPillTone.info,
+                      ? _OrderPillTone.alert
+                      : _OrderPillTone.info,
                 ),
                 _StatusPill(label: payoutStatus),
                 _StatusPill(
@@ -979,8 +972,8 @@ class _OrderQueueCard extends StatelessWidget {
               issueReport != null
                   ? '${issueReport!.issueType} • ${formatDateTime(issueReport!.updatedAt)}'
                   : payoutDispute != null
-                      ? '${payoutDispute!.reason} • ${formatDateTime(payoutDispute!.updatedAt ?? payoutDispute!.createdAt)}'
-                      : (atRisk ? riskSummary : nextBestActionReason),
+                  ? '${payoutDispute!.reason} • ${formatDateTime(payoutDispute!.updatedAt ?? payoutDispute!.createdAt)}'
+                  : (atRisk ? riskSummary : nextBestActionReason),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1165,10 +1158,10 @@ class _MetricPill extends StatelessWidget {
       ),
       child: RichText(
         text: TextSpan(
-          style: Theme.of(
-            context,
-          ).textTheme.labelSmall?.copyWith(
-            color: tone == _OrderPillTone.alert ? AppColor.alert : AppColor.neutral2,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: tone == _OrderPillTone.alert
+                ? AppColor.alert
+                : AppColor.neutral2,
           ),
           children: [
             TextSpan(text: '$label '),
@@ -1191,10 +1184,7 @@ class _MetricPill extends StatelessWidget {
 }
 
 class _OrdersEmptyState extends StatelessWidget {
-  const _OrdersEmptyState({
-    required this.icon,
-    required this.title,
-  });
+  const _OrdersEmptyState({required this.icon, required this.title});
 
   final List<List<dynamic>> icon;
   final String title;

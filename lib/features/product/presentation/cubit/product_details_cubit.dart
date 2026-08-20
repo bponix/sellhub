@@ -37,7 +37,10 @@ class ProductDetailsCubit extends SafeCubit<ProductDetailsState> {
       if (product == null) {
         throw const AppFailure(title: 'Product not found.');
       }
-      final reviews = await _repository.FetchCustomerReview(product.id ?? 0, 16);
+      final reviews = await _repository.FetchCustomerReview(
+        product.id ?? 0,
+        16,
+      );
       final merged = baseProduct.mergeDetails(product);
       final supplierTrust = (() async {
         try {

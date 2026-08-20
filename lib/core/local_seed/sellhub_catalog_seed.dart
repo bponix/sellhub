@@ -44,7 +44,8 @@ class SellHubCatalogSeed {
       'campaigns': const <dynamic>[],
       'cashback': 0.0,
       'categories': <int>[
-        if (categoryIdForProduct(product) != null) categoryIdForProduct(product)!,
+        if (categoryIdForProduct(product) != null)
+          categoryIdForProduct(product)!,
       ],
       'childProducts': const <dynamic>[],
       'collections': const <dynamic>[],
@@ -564,7 +565,11 @@ class _GeneratedCatalog {
     var nextBrandId = 5001;
     var nextSliderId = 9001;
 
-    for (var supplierIndex = 0; supplierIndex < supplierSeeds.length; supplierIndex++) {
+    for (
+      var supplierIndex = 0;
+      supplierIndex < supplierSeeds.length;
+      supplierIndex++
+    ) {
       final supplier = supplierSeeds[supplierIndex];
       suppliers.add(
         _supplier(
@@ -617,7 +622,11 @@ class _GeneratedCatalog {
         ),
       );
 
-      for (var categoryIndex = 0; categoryIndex < supplier.categories.length; categoryIndex++) {
+      for (
+        var categoryIndex = 0;
+        categoryIndex < supplier.categories.length;
+        categoryIndex++
+      ) {
         final categorySeed = supplier.categories[categoryIndex];
         final categoryId = (supplier.siteId * 100) + categoryIndex + 1;
         categories.add(
@@ -628,14 +637,16 @@ class _GeneratedCatalog {
             total: categorySeed.subTitles.length * 9,
             image: categorySeed.imagePool.first,
             cover:
-                categorySeed.imagePool[
-                    (supplierIndex + categoryIndex) %
-                        categorySeed.imagePool.length
-                ],
+                categorySeed.imagePool[(supplierIndex + categoryIndex) %
+                    categorySeed.imagePool.length],
             now: now,
           ),
         );
-        for (var subIndex = 0; subIndex < categorySeed.subTitles.length; subIndex++) {
+        for (
+          var subIndex = 0;
+          subIndex < categorySeed.subTitles.length;
+          subIndex++
+        ) {
           final subTitle = categorySeed.subTitles[subIndex];
           final subCategoryId = (categoryId * 10) + subIndex + 1;
           subCategories.add(
@@ -645,9 +656,8 @@ class _GeneratedCatalog {
               categoryId: categoryId,
               title: subTitle,
               image:
-                  categorySeed.imagePool[
-                      (subIndex + supplierIndex) % categorySeed.imagePool.length
-                  ],
+                  categorySeed.imagePool[(subIndex + supplierIndex) %
+                      categorySeed.imagePool.length],
               now: now,
             ),
           );
@@ -667,13 +677,16 @@ class _GeneratedCatalog {
             final minResellPrice = (price * 0.96).roundToDouble();
             final maxResellPrice = (comparePrice * 1.08).roundToDouble();
             final isFlash =
-                (productIndex % 4 == 0) || ((productId + supplier.siteId) % 9 == 0);
+                (productIndex % 4 == 0) ||
+                ((productId + supplier.siteId) % 9 == 0);
             final isNew =
                 productIndex < 2 || (subIndex == 0 && supplierIndex.isEven);
-            final brand = supplier
-                .brands[(categoryIndex + subIndex + productIndex) % supplier.brands.length];
-            final image = categorySeed
-                .imagePool[(subIndex + productIndex) % categorySeed.imagePool.length];
+            final brand =
+                supplier.brands[(categoryIndex + subIndex + productIndex) %
+                    supplier.brands.length];
+            final image =
+                categorySeed.imagePool[(subIndex + productIndex) %
+                    categorySeed.imagePool.length];
             final rating = 4.1 + ((productIndex + subIndex) % 6) * 0.12;
             final ratingTotal =
                 28 + (productIndex * 14) + (categoryIndex * 9) + supplierIndex;

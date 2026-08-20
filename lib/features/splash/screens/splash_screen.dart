@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sellhub/core/capabilities/store_surface_repository.dart';
 import 'package:sellhub/core/local/local_storage.dart';
 import 'package:sellhub/core/store/active_store.dart';
 import 'package:sellhub/core/store/store_context_cubit.dart';
@@ -12,6 +13,7 @@ import 'package:sellhub/core/utils/constants.dart';
 import 'package:sellhub/features/categories/presentation/cubit/categories_cubit.dart';
 import 'package:sellhub/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:sellhub/features/storefront/presentation/cubit/storefront_cubit.dart';
+import 'package:sellhub/injection_container.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -55,14 +57,66 @@ class _SplashScreenState extends State<SplashScreen>
     if (storeContextCubit.state.status == StoreContextStatus.initial) {
       await storeContextCubit.hydrate();
     }
-    var activeStore = storeContextCubit.state.activeStore;
-    if (activeStore == null) {
-      activeStore = ActiveStore(
-        siteId: AppConstants.kDefaultSiteId,
-        domain: AppConstants.kDefaultDomain,
-        title: 'SellHub',
-      );
+    final storedActiveStore = storeContextCubit.state.activeStore;
+    var activeStore =
+        storedActiveStore ??
+        ActiveStore(
+          siteId: AppConstants.kDefaultSiteId,
+          domain: AppConstants.kDefaultDomain,
+          title: 'SellHub',
+        );
+    if (storedActiveStore == null) {
       await storeContextCubit.setActiveStore(activeStore);
+    }
+
+    try {
+      final runtime = await sl<StoreSurfaceRepository>().fetchPublicRuntime(
+        domain: activeStore.domain,
+      );
+      if (!runtime.ready) {
+        await storeContextCubit.markUnavailable(
+          store: activeStore,
+          surface: null,
+          title: runtime.siteTitle ?? 'SellHub supply is off',
+          message: runtime.message,
+        );
+        if (!mounted) return;
+        AppRouter.goToHome(context);
+        return;
+      }
+      activeStore = activeStore.copyWith(market: runtime.market);
+      final surface = await sl<StoreSurfaceRepository>().fetchSellHubSurface(
+        activeStore.siteId,
+      );
+      final missing = surface.firstUnavailable(const <String>[
+        'store.sellhub_supply',
+        'store.base_price_visibility',
+        'store.reseller_order_routing',
+      ]);
+      if (missing != null) {
+        await storeContextCubit.markUnavailable(
+          store: activeStore,
+          surface: surface,
+          title: 'SellHub supply is off',
+          message:
+              'This supplier has not enabled SellHub supply, base price visibility, and reseller order routing yet.',
+        );
+        if (!mounted) return;
+        AppRouter.goToHome(context);
+        return;
+      }
+      await storeContextCubit.setActiveStoreWithSurface(activeStore, surface);
+    } catch (_) {
+      await storeContextCubit.markUnavailable(
+        store: activeStore,
+        surface: null,
+        title: 'Supplier is not ready for SellHub',
+        message:
+            'This supplier cannot be used for reseller selling right now. Ask the operator to enable SellHub supply.',
+      );
+      if (!mounted) return;
+      AppRouter.goToHome(context);
+      return;
     }
 
     await storefrontCubit.preload(
@@ -103,9 +157,7 @@ class _SplashScreenState extends State<SplashScreen>
           child: Column(
             children: [
               const Spacer(),
-              Center(
-                child: _SplashLogo(fadeIn: _fadeIn),
-              ),
+              Center(child: _SplashLogo(fadeIn: _fadeIn)),
               const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 30),
@@ -174,10 +226,7 @@ class _SplashLogo extends StatelessWidget {
       child: SizedBox(
         width: 156,
         height: 156,
-        child: Image.asset(
-          'assets/sellhub_logo.png',
-          fit: BoxFit.contain,
-        ),
+        child: Image.asset('assets/sellhub_logo.png', fit: BoxFit.contain),
       ),
     );
   }

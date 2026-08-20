@@ -323,9 +323,7 @@ class LocalStorage {
   ) async {
     await saveString(
       orderIssueReportsKey,
-      jsonEncode(
-        reports.map((item) => item.toJson()).toList(growable: false),
-      ),
+      jsonEncode(reports.map((item) => item.toJson()).toList(growable: false)),
     );
   }
 
@@ -355,7 +353,9 @@ class LocalStorage {
     return matches.first;
   }
 
-  static Future<void> upsertRepeatSellReminder(RepeatSellReminder reminder) async {
+  static Future<void> upsertRepeatSellReminder(
+    RepeatSellReminder reminder,
+  ) async {
     final reminders = await getRepeatSellReminders();
     final updated = <RepeatSellReminder>[
       reminder,

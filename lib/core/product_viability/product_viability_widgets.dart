@@ -52,16 +52,15 @@ class ProductViabilityCompactBlock extends StatelessWidget {
               backgroundColor: viabilityRiskSoftColor(profile.deliveryRisk),
             ),
             _SignalPill(
-              label:
-                  'Return ${viabilityRiskLabel(profile.returnSensitivity)}',
+              label: 'Return ${viabilityRiskLabel(profile.returnSensitivity)}',
               textColor: viabilityRiskColor(profile.returnSensitivity),
               backgroundColor: viabilityRiskSoftColor(
                 profile.returnSensitivity,
               ),
             ),
-            ...profile.labels.take(maxLabels).map(
-              (label) => const _LabelPillBuilder().build(label),
-            ),
+            ...profile.labels
+                .take(maxLabels)
+                .map((label) => const _LabelPillBuilder().build(label)),
           ],
         ),
         const SizedBox(height: 4),
@@ -85,10 +84,7 @@ class ProductViabilityCompactBlock extends StatelessWidget {
 }
 
 class ProductViabilityDetailCard extends StatelessWidget {
-  const ProductViabilityDetailCard({
-    super.key,
-    required this.product,
-  });
+  const ProductViabilityDetailCard({super.key, required this.product});
 
   final ProductResCommon product;
 
@@ -117,7 +113,8 @@ class ProductViabilityDetailCard extends StatelessWidget {
       ),
       _ViabilityTile(
         label: 'Shareability score',
-        value: '${profile.shareabilityScore.round()} ${profile.shareabilityLabel}',
+        value:
+            '${profile.shareabilityScore.round()} ${profile.shareabilityLabel}',
       ),
       _ViabilityTile(
         label: 'Supplier trust score',
@@ -193,10 +190,10 @@ class ProductViabilityDetailCard extends StatelessWidget {
                       color: AppColor.safe1,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                         Text(
                           tile.label,
                           style: textTheme.labelSmall?.copyWith(
@@ -225,10 +222,7 @@ class ProductViabilityDetailCard extends StatelessWidget {
 }
 
 class ProductViabilityExplanationSheet extends StatelessWidget {
-  const ProductViabilityExplanationSheet({
-    super.key,
-    required this.product,
-  });
+  const ProductViabilityExplanationSheet({super.key, required this.product});
 
   final ProductResCommon product;
 

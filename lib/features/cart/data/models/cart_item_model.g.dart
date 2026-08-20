@@ -24,23 +24,23 @@ class CartItemAdapter extends TypeAdapter<CartItem> {
           ((fields[4] as int?) ??
               (fields[3] as int?) ??
               (((fields[0] as ProductResCommon).maxResellPrice ??
-                          (fields[0] as ProductResCommon).minResellPrice ??
-                          (fields[0] as ProductResCommon).price ??
-                          0)
-                      .round())),
-      minSellPrice:
-          (fields[3] as int?) ??
-          (((fields[0] as ProductResCommon).minResellPrice ??
-                      (fields[0] as ProductResCommon).price ??
-                      0)
-                  .round()),
-      maxSellPrice:
-          (fields[4] as int?) ??
-          (((fields[0] as ProductResCommon).maxResellPrice ??
                       (fields[0] as ProductResCommon).minResellPrice ??
                       (fields[0] as ProductResCommon).price ??
                       0)
-                  .round()),
+                  .round())),
+      minSellPrice:
+          (fields[3] as int?) ??
+          (((fields[0] as ProductResCommon).minResellPrice ??
+                  (fields[0] as ProductResCommon).price ??
+                  0)
+              .round()),
+      maxSellPrice:
+          (fields[4] as int?) ??
+          (((fields[0] as ProductResCommon).maxResellPrice ??
+                  (fields[0] as ProductResCommon).minResellPrice ??
+                  (fields[0] as ProductResCommon).price ??
+                  0)
+              .round()),
     );
   }
 

@@ -13,14 +13,10 @@ class StoreScope {
   static String domainFromState(StorefrontState state) =>
       state.siteDetails?.domain?.trim().isNotEmpty == true
       ? state.siteDetails!.domain!.trim()
-      : (StoreRegistry.currentStore?.domain ?? 'sellhub.bponi.com');
+      : (StoreRegistry.currentStore?.domain ?? 'reseller.store.bponi.com');
 
   static int sourceIdFromState(StorefrontState state) =>
-      state.siteDetails?.createdById ??
-      state.siteDetails?.createdBy?.id ??
-      state.siteDetails?.id ??
-      StoreRegistry.currentStore?.siteId ??
-      1;
+      state.siteDetails?.id ?? StoreRegistry.currentStore?.siteId ?? 1;
 
   static int activeSiteId(BuildContext context) {
     final storefront = context.read<StorefrontCubit>().state;

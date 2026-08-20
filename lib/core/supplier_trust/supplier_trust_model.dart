@@ -34,8 +34,8 @@ class SupplierTrustProfile {
       score: (json['score'] as num?)?.toDouble() ?? 0,
       verified: json['isVerified'] as bool? ?? false,
       updatedAt: DateTime.tryParse((json['updatedAt'] as String?) ?? ''),
-      fulfillmentSuccessRate:
-          (json['fulfillmentSuccessRate'] as num?)?.toDouble(),
+      fulfillmentSuccessRate: (json['fulfillmentSuccessRate'] as num?)
+          ?.toDouble(),
       averageDeliveryDays: (json['averageDeliveryDays'] as num?)?.toDouble(),
       returnRate: (json['returnRate'] as num?)?.toDouble(),
       shippedOrders30d: json['shippedOrders30d'] as int?,

@@ -36,7 +36,9 @@ Future<int?> showResellerPriceSheet(
       return StatefulBuilder(
         builder: (context, setSheetState) {
           final current =
-              int.tryParse(controller.text.trim())?.clamp(minSellPrice, maxSellPrice) ??
+              int.tryParse(
+                controller.text.trim(),
+              )?.clamp(minSellPrice, maxSellPrice) ??
               recommended;
           final profit = current - basePrice;
           return Padding(
@@ -194,9 +196,9 @@ Future<int?> showResellerPriceSheet(
                     onPressed: () {
                       final parsed = int.tryParse(controller.text.trim());
                       if (parsed == null) return;
-                      Navigator.of(context).pop(
-                        parsed.clamp(minSellPrice, maxSellPrice),
-                      );
+                      Navigator.of(
+                        context,
+                      ).pop(parsed.clamp(minSellPrice, maxSellPrice));
                     },
                     child: const Text('Add to list'),
                   ),

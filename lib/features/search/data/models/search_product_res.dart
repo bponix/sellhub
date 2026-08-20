@@ -25,21 +25,38 @@ class SearchProductRes {
 
   factory SearchProductRes.fromJson(Map<String, dynamic> json) {
     return SearchProductRes(
-      id: json['id'],
-      title: json['title'],
-      thumbnail: json['thumbnail'],
-      price: (json['price'] as num).toDouble(),
-      comparePrice: (json['compare_price'] as num).toDouble(),
-      wholesalePrice: ((json['wholesale_price'] ?? json['price']) as num)
-          .toDouble(),
-      minResellPrice: ((json['min_resell_price'] ?? json['price']) as num)
-          .toDouble(),
-      maxResellPrice:
-          ((json['max_resell_price'] ?? json['compare_price'] ?? json['price'])
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      title: '${json['title'] ?? ''}',
+      thumbnail: '${json['thumbnail'] ?? ''}',
+      price: (json['price'] as num?)?.toDouble() ?? 0,
+      comparePrice:
+          (json['comparePrice'] ?? json['compare_price'] ?? json['price'] ?? 0)
+              .toDouble(),
+      wholesalePrice:
+          ((json['wholesalePrice'] ??
+                      json['wholesale_price'] ??
+                      json['price'] ??
+                      0)
                   as num)
               .toDouble(),
-      siteId: json['site_id'],
-      sku: json['sku'],
+      minResellPrice:
+          ((json['minResellPrice'] ??
+                      json['min_resell_price'] ??
+                      json['price'] ??
+                      0)
+                  as num)
+              .toDouble(),
+      maxResellPrice:
+          ((json['maxResellPrice'] ??
+                      json['max_resell_price'] ??
+                      json['comparePrice'] ??
+                      json['compare_price'] ??
+                      json['price'] ??
+                      0)
+                  as num)
+              .toDouble(),
+      siteId: ((json['siteId'] ?? json['site_id']) as num?)?.toInt() ?? 0,
+      sku: '${json['sku'] ?? ''}',
     );
   }
 }

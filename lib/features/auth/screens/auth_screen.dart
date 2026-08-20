@@ -6,6 +6,7 @@ import 'package:sellhub/core/config/app_text.dart';
 import 'package:sellhub/core/constants/app_color.dart';
 import 'package:sellhub/core/navigation/deep_link_service.dart';
 import 'package:sellhub/core/store/store_scope.dart';
+import 'package:sellhub/core/store/store_registry.dart';
 import 'package:sellhub/core/utils/app_router.dart';
 import 'package:sellhub/core/utils/custom_toast.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
@@ -267,9 +268,9 @@ class _AuthScreenState extends State<AuthScreen> {
       final nameParts = _splitName(fullName);
       final model = SignUpReq(
         country: _countryNumeric ?? _defaultCountryNumeric,
-        currency: 'BDT',
+        currency: StoreRegistry.currentStore?.market.currencyCode ?? 'BDT',
         firstName: nameParts.firstName,
-        language: 'en',
+        language: StoreRegistry.currentStore?.market.defaultLanguage ?? 'en',
         lastName: nameParts.lastName,
         name: fullName,
         password: _passwordController.text.trim(),
@@ -561,7 +562,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                       decoration: BoxDecoration(
                                         color: AppColor.safe1,
                                         borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(color: AppColor.safe),
+                                        border: Border.all(
+                                          color: AppColor.safe,
+                                        ),
                                       ),
                                       child: const Icon(
                                         Icons.lock_outline_rounded,
@@ -830,8 +833,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                         if (state.isOtpMode(_isForgotMode)) ...[
                                           const SizedBox(height: 12),
                                           _InlineFormLead(
-                                            icon: HugeIcons
-                                                .strokeRoundedShield01,
+                                            icon:
+                                                HugeIcons.strokeRoundedShield01,
                                             title: 'Verification code',
                                             subtitle:
                                                 'Enter the 6-digit code sent to your account.',
@@ -1039,27 +1042,27 @@ class _AuthStageBanner extends StatelessWidget {
                 Text(
                   eyebrow,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColor.primary,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.2,
-                      ),
+                    color: AppColor.primary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColor.neutral2,
-                        fontWeight: FontWeight.w600,
-                        height: 1.35,
-                      ),
+                    color: AppColor.neutral2,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
                 ),
               ],
             ),
@@ -1141,9 +1144,9 @@ class _HintTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -1151,9 +1154,9 @@ class _HintTile extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColor.neutral2,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: AppColor.neutral2,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -1197,17 +1200,17 @@ class _InlineFormLead extends StatelessWidget {
               Text(
                 title,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: AppColor.text,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  color: AppColor.text,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColor.neutral2,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: AppColor.neutral2,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

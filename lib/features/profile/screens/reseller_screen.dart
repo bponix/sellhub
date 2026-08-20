@@ -106,7 +106,8 @@ class _ResellerScreenState extends State<ResellerScreen> {
                 child: _ResellerInlineLead(
                   icon: HugeIcons.strokeRoundedWallet02,
                   title: 'Payout details',
-                  subtitle: 'Use the number where you want to receive reseller payments.',
+                  subtitle:
+                      'Use the number where you want to receive reseller payments.',
                 ),
               ),
               Padding(

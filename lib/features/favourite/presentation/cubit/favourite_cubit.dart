@@ -38,7 +38,7 @@ class FavouriteCubit extends SafeCubit<FavouriteState> {
       emit(
         state.copyWith(
           isLoading: false,
-            error: AppFailure.fromObject(
+          error: AppFailure.fromObject(
             error,
             fallbackTitle: 'Unable to load saved products.',
           ),
@@ -98,7 +98,9 @@ class FavouriteCubit extends SafeCubit<FavouriteState> {
       nextItems.add(product);
       nextIds.add(productId);
     }
-    emit(state.copyWith(items: nextItems, favoriteIds: nextIds, clearError: true));
+    emit(
+      state.copyWith(items: nextItems, favoriteIds: nextIds, clearError: true),
+    );
   }
 
   bool isFavourite(int productId) {

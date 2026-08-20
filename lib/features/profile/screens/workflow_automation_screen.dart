@@ -37,8 +37,9 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
   }
 
   Future<WorkflowAutomationOverview> _loadOverview() async {
+    final siteId =
+        context.read<StoreContextCubit>().state.activeStore?.siteId ?? 0;
     final userId = await LocalStorage.getUserID() ?? 0;
-    final siteId = context.read<StoreContextCubit>().state.activeStore?.siteId ?? 0;
     _userId = userId;
     _siteId = siteId;
     if (userId <= 0 || siteId <= 0) {
@@ -82,7 +83,9 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          title: Text(existing == null ? 'New pricing template' : 'Edit template'),
+          title: Text(
+            existing == null ? 'New pricing template' : 'Edit template',
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -145,7 +148,9 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
     if (action != 'save') return;
     await repo.upsertWorkflowPricingTemplate(
       WorkflowPricingTemplate(
-        id: existing?.id ?? 'pricing-${_siteId!}-${DateTime.now().millisecondsSinceEpoch}',
+        id:
+            existing?.id ??
+            'pricing-${_siteId!}-${DateTime.now().millisecondsSinceEpoch}',
         userId: _userId!,
         siteId: _siteId!,
         name: nameController.text.trim().isEmpty
@@ -238,7 +243,9 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
     if (action != 'save') return;
     await repo.upsertWorkflowSupplierBundle(
       WorkflowSupplierBundle(
-        id: existing?.id ?? 'bundle-${_siteId!}-${DateTime.now().millisecondsSinceEpoch}',
+        id:
+            existing?.id ??
+            'bundle-${_siteId!}-${DateTime.now().millisecondsSinceEpoch}',
         userId: _userId!,
         siteId: _siteId!,
         supplierName: supplierController.text.trim().isEmpty
@@ -317,7 +324,9 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
     );
     if (action == null) return;
     final repo = di.sl<ProfileRepository>();
-    if (action == 'delete' && existing != null && !existing.id.startsWith('auto-')) {
+    if (action == 'delete' &&
+        existing != null &&
+        !existing.id.startsWith('auto-')) {
       await repo.deleteWorkflowBuyerSegment(existing.id);
       await _refresh();
       return;
@@ -325,7 +334,9 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
     if (action != 'save') return;
     await repo.upsertWorkflowBuyerSegment(
       WorkflowBuyerSegment(
-        id: existing?.id ?? 'segment-${_siteId!}-${DateTime.now().millisecondsSinceEpoch}',
+        id:
+            existing?.id ??
+            'segment-${_siteId!}-${DateTime.now().millisecondsSinceEpoch}',
         userId: _userId!,
         siteId: _siteId!,
         name: nameController.text.trim().isEmpty
@@ -345,7 +356,7 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
       backgroundColor: Colors.white,
       appBar: const SellHubTopAppBar(
         title: 'Workflows',
-        subtitle: 'Saved pricing, buyer segments, and sell-again shortcuts',
+        subtitle: 'Device drafts for pricing, segments, and repeat selling',
         icon: HugeIcons.strokeRoundedReload,
         showBackButton: true,
       ),
@@ -370,18 +381,24 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 const _WorkflowHero(),
+                const SizedBox(height: 12),
+                const _InlineHintCard(
+                  text:
+                      'Device draft: these workflow shortcuts are not Store order, buyer, payout, or team truth.',
+                ),
                 const SizedBox(height: 16),
                 _WorkflowSectionLead(
                   icon: HugeIcons.strokeRoundedInvoice03,
                   title: 'Pricing templates',
-                  subtitle: 'Keep reusable margin rules by channel.',
+                  subtitle: 'Device-only margin preferences by channel.',
                   actionLabel: 'New template',
                   onAction: () => _editTemplate(),
                 ),
                 const SizedBox(height: 12),
                 if (overview.pricingTemplates.isEmpty)
                   const _InlineHintCard(
-                    text: 'Save your first pricing template to keep repeat quotes fast.',
+                    text:
+                        'Save your first pricing template to keep repeat quotes fast.',
                   )
                 else
                   ...overview.pricingTemplates.map(
@@ -397,27 +414,32 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
                 _WorkflowSectionLead(
                   icon: HugeIcons.strokeRoundedPackage,
                   title: 'Supplier bundles',
-                  subtitle: 'Reuse product clusters that sell together.',
+                  subtitle: 'Device-only product groups for quick reopening.',
                   actionLabel: 'New bundle',
                   onAction: () => _editBundle(),
                 ),
                 const SizedBox(height: 12),
                 if (overview.supplierBundles.isEmpty)
                   const _InlineHintCard(
-                    text: 'Save supplier bundles to reopen winning product groups faster.',
+                    text:
+                        'Save supplier bundles to reopen winning product groups faster.',
                   )
                 else
                   ...overview.supplierBundles.map(
                     (item) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: _BundleCard(item: item, onTap: () => _editBundle(item)),
+                      child: _BundleCard(
+                        item: item,
+                        onTap: () => _editBundle(item),
+                      ),
                     ),
                   ),
                 const SizedBox(height: 18),
                 _WorkflowSectionLead(
                   icon: HugeIcons.strokeRoundedUserGroup,
                   title: 'Buyer segments',
-                  subtitle: 'Keep reusable follow-up buckets beside the auto-derived ones.',
+                  subtitle:
+                      'Device-only follow-up buckets for personal workflow.',
                   actionLabel: 'New segment',
                   onAction: () => _editSegment(),
                 ),
@@ -427,7 +449,9 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: _SegmentCard(
                       item: item,
-                      onTap: item.id.startsWith('auto-') ? null : () => _editSegment(item),
+                      onTap: item.id.startsWith('auto-')
+                          ? null
+                          : () => _editSegment(item),
                     ),
                   ),
                 ),
@@ -440,7 +464,8 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
                 const SizedBox(height: 12),
                 if (overview.recentPairings.isEmpty)
                   const _InlineHintCard(
-                    text: 'Recent buyer pairings will appear after quotes convert into orders.',
+                    text:
+                        'Recent buyer pairings will appear after quotes convert into orders.',
                   )
                 else
                   ...overview.recentPairings.map(
@@ -453,12 +478,14 @@ class _WorkflowAutomationScreenState extends State<WorkflowAutomationScreen> {
                 const _WorkflowSectionLead(
                   icon: HugeIcons.strokeRoundedReload,
                   title: 'Sell again',
-                  subtitle: 'Jump back into high-repeat products without rebuilding the flow.',
+                  subtitle:
+                      'Jump back into high-repeat products without rebuilding the flow.',
                 ),
                 const SizedBox(height: 12),
                 if (overview.sellAgainSuggestions.isEmpty)
                   const _InlineHintCard(
-                    text: 'Delivered orders will seed sell-again suggestions here.',
+                    text:
+                        'Delivered orders will seed sell-again suggestions here.',
                   )
                 else
                   ...overview.sellAgainSuggestions.map(
@@ -508,9 +535,9 @@ class _WorkflowHero extends StatelessWidget {
             child: Text(
               'Keep reusable reseller decisions here so repeat selling starts from saved defaults instead of retyping the same rules.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColor.neutral2,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: AppColor.neutral2,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -558,16 +585,16 @@ class _WorkflowSectionLead extends StatelessWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColor.text,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        color: AppColor.text,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColor.neutral2,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -576,10 +603,7 @@ class _WorkflowSectionLead extends StatelessWidget {
           ),
         ),
         if (actionLabel != null && onAction != null)
-          OutlinedButton(
-            onPressed: onAction,
-            child: Text(actionLabel!),
-          ),
+          OutlinedButton(onPressed: onAction, child: Text(actionLabel!)),
       ],
     );
   }
@@ -602,9 +626,9 @@ class _InlineHintCard extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColor.neutral2,
-              fontWeight: FontWeight.w600,
-            ),
+          color: AppColor.neutral2,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -621,7 +645,8 @@ class _TemplateCard extends StatelessWidget {
     return _WorkflowCardShell(
       title: item.name,
       subtitle: '${item.channel} • Updated ${formatDateTime(item.updatedAt)}',
-      body: 'Markup ৳${item.markupAmount.toStringAsFixed(0)} • ${item.markupPercent.toStringAsFixed(0)}%',
+      body:
+          'Markup ৳${item.markupAmount.toStringAsFixed(0)} • ${item.markupPercent.toStringAsFixed(0)}%',
       note: item.note,
       onTap: onTap,
     );
@@ -657,8 +682,7 @@ class _SegmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return _WorkflowCardShell(
       title: item.name,
-      subtitle:
-          '${item.buyerCount} buyers • ${formatDateTime(item.updatedAt)}',
+      subtitle: '${item.buyerCount} buyers • ${formatDateTime(item.updatedAt)}',
       body: item.description,
       note: item.id.startsWith('auto-') ? 'Auto-derived' : 'Saved segment',
       onTap: onTap,
@@ -686,25 +710,25 @@ class _RecentPairingCard extends StatelessWidget {
           Text(
             item.productTitle,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             '${item.buyerName} • ৳${item.sellPrice.toStringAsFixed(0)} • ${formatDateTime(item.updatedAt)}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             'Order ${item.orderId} • ${item.buyerPhone}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.primary,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: AppColor.primary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -735,13 +759,16 @@ class _SellAgainCard extends StatelessWidget {
                 child: Text(
                   item.productTitle,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColor.safe1,
                   borderRadius: BorderRadius.circular(999),
@@ -749,9 +776,9 @@ class _SellAgainCard extends StatelessWidget {
                 child: Text(
                   '${item.repeatCount}x sold',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColor.primary,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
@@ -760,17 +787,17 @@ class _SellAgainCard extends StatelessWidget {
           Text(
             item.reason,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             '${item.lastBuyerName} • ৳${item.lastSellPrice.toStringAsFixed(0)} • ${formatDateTime(item.lastOrderedAt)}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.primary,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: AppColor.primary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 12),
           FilledButton(
@@ -820,33 +847,33 @@ class _WorkflowCardShell extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColor.text,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: AppColor.text,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColor.neutral2,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: AppColor.neutral2,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               body,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColor.text,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: AppColor.text,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             if (note.trim().isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
                 note,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColor.neutral2,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColor.neutral2),
               ),
             ],
           ],
@@ -889,17 +916,17 @@ class _WorkflowEmptyState extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColor.neutral2,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColor.neutral2),
               ),
               const SizedBox(height: 14),
               OutlinedButton(

@@ -320,7 +320,9 @@ class StorefrontCubit extends SafeCubit<StorefrontState> {
     }
 
     final missingCategories = targetCategories
-        .where((category) => !state.homeCategoryProducts.containsKey(category.id))
+        .where(
+          (category) => !state.homeCategoryProducts.containsKey(category.id),
+        )
         .toList(growable: false);
 
     if (missingCategories.isEmpty) {

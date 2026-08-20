@@ -6,12 +6,11 @@ import 'package:get_it/get_it.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:sellhub/core/api/local_graphql_api.dart';
 import 'package:sellhub/core/database/local_entity_database.dart';
-import 'package:sellhub/core/local_seed/sellhub_catalog_local_store.dart';
 import 'package:sellhub/core/local_seed/sellhub_commerce_local_store.dart';
-import 'package:sellhub/core/local_seed/sellhub_local_auth_store.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:sellhub/core/network/connectivity_cubit.dart';
 import 'package:sellhub/core/notifications/notification_center_cubit.dart';
+import 'package:sellhub/core/capabilities/store_surface_repository.dart';
 import 'package:sellhub/core/services/analytics_service.dart';
 import 'package:sellhub/core/services/crash_reporting_service.dart';
 import 'package:sellhub/core/services/remote_config_service.dart';
@@ -74,13 +73,7 @@ Future<void> initDependencies({
     () => SupplierTrustLocalStore(api: sl<LocalGraphQLApi>()),
   );
   sl.registerLazySingleton(
-    () => SellHubCatalogLocalStore(api: sl<LocalGraphQLApi>()),
-  );
-  sl.registerLazySingleton(
     () => SellHubCommerceLocalStore(api: sl<LocalGraphQLApi>()),
-  );
-  sl.registerLazySingleton(
-    () => SellHubLocalAuthStore(sl<SellHubCommerceLocalStore>()),
   );
   sl.registerLazySingleton(() => Connectivity());
   sl.registerLazySingleton(
@@ -98,38 +91,23 @@ Future<void> initDependencies({
     ),
   );
 
-  sl.registerLazySingleton(
-    () => AuthRepository(
-      sl<GraphQLClient>(),
-      sl<SellHubLocalAuthStore>(),
-    ),
-  );
+  sl.registerLazySingleton(() => AuthRepository(sl<GraphQLClient>()));
   sl.registerLazySingleton<AuthRepositoryContract>(
     () => AuthRepositoryAdapter(sl<AuthRepository>()),
   );
   sl.registerLazySingleton<SessionRepository>(() => LocalSessionRepository());
   sl.registerLazySingleton(
-    () => ProductRepository(
-      sl<GraphQLClient>(),
-      sl<SupplierTrustLocalStore>(),
-      sl<SellHubCatalogLocalStore>(),
-      sl<SellHubCommerceLocalStore>(),
-    ),
+    () => ProductRepository(sl<GraphQLClient>(), sl<SupplierTrustLocalStore>()),
   );
+  sl.registerLazySingleton(() => StoreSurfaceRepository(sl<GraphQLClient>()));
   sl.registerLazySingleton<StorefrontRepository>(
     () => StorefrontRepositoryImpl(sl<ProductRepository>()),
   );
-  sl.registerLazySingleton(
-    () => CategoryRepository(
-      sl<GraphQLClient>(),
-      sl<SellHubCatalogLocalStore>(),
-    ),
-  );
+  sl.registerLazySingleton(() => CategoryRepository(sl<GraphQLClient>()));
   sl.registerLazySingleton(
     () => StoreDiscoveryRepository(
       sl<GraphQLClient>(),
       sl<SupplierTrustLocalStore>(),
-      sl<SellHubCatalogLocalStore>(),
     ),
   );
   sl.registerLazySingleton(
@@ -139,18 +117,11 @@ Future<void> initDependencies({
     ),
   );
   sl.registerLazySingleton(
-    () => ProfileRepository(
-      sl<GraphQLClient>(),
-      sl<SellHubCommerceLocalStore>(),
-    ),
+    () =>
+        ProfileRepository(sl<GraphQLClient>(), sl<SellHubCommerceLocalStore>()),
   );
   sl.registerLazySingleton(() => OrdersRepository(sl(), sl()));
-  sl.registerLazySingleton(
-    () => SearchRepository(
-      sl<GraphQLClient>(),
-      sl<SellHubCatalogLocalStore>(),
-    ),
-  );
+  sl.registerLazySingleton(() => SearchRepository(sl<GraphQLClient>()));
 
   sl.registerLazySingleton(() => CheckUser(sl()));
   sl.registerLazySingleton(() => LoginUser(sl()));

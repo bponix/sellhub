@@ -108,42 +108,6 @@ class OrdersCubit extends SafeCubit<OrdersState> {
     );
   }
 
-  Future<bool> clearCustomerSupportRequest({
-    required int siteId,
-    required int orderId,
-  }) {
-    return _deleteCustomerOrderNote(
-      siteId: siteId,
-      orderId: orderId,
-      eventType: _customerNoteEventType,
-      failureTitle: 'Unable to clear support request.',
-    );
-  }
-
-  Future<bool> clearCustomerIssueRequest({
-    required int siteId,
-    required int orderId,
-  }) {
-    return _deleteCustomerOrderNote(
-      siteId: siteId,
-      orderId: orderId,
-      eventType: _issueEventType,
-      failureTitle: 'Unable to clear issue flag.',
-    );
-  }
-
-  Future<bool> clearBuyerContacted({
-    required int siteId,
-    required int orderId,
-  }) {
-    return _deleteCustomerOrderNote(
-      siteId: siteId,
-      orderId: orderId,
-      eventType: _buyerContactedEventType,
-      failureTitle: 'Unable to clear buyer follow-up.',
-    );
-  }
-
   Future<bool> _createCustomerOrderNote({
     required int userId,
     required int siteId,
@@ -191,69 +155,6 @@ class OrdersCubit extends SafeCubit<OrdersState> {
         ),
       );
       return true;
-    } catch (error) {
-      emit(
-        state.copyWith(
-          actionSubmitting: false,
-          clearActionOrderId: true,
-          actionError: AppFailure.fromObject(
-            error,
-            fallbackTitle: failureTitle,
-          ),
-        ),
-      );
-      return false;
-    }
-  }
-
-  Future<bool> _deleteCustomerOrderNote({
-    required int siteId,
-    required int orderId,
-    required int eventType,
-    required String failureTitle,
-  }) async {
-    if (siteId <= 0 || orderId <= 0) {
-      emit(
-        state.copyWith(
-          actionError: const AppFailure(
-            title: 'Unable to complete this action.',
-            detail: 'Missing order context.',
-          ),
-          clearActionError: false,
-          actionSubmitting: false,
-          clearActionOrderId: true,
-        ),
-      );
-      return false;
-    }
-
-    emit(
-      state.copyWith(
-        actionOrderId: orderId,
-        actionSubmitting: true,
-        clearActionError: true,
-      ),
-    );
-    try {
-      final deleted = await _repository.deleteLatestCustomerOrderEvent(
-        siteId: siteId,
-        orderId: orderId,
-        eventType: eventType,
-      );
-      emit(
-        state.copyWith(
-          actionSubmitting: false,
-          clearActionOrderId: true,
-          clearActionError: deleted,
-          actionError: deleted
-              ? null
-              : const AppFailure(
-                  title: 'Nothing to clear.',
-                  detail: 'No matching local follow-up event was found.',
-                ),
-        ),
-      );
-      return deleted;
     } catch (error) {
       emit(
         state.copyWith(

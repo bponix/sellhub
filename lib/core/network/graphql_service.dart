@@ -42,7 +42,7 @@ class GraphQLService {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString(AppConstants.kAuthTokenKey);
       if (token != null && token.isNotEmpty) {
-        return 'BPONI-AUTH $token';
+        return 'Bearer $token';
       }
       return null;
     },

@@ -27,7 +27,8 @@ class SearchButtonClickResult extends StatefulWidget {
   final int siteId;
 
   @override
-  State<SearchButtonClickResult> createState() => _SearchButtonClickResultState();
+  State<SearchButtonClickResult> createState() =>
+      _SearchButtonClickResultState();
 }
 
 class _SearchButtonClickResultState extends State<SearchButtonClickResult> {
@@ -127,236 +128,82 @@ class _SearchButtonClickResultState extends State<SearchButtonClickResult> {
             Expanded(
               child: BlocBuilder<SearchCubit, SearchState>(
                 builder: (context, state) {
-            final visibleProducts = applyProductViability(
-              state.searchProducts,
-              filter: _viabilityFilter,
-              sort: _viabilitySort,
-            );
-            if (state.loading && state.searchProducts.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state.error != null && state.searchProducts.isEmpty) {
-              return _SearchResultState(
-                icon: HugeIcons.strokeRoundedAlertCircle,
-                title: state.error!.title,
-                subtitle: 'Try another keyword or pull to refresh.',
-                actionLabel: 'Retry',
-                onAction: _refresh,
-              );
-            }
-            if (state.searchProducts.isEmpty) {
-              return const _SearchResultState(
-                icon: HugeIcons.strokeRoundedPackageSearch01,
-                title: 'No products found',
-                subtitle: 'No products matched this query across active suppliers.',
-              );
-            }
-            return RefreshIndicator(
-              onRefresh: _refresh,
-              child: ListView.separated(
-                itemCount: visibleProducts.length + 1,
-                separatorBuilder: (_, index) => SizedBox(
-                  height: index == 0 ? 12 : 10,
-                ),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${visibleProducts.length} matches',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      color: AppColor.text,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                              ),
-                            ),
-                            PopupMenuButton<ProductViabilitySort>(
-                              onSelected: (value) {
-                                setState(() {
-                                  _viabilitySort = value;
-                                });
-                              },
-                              itemBuilder: (context) => ProductViabilitySort.values
-                                  .map(
-                                    (sort) => PopupMenuItem(
-                                      value: sort,
-                                      child: Text(sort.name),
-                                    ),
-                                  )
-                                  .toList(growable: false),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColor.safe1,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  _viabilitySort.name,
-                                  style: Theme.of(context).textTheme.labelSmall
-                                      ?.copyWith(
-                                        color: AppColor.primary,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        _SellerLensSummaryCard(
-                          filter: _viabilityFilter,
-                          sort: _viabilitySort,
-                        ),
-                        const SizedBox(height: 10),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              _SellerLensChip(
-                                label: 'All',
-                                selected: _viabilityFilter ==
-                                        ProductViabilityFilter.all &&
-                                    _viabilitySort ==
-                                        ProductViabilitySort.featured,
-                                onTap: () => _applySellerLens('all'),
-                              ),
-                              _SellerLensChip(
-                                label: 'WhatsApp',
-                                selected: _viabilityFilter ==
-                                        ProductViabilityFilter.goodMargin &&
-                                    _viabilitySort ==
-                                        ProductViabilitySort.featured,
-                                onTap: () => _applySellerLens('whatsapp'),
-                              ),
-                              _SellerLensChip(
-                                label: 'Facebook',
-                                selected: _viabilityFilter ==
-                                        ProductViabilityFilter.highRepeatPotential &&
-                                    _viabilitySort ==
-                                        ProductViabilitySort.featured,
-                                onTap: () => _applySellerLens('facebook'),
-                              ),
-                              _SellerLensChip(
-                                label: 'Good margin',
-                                selected: _viabilityFilter ==
-                                        ProductViabilityFilter.goodMargin &&
-                                    _viabilitySort ==
-                                        ProductViabilitySort.highestMargin,
-                                onTap: () => _applySellerLens('margin'),
-                              ),
-                              _SellerLensChip(
-                                label: 'Low risk',
-                                selected: _viabilityFilter ==
-                                        ProductViabilityFilter.beginnerFriendly &&
-                                    _viabilitySort ==
-                                        ProductViabilitySort.lowestRisk,
-                                onTap: () => _applySellerLens('risk'),
-                              ),
-                              _SellerLensChip(
-                                label: 'COD-friendly',
-                                selected: _viabilityFilter ==
-                                        ProductViabilityFilter.beginnerFriendly &&
-                                    _viabilitySort ==
-                                        ProductViabilitySort.featured,
-                                onTap: () => _applySellerLens('cod'),
-                              ),
-                              _SellerLensChip(
-                                label: 'Repeat sell',
-                                selected: _viabilityFilter ==
-                                        ProductViabilityFilter.highRepeatPotential &&
-                                    _viabilitySort ==
-                                        ProductViabilitySort.highRepeatPotential,
-                                onTap: () => _applySellerLens('repeat'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                  final visibleProducts = applyProductViability(
+                    state.searchProducts,
+                    filter: _viabilityFilter,
+                    sort: _viabilitySort,
+                  );
+                  if (state.loading && state.searchProducts.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (state.error != null && state.searchProducts.isEmpty) {
+                    return _SearchResultState(
+                      icon: HugeIcons.strokeRoundedAlertCircle,
+                      title: state.error!.title,
+                      subtitle: 'Try another keyword or pull to refresh.',
+                      actionLabel: 'Retry',
+                      onAction: _refresh,
                     );
                   }
-
-                  final item = visibleProducts[index - 1];
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      bottom: index == state.searchProducts.length ? 0 : 0,
-                    ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () {
-                        final hid = encodeId(item.id!);
-                        Navigator.of(context).push(
-                          ProductDetailsScreen.route(hid: hid, product: item),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: AppColor.safe),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 76,
-                              height: 76,
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: AppColor.safe1,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: AppNetworkImage(
-                                  imageUrl: item.thumbnail ?? item.images.firstOrNull?.image,
-                                  width: 72,
-                                  height: 72,
-                                  fit: BoxFit.cover,
-                                  backgroundColor: AppColor.safe1,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                  if (state.searchProducts.isEmpty) {
+                    return const _SearchResultState(
+                      icon: HugeIcons.strokeRoundedPackageSearch01,
+                      title: 'No products found',
+                      subtitle:
+                          'No products matched this query across active suppliers.',
+                    );
+                  }
+                  return RefreshIndicator(
+                    onRefresh: _refresh,
+                    child: ListView.separated(
+                      itemCount: visibleProducts.length + 1,
+                      separatorBuilder: (_, index) =>
+                          SizedBox(height: index == 0 ? 12 : 10),
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Text(
-                                    item.title ?? '',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: AppColor.text,
-                                      fontWeight: FontWeight.w700,
-                                      height: 1.25,
+                                  Expanded(
+                                    child: Text(
+                                      '${visibleProducts.length} matches',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            color: AppColor.text,
+                                            fontWeight: FontWeight.w800,
+                                          ),
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        '৳ ${item.price}',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelLarge
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w800,
-                                              color: AppColor.text,
-                                            ),
+                                  PopupMenuButton<ProductViabilitySort>(
+                                    onSelected: (value) {
+                                      setState(() {
+                                        _viabilitySort = value;
+                                      });
+                                    },
+                                    itemBuilder: (context) =>
+                                        ProductViabilitySort.values
+                                            .map(
+                                              (sort) => PopupMenuItem(
+                                                value: sort,
+                                                child: Text(sort.name),
+                                              ),
+                                            )
+                                            .toList(growable: false),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 8,
                                       ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        _activeCueLabel(item),
+                                      decoration: BoxDecoration(
+                                        color: AppColor.safe1,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        _viabilitySort.name,
                                         style: Theme.of(context)
                                             .textTheme
                                             .labelSmall
@@ -365,39 +212,224 @@ class _SearchButtonClickResultState extends State<SearchButtonClickResult> {
                                               fontWeight: FontWeight.w800,
                                             ),
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  ProductViabilityCompactBlock(
-                                    product: item,
-                                    maxLabels: 2,
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              _SellerLensSummaryCard(
+                                filter: _viabilityFilter,
+                                sort: _viabilitySort,
+                              ),
+                              const SizedBox(height: 10),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    _SellerLensChip(
+                                      label: 'All',
+                                      selected:
+                                          _viabilityFilter ==
+                                              ProductViabilityFilter.all &&
+                                          _viabilitySort ==
+                                              ProductViabilitySort.featured,
+                                      onTap: () => _applySellerLens('all'),
+                                    ),
+                                    _SellerLensChip(
+                                      label: 'WhatsApp',
+                                      selected:
+                                          _viabilityFilter ==
+                                              ProductViabilityFilter
+                                                  .goodMargin &&
+                                          _viabilitySort ==
+                                              ProductViabilitySort.featured,
+                                      onTap: () => _applySellerLens('whatsapp'),
+                                    ),
+                                    _SellerLensChip(
+                                      label: 'Facebook',
+                                      selected:
+                                          _viabilityFilter ==
+                                              ProductViabilityFilter
+                                                  .highRepeatPotential &&
+                                          _viabilitySort ==
+                                              ProductViabilitySort.featured,
+                                      onTap: () => _applySellerLens('facebook'),
+                                    ),
+                                    _SellerLensChip(
+                                      label: 'Good margin',
+                                      selected:
+                                          _viabilityFilter ==
+                                              ProductViabilityFilter
+                                                  .goodMargin &&
+                                          _viabilitySort ==
+                                              ProductViabilitySort
+                                                  .highestMargin,
+                                      onTap: () => _applySellerLens('margin'),
+                                    ),
+                                    _SellerLensChip(
+                                      label: 'Low risk',
+                                      selected:
+                                          _viabilityFilter ==
+                                              ProductViabilityFilter
+                                                  .beginnerFriendly &&
+                                          _viabilitySort ==
+                                              ProductViabilitySort.lowestRisk,
+                                      onTap: () => _applySellerLens('risk'),
+                                    ),
+                                    _SellerLensChip(
+                                      label: 'COD-friendly',
+                                      selected:
+                                          _viabilityFilter ==
+                                              ProductViabilityFilter
+                                                  .beginnerFriendly &&
+                                          _viabilitySort ==
+                                              ProductViabilitySort.featured,
+                                      onTap: () => _applySellerLens('cod'),
+                                    ),
+                                    _SellerLensChip(
+                                      label: 'Repeat sell',
+                                      selected:
+                                          _viabilityFilter ==
+                                              ProductViabilityFilter
+                                                  .highRepeatPotential &&
+                                          _viabilitySort ==
+                                              ProductViabilitySort
+                                                  .highRepeatPotential,
+                                      onTap: () => _applySellerLens('repeat'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+
+                        final item = visibleProducts[index - 1];
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            bottom: index == state.searchProducts.length
+                                ? 0
+                                : 0,
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(18),
+                            onTap: () {
+                              final hid = encodeId(item.id!);
+                              Navigator.of(context).push(
+                                ProductDetailsScreen.route(
+                                  hid: hid,
+                                  product: item,
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: AppColor.safe),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 76,
+                                    height: 76,
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: AppColor.safe1,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: AppNetworkImage(
+                                        imageUrl:
+                                            item.thumbnail ??
+                                            item.images.firstOrNull?.image,
+                                        width: 72,
+                                        height: 72,
+                                        fit: BoxFit.cover,
+                                        backgroundColor: AppColor.safe1,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.title ?? '',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                color: AppColor.text,
+                                                fontWeight: FontWeight.w700,
+                                                height: 1.25,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              '৳ ${item.price}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelLarge
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w800,
+                                                    color: AppColor.text,
+                                                  ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              _activeCueLabel(item),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelSmall
+                                                  ?.copyWith(
+                                                    color: AppColor.primary,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        ProductViabilityCompactBlock(
+                                          product: item,
+                                          maxLabels: 2,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    width: 34,
+                                    height: 34,
+                                    decoration: BoxDecoration(
+                                      color: AppColor.primarySoft,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const AppHugeIcon(
+                                      HugeIcons.strokeRoundedArrowRight02,
+                                      size: 14,
+                                      color: AppColor.primary,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Container(
-                              width: 34,
-                              height: 34,
-                              decoration: BoxDecoration(
-                                color: AppColor.primarySoft,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const AppHugeIcon(
-                                HugeIcons.strokeRoundedArrowRight02,
-                                size: 14,
-                                color: AppColor.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },
-                ),
-              );
-            },
               ),
             ),
           ],
@@ -428,7 +460,8 @@ class _SearchButtonClickResultState extends State<SearchButtonClickResult> {
       return 'Repeat';
     }
     final viability = ProductViabilityEngine.build(item);
-    if (viability.labels.contains('Good margin') || viability.maxMargin >= 180) {
+    if (viability.labels.contains('Good margin') ||
+        viability.maxMargin >= 180) {
       return 'Margin';
     }
     if (viability.labels.contains('High repeat potential')) {
@@ -477,17 +510,17 @@ class _SearchResultState extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColor.neutral2,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColor.neutral2),
               ),
               if (actionLabel != null && onAction != null) ...[
                 const SizedBox(height: 12),
@@ -545,10 +578,7 @@ class _SellerLensChip extends StatelessWidget {
 }
 
 class _SellerLensSummaryCard extends StatelessWidget {
-  const _SellerLensSummaryCard({
-    required this.filter,
-    required this.sort,
-  });
+  const _SellerLensSummaryCard({required this.filter, required this.sort});
 
   final ProductViabilityFilter filter;
   final ProductViabilitySort sort;

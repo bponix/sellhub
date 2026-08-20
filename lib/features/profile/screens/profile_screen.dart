@@ -74,13 +74,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: ListView(
                     children: [
                       ItemListWidget(
-                        items: const ['Overview', 'Password', 'Log Out'],
+                        items: const [
+                          'Overview',
+                          'Buyers',
+                          'Payouts',
+                          'Team',
+                          'Password',
+                          'Log Out',
+                        ],
                         selectedIndex: profileState.indexProfileItem,
                         onTabSelected: (index) async {
                           final profileCubit = context.read<ProfileCubit>();
                           final authCubit = context.read<AuthCubit>();
-                          profileCubit.setIndexProfileItem(index);
+                          if (index == 1) {
+                            AppRouter.goToBuyerBook(context);
+                            return;
+                          }
                           if (index == 2) {
+                            AppRouter.goToPayouts(context);
+                            return;
+                          }
+                          if (index == 3) {
+                            AppRouter.goToTeamSelling(context);
+                            return;
+                          }
+                          profileCubit.setIndexProfileItem(index);
+                          if (index == 5) {
                             profileCubit.setIndexProfileItem(0);
                             await authCubit.logout();
                             if (!context.mounted) return;
@@ -99,7 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 16),
                       profileState.indexProfileItem == 0
                           ? _profileHomeDetails(profileState)
-                          : profileState.indexProfileItem == 1
+                          : profileState.indexProfileItem == 4
                           ? PasswordChangeScreen()
                           : Container(),
                     ],
@@ -187,17 +206,17 @@ class _ProfileOperatorCard extends StatelessWidget {
           Text(
             'Reseller control center',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             'Use this page to watch payout readiness, reopen buyers, and jump into chat intake, quick orders, disputes, team, and referrals.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

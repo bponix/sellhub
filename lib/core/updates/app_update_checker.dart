@@ -230,8 +230,7 @@ class AppUpdateChecker {
       return null;
     }
     return value.map(
-      (dynamic key, dynamic entryValue) =>
-          MapEntry(key.toString(), entryValue),
+      (dynamic key, dynamic entryValue) => MapEntry(key.toString(), entryValue),
     );
   }
 }

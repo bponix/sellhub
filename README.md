@@ -120,7 +120,7 @@ Key runtime capabilities:
 ## Brand And Identity
 
 - app name: `SellHub`
-- domain: `sellhub.bponi.com`
+- domain: `reseller.store.bponi.com`
 - Android application id: `com.bponi.sellhub`
 - iOS bundle id: `com.bponi.sellhub`
 - Dart package: `sellhub`

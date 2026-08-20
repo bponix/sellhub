@@ -11,14 +11,11 @@ class LocalGraphqlCollections {
 
   static const String supplierTrustProfiles = 'supplier_trust_profiles';
   static const String bootstrapMeta = 'bootstrap_meta';
-  static const String resellerQuickOrderDrafts =
-      'reseller_quick_order_drafts';
+  static const String resellerQuickOrderDrafts = 'reseller_quick_order_drafts';
   static const String resellerBuyerRiskProfiles =
       'reseller_buyer_risk_profiles';
-  static const String resellerOrderGroupDrafts =
-      'reseller_order_group_drafts';
-  static const String resellerShareAssetDrafts =
-      'reseller_share_asset_drafts';
+  static const String resellerOrderGroupDrafts = 'reseller_order_group_drafts';
+  static const String resellerShareAssetDrafts = 'reseller_share_asset_drafts';
 }
 
 class LocalGraphqlOperations {

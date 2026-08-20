@@ -57,8 +57,7 @@ class SellingIntelligenceCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               _SignalPill(
-                label:
-                    'Best channel ${intelligence.bestChannelLabel}',
+                label: 'Best channel ${intelligence.bestChannelLabel}',
                 tone: AppColor.primary,
                 background: AppColor.primarySoft,
               ),
@@ -66,9 +65,7 @@ class SellingIntelligenceCard extends StatelessWidget {
                 label:
                     'Demand ${intelligence.viability.demandScore.round()}/100',
               ),
-              _SignalPill(
-                label: intelligence.repeatPotentialLabel,
-              ),
+              _SignalPill(label: intelligence.repeatPotentialLabel),
               _SignalPill(
                 label: intelligence.trustRiskLabel,
                 tone: intelligence.trustRiskColor,
@@ -128,10 +125,7 @@ class SellingIntelligenceCompactSummary extends StatelessWidget {
         children: [
           const Text(
             'Selling intelligence',
-            style: TextStyle(
-              color: AppColor.text,
-              fontWeight: FontWeight.w800,
-            ),
+            style: TextStyle(color: AppColor.text, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           _PriceBandSummary(intelligence: intelligence, compact: true),
@@ -141,9 +135,12 @@ class SellingIntelligenceCompactSummary extends StatelessWidget {
             runSpacing: 8,
             children: [
               _SignalPill(
-                label: 'Selected margin ৳${convertToBengaliNumber(selectedMargin)}',
+                label:
+                    'Selected margin ৳${convertToBengaliNumber(selectedMargin)}',
               ),
-              _SignalPill(label: 'Best channel ${intelligence.bestChannelLabel}'),
+              _SignalPill(
+                label: 'Best channel ${intelligence.bestChannelLabel}',
+              ),
               _SignalPill(label: intelligence.repeatPotentialLabel),
               _SignalPill(
                 label: intelligence.trustRiskLabel,
@@ -175,8 +172,7 @@ class SellingIntelligenceEngine {
         : 'Moderate repeat potential';
     final trustRisk = _trustRisk(viability);
     return SellingIntelligenceProfile(
-      basePrice:
-          product.wholesalePrice?.round() ?? product.price?.round() ?? 0,
+      basePrice: product.wholesalePrice?.round() ?? product.price?.round() ?? 0,
       viability: viability,
       bestChannelLabel: bestChannel.label,
       bestChannelReason: bestChannel.reason,
@@ -256,10 +252,7 @@ class SellingIntelligencePriceLadder {
 }
 
 class _PriceBandSummary extends StatelessWidget {
-  const _PriceBandSummary({
-    required this.intelligence,
-    this.compact = false,
-  });
+  const _PriceBandSummary({required this.intelligence, this.compact = false});
 
   final SellingIntelligenceProfile intelligence;
   final bool compact;

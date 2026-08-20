@@ -171,25 +171,24 @@ class _CarousalSliderHomePageState extends State<CarousalSliderHomePage> {
               children: [
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: List.generate(
-                    items.length > 6 ? 6 : items.length,
-                    (index) {
-                      final activeIndex = items.length > 6
-                          ? _currentIndex % 6
-                          : _currentIndex;
-                      final selected = index == activeIndex;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        margin: EdgeInsets.only(right: index == 5 ? 0 : 6),
-                        width: selected ? 18 : 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: selected ? AppColor.primary : AppColor.safe,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      );
-                    },
-                  ),
+                  children: List.generate(items.length > 6 ? 6 : items.length, (
+                    index,
+                  ) {
+                    final activeIndex = items.length > 6
+                        ? _currentIndex % 6
+                        : _currentIndex;
+                    final selected = index == activeIndex;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      margin: EdgeInsets.only(right: index == 5 ? 0 : 6),
+                      width: selected ? 18 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: selected ? AppColor.primary : AppColor.safe,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    );
+                  }),
                 ),
                 if (items.length > 6) ...[
                   const SizedBox(width: 8),

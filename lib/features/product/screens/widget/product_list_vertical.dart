@@ -254,7 +254,8 @@ class ProductCard extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.96),
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
-                              color: viability.deliveryRisk ==
+                              color:
+                                  viability.deliveryRisk ==
                                       ViabilityRiskLevel.high
                                   ? const Color(0xFFF1C9B8)
                                   : AppColor.safe.withValues(alpha: 0.8),
@@ -265,7 +266,8 @@ class ProductCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: viability.deliveryRisk ==
+                              color:
+                                  viability.deliveryRisk ==
                                       ViabilityRiskLevel.high
                                   ? const Color(0xFFA85A2A)
                                   : AppColor.text,
@@ -420,7 +422,9 @@ class ProductCard extends StatelessWidget {
                                                   ?.copyWith(
                                                     color: AppColor.neutral2,
                                                     fontWeight: FontWeight.w700,
-                                                    fontSize: ultraCompact ? 8.8 : 9.2,
+                                                    fontSize: ultraCompact
+                                                        ? 8.8
+                                                        : 9.2,
                                                     height: 1.0,
                                                   ),
                                             ),
@@ -498,7 +502,10 @@ class ProductCard extends StatelessWidget {
                                                         ?.round(),
                                                     thumbnail:
                                                         product.thumbnail ??
-                                                        product.images.firstOrNull?.image,
+                                                        product
+                                                            .images
+                                                            .firstOrNull
+                                                            ?.image,
                                                     title:
                                                         product.translation ??
                                                         product.title ??

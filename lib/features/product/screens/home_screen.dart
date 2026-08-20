@@ -21,6 +21,9 @@ import 'package:sellhub/features/profile/data/model/repeat_sell_reminder.dart';
 import 'package:sellhub/features/categories/presentation/cubit/categories_cubit.dart';
 import 'package:sellhub/features/categories/screen/sub_category_products_screen.dart';
 import 'package:sellhub/features/product/data/models/category_res.dart';
+import 'package:sellhub/features/product/data/models/sellhub_product_winner.dart';
+import 'package:sellhub/features/product/data/product_repository.dart';
+import 'package:sellhub/features/product/screens/product_details_screen.dart';
 import 'package:sellhub/features/product/screens/widget/allPartHomePage.dart';
 import 'package:sellhub/features/storefront/presentation/cubit/storefront_cubit.dart';
 import 'package:sellhub/features/storefront/presentation/cubit/storefront_state.dart';
@@ -53,12 +56,16 @@ class _HomeScreenState extends State<HomeScreen> {
   _HomeDiscoveryFocus _discoveryFocus = _HomeDiscoveryFocus.all;
   Map<String, dynamic>? _onboardingProfile;
   bool _onboardingLoaded = false;
+  List<SellHubProductWinner> _productWinners = const [];
+  bool _winnerLoading = false;
+  String? _winnerError;
 
   @override
   void initState() {
     super.initState();
     _mainScrollController.addListener(_onScroll);
     _loadOnboardingProfile();
+    _loadProductWinners();
   }
 
   void _onScroll() {
@@ -183,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (storefrontState.error != null &&
                           storefrontState.products.isEmpty &&
                           storefrontState.siteSlider.isEmpty)
-                          _InlineHomeState(
+                        _InlineHomeState(
                           icon: HugeIcons.strokeRoundedAlertCircle,
                           title: storefrontState.error!.title,
                           actionLabel: 'Retry',
@@ -254,12 +261,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: _sectionGap),
                         _HomeOperatorSummaryCard(
                           focus: _discoveryFocus,
-                          supplierName:
-                              storefrontState.siteDetails?.title?.trim(),
+                          supplierName: 'Anonymous supply source',
                           storefrontState: storefrontState,
                         ),
                         const SizedBox(height: _sectionGap),
-                        if (_onboardingLoaded && _requiresOnboardingSetup()) ...[
+                        if (_onboardingLoaded &&
+                            _requiresOnboardingSetup()) ...[
                           _ResellerOnboardingSetupCard(
                             categoryNames: storefrontState.allCategory
                                 .map((category) => category.title?.trim() ?? '')
@@ -277,6 +284,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                         const _ResellerActionStrip(),
                         const SizedBox(height: _sectionGap),
+                        if (_winnerLoading ||
+                            _productWinners.isNotEmpty ||
+                            _winnerError != null) ...[
+                          _SellHubWinnerRail(
+                            winners: _productWinners,
+                            loading: _winnerLoading,
+                            error: _winnerError,
+                            onOpen: _openWinner,
+                          ),
+                          const SizedBox(height: _sectionGap),
+                        ],
                         const _RepeatReminderHomeCard(),
                         const SizedBox(height: _sectionGap),
                         if (!storefrontState.isLoading && !hasVisibleContent)
@@ -318,6 +336,52 @@ class _HomeScreenState extends State<HomeScreen> {
       siteId: activeStore?.siteId ?? AppConstants.kDefaultSiteId,
       first: AppConstants.kDefaultFirst,
       forceRefresh: true,
+    );
+    await _loadProductWinners();
+  }
+
+  Future<void> _loadProductWinners() async {
+    final userId = await LocalStorage.getUserID() ?? 0;
+    if (!mounted || userId <= 0) return;
+    final siteId =
+        context.read<StoreContextCubit>().state.activeStore?.siteId ??
+        AppConstants.kDefaultSiteId;
+    if (siteId <= 0) return;
+    if (mounted) {
+      setState(() {
+        _winnerLoading = true;
+        _winnerError = null;
+      });
+    }
+    try {
+      final rows = await di.sl<ProductRepository>().fetchSellHubProductWinners(
+        siteId: siteId,
+        userId: userId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _productWinners = rows;
+        _winnerLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _winnerLoading = false;
+        _winnerError = 'Winner signals are temporarily unavailable.';
+      });
+    }
+  }
+
+  Future<void> _openWinner(SellHubProductWinner winner) async {
+    final product = await di.sl<ProductRepository>().fetchProductById(
+      winner.productId,
+    );
+    if (!mounted || product == null) return;
+    Navigator.of(context).push(
+      ProductDetailsScreen.route(
+        hid: product.hid ?? winner.slug,
+        product: product,
+      ),
     );
   }
 
@@ -617,8 +681,7 @@ class _ResellerOnboardingSheetState extends State<_ResellerOnboardingSheet> {
                     labelText: 'Your reseller name',
                     hintText: 'Name used for buyer follow-up',
                   ),
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty
+                  validator: (value) => value == null || value.trim().isEmpty
                       ? 'Name is required'
                       : null,
                 ),
@@ -629,8 +692,7 @@ class _ResellerOnboardingSheetState extends State<_ResellerOnboardingSheet> {
                     labelText: 'Primary selling area',
                     hintText: 'Dhaka, Narayanganj, Mirpur, Chattogram',
                   ),
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty
+                  validator: (value) => value == null || value.trim().isEmpty
                       ? 'Area is required'
                       : null,
                 ),
@@ -702,30 +764,31 @@ class _ResellerOnboardingSheetState extends State<_ResellerOnboardingSheet> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: (widget.categoryNames.isEmpty
-                          ? const <String>[
-                              'Fashion',
-                              'Beauty',
-                              'Home',
-                              'Electronics',
-                            ]
-                          : widget.categoryNames)
-                      .map(
-                        (category) => FilterChip(
-                          label: Text(category),
-                          selected: _preferredCategories.contains(category),
-                          onSelected: (selected) {
-                            setState(() {
-                              if (selected) {
-                                _preferredCategories.add(category);
-                              } else {
-                                _preferredCategories.remove(category);
-                              }
-                            });
-                          },
-                        ),
-                      )
-                      .toList(growable: false),
+                  children:
+                      (widget.categoryNames.isEmpty
+                              ? const <String>[
+                                  'Fashion',
+                                  'Beauty',
+                                  'Home',
+                                  'Electronics',
+                                ]
+                              : widget.categoryNames)
+                          .map(
+                            (category) => FilterChip(
+                              label: Text(category),
+                              selected: _preferredCategories.contains(category),
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _preferredCategories.add(category);
+                                  } else {
+                                    _preferredCategories.remove(category);
+                                  }
+                                });
+                              },
+                            ),
+                          )
+                          .toList(growable: false),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
@@ -800,23 +863,32 @@ class _OnboardingSignalPill extends StatelessWidget {
 }
 
 class _DiscoveryFocusStrip extends StatelessWidget {
-  const _DiscoveryFocusStrip({
-    required this.current,
-    required this.onChanged,
-  });
+  const _DiscoveryFocusStrip({required this.current, required this.onChanged});
 
   final _HomeDiscoveryFocus current;
   final ValueChanged<_HomeDiscoveryFocus> onChanged;
 
-  static const List<(_HomeDiscoveryFocus, String, List<List<dynamic>>)> _items = <
-      (_HomeDiscoveryFocus, String, List<List<dynamic>>)>[
+  static const List<(_HomeDiscoveryFocus, String, List<List<dynamic>>)>
+  _items = <(_HomeDiscoveryFocus, String, List<List<dynamic>>)>[
     (_HomeDiscoveryFocus.all, 'All', HugeIcons.strokeRoundedSparkles),
     (_HomeDiscoveryFocus.whatsapp, 'WhatsApp', HugeIcons.strokeRoundedWhatsapp),
-    (_HomeDiscoveryFocus.facebook, 'Facebook', HugeIcons.strokeRoundedFacebook02),
+    (
+      _HomeDiscoveryFocus.facebook,
+      'Facebook',
+      HugeIcons.strokeRoundedFacebook02,
+    ),
     (_HomeDiscoveryFocus.cod, 'COD', HugeIcons.strokeRoundedDeliveryTruck01),
     (_HomeDiscoveryFocus.lowRisk, 'Low risk', HugeIcons.strokeRoundedShield01),
-    (_HomeDiscoveryFocus.goodMargin, 'Good margin', HugeIcons.strokeRoundedWallet02),
-    (_HomeDiscoveryFocus.repeat, 'Repeat buyers', HugeIcons.strokeRoundedReload),
+    (
+      _HomeDiscoveryFocus.goodMargin,
+      'Good margin',
+      HugeIcons.strokeRoundedWallet02,
+    ),
+    (
+      _HomeDiscoveryFocus.repeat,
+      'Repeat buyers',
+      HugeIcons.strokeRoundedReload,
+    ),
   ];
 
   @override
@@ -827,17 +899,17 @@ class _DiscoveryFocusStrip extends StatelessWidget {
         Text(
           'Today\'s selling mode',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppColor.text,
-                fontWeight: FontWeight.w800,
-              ),
+            color: AppColor.text,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           'Pick one lens and keep the feed focused.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColor.neutral2,
-                fontWeight: FontWeight.w600,
-              ),
+            color: AppColor.neutral2,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 10),
         SingleChildScrollView(
@@ -903,9 +975,9 @@ class _DiscoveryFocusChip extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: selected ? AppColor.primary : AppColor.text,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: selected ? AppColor.primary : AppColor.text,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),
@@ -959,7 +1031,9 @@ class _HomeOperatorSummaryCard extends StatelessWidget {
               !updatedAt.isBefore(dayStart) &&
               updatedAt.isBefore(dayEnd);
         })
-        .map((order) => '${order.customerPhone ?? ''}:${order.customerName ?? ''}')
+        .map(
+          (order) => '${order.customerPhone ?? ''}:${order.customerName ?? ''}',
+        )
         .where((value) => value.trim() != ':')
         .toSet()
         .length;
@@ -991,8 +1065,9 @@ class _HomeOperatorSummaryCard extends StatelessWidget {
     return _HomeDashboardMetrics(
       activeOrders: activeOrders,
       confirmedBuyersToday: confirmedToday,
-      expectedPayout:
-          expectedBatchPayout > 0 ? expectedBatchPayout : expectedDeliveredPayout,
+      expectedPayout: expectedBatchPayout > 0
+          ? expectedBatchPayout
+          : expectedDeliveredPayout,
       topSavedProduct: topSavedProduct,
       dueRepeatPrompts: duePrompts,
       openRepeatPrompts: openPrompts,
@@ -1073,9 +1148,7 @@ class _HomeOperatorSummaryCard extends StatelessWidget {
     final quickOrderCount = storefrontState.products.take(12).length;
     final freshCount = storefrontState.newArrival.length;
     final categoryCount = storefrontState.allCategory.length;
-    final activeSupplier = (supplierName?.isNotEmpty ?? false)
-        ? supplierName!
-        : 'Active source';
+    const activeSupplier = 'Anonymous supply source';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -1093,9 +1166,9 @@ class _HomeOperatorSummaryCard extends StatelessWidget {
                 child: Text(
                   'Today\'s reseller desk',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               Container(
@@ -1110,9 +1183,9 @@ class _HomeOperatorSummaryCard extends StatelessWidget {
                 child: Text(
                   '$readyCount ready now',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColor.primary,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
@@ -1121,9 +1194,9 @@ class _HomeOperatorSummaryCard extends StatelessWidget {
           Text(
             '$activeSupplier operator queue. $_focusNote',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -1168,9 +1241,9 @@ class _HomeOperatorSummaryCard extends StatelessWidget {
                       Text(
                         'Today\'s dashboard',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: AppColor.text,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          color: AppColor.text,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -1192,7 +1265,8 @@ class _HomeOperatorSummaryCard extends StatelessWidget {
                           Expanded(
                             child: _SummaryMetricTile(
                               label: 'Expected payout',
-                              value: '৳ ${metrics.expectedPayout.toStringAsFixed(0)}',
+                              value:
+                                  '৳ ${metrics.expectedPayout.toStringAsFixed(0)}',
                             ),
                           ),
                         ],
@@ -1232,12 +1306,7 @@ class _HomeOperatorSummaryCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               _SummaryPill(label: 'Focus', value: _focusLabel),
-              _SummaryPill(
-                label: 'Supplier',
-                value: (supplierName?.isNotEmpty ?? false)
-                    ? supplierName!
-                    : 'Active source',
-              ),
+              _SummaryPill(label: 'Source', value: 'Anonymous supply source'),
               const _SummaryPill(label: 'Next', value: 'Start order'),
             ],
           ),
@@ -1248,7 +1317,8 @@ class _HomeOperatorSummaryCard extends StatelessWidget {
                 flex: 2,
                 child: _PrimaryQueueAction(
                   title: 'Start order',
-                  subtitle: 'Open your sell list and move straight to buyer setup',
+                  subtitle:
+                      'Open your sell list and move straight to buyer setup',
                   onTap: () => AppRouter.goToSellingList(context),
                 ),
               ),
@@ -1552,10 +1622,7 @@ class _PrimaryQueueAction extends StatelessWidget {
 }
 
 class _MiniQueueAction extends StatelessWidget {
-  const _MiniQueueAction({
-    required this.title,
-    required this.onTap,
-  });
+  const _MiniQueueAction({required this.title, required this.onTap});
 
   final String title;
   final VoidCallback onTap;
@@ -1602,17 +1669,17 @@ class _SummaryPill extends StatelessWidget {
       child: RichText(
         text: TextSpan(
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColor.neutral2,
-                fontWeight: FontWeight.w700,
-              ),
+            color: AppColor.neutral2,
+            fontWeight: FontWeight.w700,
+          ),
           children: [
             TextSpan(text: '$label: '),
             TextSpan(
               text: value,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColor.text,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: AppColor.text,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),
@@ -1683,10 +1750,7 @@ class _TwoRowCategoryRail extends StatelessWidget {
         children: categories
             .take(12)
             .map(
-              (category) => _HomeCategoryTile(
-                category: category,
-                onTap: onTap,
-              ),
+              (category) => _HomeCategoryTile(category: category, onTap: onTap),
             )
             .toList(growable: false),
       ),
@@ -1867,6 +1931,228 @@ class _CategoryFallback extends StatelessWidget {
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w700,
           color: AppColor.neutral2,
+        ),
+      ),
+    );
+  }
+}
+
+class _SellHubWinnerRail extends StatelessWidget {
+  const _SellHubWinnerRail({
+    required this.winners,
+    required this.loading,
+    required this.error,
+    required this.onOpen,
+  });
+
+  final List<SellHubProductWinner> winners;
+  final bool loading;
+  final String? error;
+  final ValueChanged<SellHubProductWinner> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Products winning now',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColor.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Orders, quotes, repeat demand, supply quality and payout proof.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColor.neutral2,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const AppHugeIcon(
+              HugeIcons.strokeRoundedAward01,
+              color: AppColor.primary,
+              size: 22,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (loading && winners.isEmpty)
+          const SizedBox(
+            height: 132,
+            child: Row(
+              children: [
+                Expanded(child: AppSkeleton(height: 132, radius: 8)),
+                SizedBox(width: 10),
+                Expanded(child: AppSkeleton(height: 132, radius: 8)),
+              ],
+            ),
+          )
+        else if (error != null && winners.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColor.safe1,
+              border: Border.all(color: AppColor.safe),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              error!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColor.neutral2,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          )
+        else
+          SizedBox(
+            height: 154,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: winners.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final winner = winners[index];
+                return _SellHubWinnerCard(
+                  winner: winner,
+                  onTap: () => onOpen(winner),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SellHubWinnerCard extends StatelessWidget {
+  const _SellHubWinnerCard({required this.winner, required this.onTap});
+
+  final SellHubProductWinner winner;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 252,
+      child: Material(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: AppColor.safe),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    AppNetworkImage(
+                      imageUrl: winner.thumbnail,
+                      width: 52,
+                      height: 52,
+                      borderRadius: BorderRadius.circular(6),
+                      backgroundColor: AppColor.safe1,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            winner.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: AppColor.text,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${winner.score}/100 · ${winner.tier}',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: AppColor.primary,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  '${winner.orderCount} orders · ${winner.quoteCount} quotes · ${winner.reorderCount} repeats',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColor.neutral2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    _WinnerProofChip(
+                      label: 'Supply ${winner.supplierQualityScore}',
+                    ),
+                    _WinnerProofChip(
+                      label: 'Payout ${winner.payoutProofScore}',
+                    ),
+                    if (winner.badges.isNotEmpty)
+                      _WinnerProofChip(label: winner.badges.first),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WinnerProofChip extends StatelessWidget {
+  const _WinnerProofChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColor.safe1,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: AppColor.neutral2,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

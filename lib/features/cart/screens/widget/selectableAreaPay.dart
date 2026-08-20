@@ -37,9 +37,7 @@ class SelectableListAreaPay extends StatelessWidget {
           padding: EdgeInsets.only(bottom: index == itemCount - 1 ? 0 : 15),
           child: Container(
             decoration: BoxDecoration(
-              color: selected
-                  ? AppColor.safe1
-                  : Colors.white,
+              color: selected ? AppColor.safe1 : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: selected ? AppColor.primary : AppColor.safe,
@@ -63,7 +61,8 @@ class SelectableListAreaPay extends StatelessWidget {
               ),
               title: titleBuilder(index),
               subtitle: subtitleBuilder(index),
-              trailing: trailingBuilder?.call(index) ??
+              trailing:
+                  trailingBuilder?.call(index) ??
                   (selected
                       ? Container(
                           padding: const EdgeInsets.symmetric(

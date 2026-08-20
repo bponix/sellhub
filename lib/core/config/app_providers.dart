@@ -60,7 +60,9 @@ class AppProviders extends StatelessWidget {
         ],
         child: MultiRepositoryProvider(
           providers: [
-            RepositoryProvider<AuthRepository>.value(value: di.sl<AuthRepository>()),
+            RepositoryProvider<AuthRepository>.value(
+              value: di.sl<AuthRepository>(),
+            ),
             RepositoryProvider<ProductRepository>.value(
               value: di.sl<ProductRepository>(),
             ),

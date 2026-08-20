@@ -108,6 +108,8 @@ class OrderCompleteWelcome extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _CompletionRouteStrip(
+            title: _nextActionTitle(),
+            description: _nextActionDescription(),
             routeLabel: _nextActionLabel(),
             statusLabel: statusLabel,
             updatedLabel: updatedLabel,
@@ -187,10 +189,7 @@ class OrderCompleteWelcome extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: _MetricTile(
-                        label: 'Updated',
-                        value: updatedLabel,
-                      ),
+                      child: _MetricTile(label: 'Updated', value: updatedLabel),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -360,37 +359,73 @@ class _CompletionOverviewCard extends StatelessWidget {
 
 class _CompletionRouteStrip extends StatelessWidget {
   const _CompletionRouteStrip({
+    required this.title,
+    required this.description,
     required this.routeLabel,
     required this.statusLabel,
     required this.updatedLabel,
   });
 
+  final String title;
+  final String description;
   final String routeLabel;
   final String statusLabel;
   final String updatedLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _HeroPill(
-          label: routeLabel,
-          toneColor: AppColor.primary,
-          background: AppColor.primarySoft,
-        ),
-        _HeroPill(
-          label: statusLabel,
-          toneColor: AppColor.text,
-          background: AppColor.safe1,
-        ),
-        _HeroPill(
-          label: updatedLabel,
-          toneColor: AppColor.neutral2,
-          background: Colors.white,
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColor.safe1,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColor.safe),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColor.text,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            description,
+            style: const TextStyle(
+              color: AppColor.neutral2,
+              fontSize: 12,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _HeroPill(
+                label: routeLabel,
+                toneColor: AppColor.primary,
+                background: AppColor.primarySoft,
+              ),
+              _HeroPill(
+                label: statusLabel,
+                toneColor: AppColor.text,
+                background: Colors.white,
+              ),
+              _HeroPill(
+                label: updatedLabel,
+                toneColor: AppColor.neutral2,
+                background: Colors.white,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

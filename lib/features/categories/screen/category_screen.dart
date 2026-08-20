@@ -115,10 +115,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                 setState(() {
                                   _selectedIndex = index;
                                 });
-                                context.read<CategoriesCubit>().setCategoryIndex(
-                                  index,
-                                  categoryItem,
-                                );
+                                context
+                                    .read<CategoriesCubit>()
+                                    .setCategoryIndex(index, categoryItem);
                               },
                               child: Container(
                                 width: 82,
@@ -126,7 +125,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                 child: Column(
                                   children: [
                                     AnimatedContainer(
-                                      duration: const Duration(milliseconds: 180),
+                                      duration: const Duration(
+                                        milliseconds: 180,
+                                      ),
                                       width: 54,
                                       height: 54,
                                       decoration: BoxDecoration(
@@ -150,7 +151,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                       ),
                                       child: imageUrl.isNotEmpty
                                           ? ClipRRect(
-                                              borderRadius: BorderRadius.circular(14),
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
                                               child: AppNetworkImage(
                                                 imageUrl: imageUrl,
                                                 fit: BoxFit.cover,
@@ -177,7 +179,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       textAlign: TextAlign.center,
-                                      style: Theme.of(context).textTheme.labelSmall
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
                                           ?.copyWith(
                                             color: selected
                                                 ? AppColor.primary
@@ -191,14 +195,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                     ),
                                     const SizedBox(height: 3),
                                     AnimatedContainer(
-                                      duration: const Duration(milliseconds: 180),
+                                      duration: const Duration(
+                                        milliseconds: 180,
+                                      ),
                                       width: selected ? 16 : 6,
                                       height: 2.5,
                                       decoration: BoxDecoration(
                                         color: selected
                                             ? AppColor.primary
                                             : AppColor.safe,
-                                        borderRadius: BorderRadius.circular(999),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -230,8 +238,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
                               builder: (context, constraints) {
                                 final crossAxisCount =
                                     constraints.maxWidth >= 430 ? 4 : 3;
-                                final childAspectRatio =
-                                    crossAxisCount == 4 ? 0.76 : 0.84;
+                                final childAspectRatio = crossAxisCount == 4
+                                    ? 0.76
+                                    : 0.84;
                                 return GridView.builder(
                                   physics: const NeverScrollableScrollPhysics(),
                                   itemCount: 9,
@@ -244,11 +253,16 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                       ),
                                   itemBuilder: (_, __) => const AppSkeletonCard(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         AppSkeleton(height: 92, radius: 18),
                                         Spacer(),
-                                        AppSkeleton(width: 62, height: 20, radius: 999),
+                                        AppSkeleton(
+                                          width: 62,
+                                          height: 20,
+                                          radius: 999,
+                                        ),
                                         SizedBox(height: 8),
                                         AppSkeleton(height: 28, radius: 10),
                                       ],
@@ -269,9 +283,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
                           return RefreshIndicator(
                             onRefresh: () async {
                               context.read<CategoriesCubit>().reset();
-                              await context.read<CategoriesCubit>().fetchSubCategory(
-                                siteId,
-                              );
+                              await context
+                                  .read<CategoriesCubit>()
+                                  .fetchSubCategory(siteId);
                             },
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,7 +309,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                             .fetchCategoriesAllProduct(
                                               siteId,
                                               16,
-                                              categoriesState.selectCategory?.id ?? 0,
+                                              categoriesState
+                                                      .selectCategory
+                                                      ?.id ??
+                                                  0,
                                               0,
                                             );
 
@@ -313,7 +330,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                                   'Browse',
                                               seeAll: true,
                                               categoryId:
-                                                  categoriesState.selectCategory?.id ??
+                                                  categoriesState
+                                                      .selectCategory
+                                                      ?.id ??
                                                   0,
                                             ),
                                           ),
@@ -339,38 +358,42 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                               crossAxisCount: crossAxisCount,
                                               crossAxisSpacing: 8,
                                               mainAxisSpacing: 8,
-                                              childAspectRatio: childAspectRatio,
+                                              childAspectRatio:
+                                                  childAspectRatio,
                                             ),
                                         itemCount: items.length,
                                         itemBuilder: (context, index) {
-                                        final sub = items[index];
-                                        return GestureDetector(
-                                          onTap: () {
-                                            context
-                                                .read<CategoriesCubit>()
-                                                .fetchSubCategoriesProduct(
-                                                  siteId,
-                                                  16,
-                                                  sub.id ?? 0,
-                                                  0,
-                                                );
+                                          final sub = items[index];
+                                          return GestureDetector(
+                                            onTap: () {
+                                              context
+                                                  .read<CategoriesCubit>()
+                                                  .fetchSubCategoriesProduct(
+                                                    siteId,
+                                                    16,
+                                                    sub.id ?? 0,
+                                                    0,
+                                                  );
 
-                                            Navigator.of(context).push(
-                                              _fadeRoute(
-                                                SubCategoryProductsScreen(
-                                                  subCategoryId: sub.id ?? 0,
-                                                  title: sub.title ?? '',
-                                                  seeAll: false,
-                                                  categoryId: -1,
+                                              Navigator.of(context).push(
+                                                _fadeRoute(
+                                                  SubCategoryProductsScreen(
+                                                    subCategoryId: sub.id ?? 0,
+                                                    title: sub.title ?? '',
+                                                    seeAll: false,
+                                                    categoryId: -1,
+                                                  ),
                                                 ),
-                                              ),
-                                            );
-                                          },
-                                          child: _CategoryGridCard(
-                                            imageUrl: sub.image ?? '',
-                                            title: sub.translation ?? sub.title ?? '',
-                                          ),
-                                        );
+                                              );
+                                            },
+                                            child: _CategoryGridCard(
+                                              imageUrl: sub.image ?? '',
+                                              title:
+                                                  sub.translation ??
+                                                  sub.title ??
+                                                  '',
+                                            ),
+                                          );
                                         },
                                       );
                                     },
@@ -394,10 +417,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 }
 
 class _CategoryGridCard extends StatelessWidget {
-  const _CategoryGridCard({
-    required this.imageUrl,
-    required this.title,
-  });
+  const _CategoryGridCard({required this.imageUrl, required this.title});
 
   final String imageUrl;
   final String title;
@@ -425,10 +445,7 @@ class _CategoryGridCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: AppColor.safe,
-                        width: 1,
-                      ),
+                      border: Border.all(color: AppColor.safe, width: 1),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(14),
@@ -499,9 +516,9 @@ class _CategoryStateCard extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               if (onRetry != null) ...[
                 const SizedBox(height: 12),

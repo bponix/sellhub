@@ -44,7 +44,11 @@ class PreloadStorefront {
 
     final degradedSections = <String>[];
 
-    Future<T> guard<T>(String key, Future<T> Function() loader, T fallback) async {
+    Future<T> guard<T>(
+      String key,
+      Future<T> Function() loader,
+      T fallback,
+    ) async {
       try {
         return await loader();
       } catch (_) {

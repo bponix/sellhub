@@ -165,14 +165,21 @@ class CheckoutCubit extends SafeCubit<CheckoutState> {
   }
 
   Future<ResellerQuote> createQuote(ResellerQuote quote) {
-    return _repository.createQuote(quote);
+    return _repository.createQuote(quote, customerId: state.customerId);
   }
 
   Future<void> markQuoteConverted({
     required String quoteId,
     required String orderId,
+    required int userId,
+    required int siteId,
   }) {
-    return _repository.markQuoteConverted(quoteId: quoteId, orderId: orderId);
+    return _repository.markQuoteConverted(
+      quoteId: quoteId,
+      orderId: orderId,
+      userId: userId,
+      siteId: siteId,
+    );
   }
 
   Future<bool> deleteQuote(String quoteId) {

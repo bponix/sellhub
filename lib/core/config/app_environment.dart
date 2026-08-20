@@ -1,11 +1,15 @@
 class AppEnvironment {
   const AppEnvironment._();
 
-  static const String apiBaseUrl = 'https://api.bponi.com/x';
+  static const String apiBaseUrl = String.fromEnvironment(
+    'SELLHUB_API_BASE_URL',
+    defaultValue: 'https://api.bponi.com/x',
+  );
+  static const String localApiBaseUrl = 'http://api.bponi.test:8080/x';
   static const String appUpdateAppKey = 'sellhub';
   static const bool firebaseEnabled = false;
   static const List<String> appLinkHosts = <String>[
-    'sellhub.bponi.com',
+    'reseller.store.bponi.com',
     'bponi.com',
     'www.bponi.com',
   ];

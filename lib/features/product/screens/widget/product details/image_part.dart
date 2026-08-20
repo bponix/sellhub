@@ -109,7 +109,8 @@ class LargeImageProductDetails extends StatelessWidget {
         : validImages[state.imageIndex].image;
     return Container(
       width: double.infinity,
-      height: MediaQuery.of(context).size.height * (visualCatalog ? 0.48 : 0.38),
+      height:
+          MediaQuery.of(context).size.height * (visualCatalog ? 0.48 : 0.38),
       decoration: BoxDecoration(
         color: const Color(0xFFF9FBF8),
         borderRadius: BorderRadius.circular(22),

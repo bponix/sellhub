@@ -79,7 +79,9 @@ class SingleCustomerReviewCard extends StatelessWidget {
                           children: List.generate(5, (index) {
                             final active = index < rating;
                             return Padding(
-                              padding: EdgeInsets.only(right: index == 4 ? 0 : 2),
+                              padding: EdgeInsets.only(
+                                right: index == 4 ? 0 : 2,
+                              ),
                               child: AppHugeIcon(
                                 HugeIcons.strokeRoundedStar,
                                 color: active

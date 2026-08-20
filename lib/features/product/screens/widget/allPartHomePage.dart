@@ -59,7 +59,8 @@ class AllPartHomePage extends StatelessWidget {
           const SizedBox(height: _sectionGap),
           const _ResellerTaskRail(
             title: 'Student / housewife / social queue',
-            subtitle: 'Use the fastest BD-friendly moves for side-hustle sellers.',
+            subtitle:
+                'Use the fastest BD-friendly moves for side-hustle sellers.',
             tasks: [
               _ResellerTaskItem(
                 title: 'Student sprint',
@@ -136,9 +137,7 @@ class AllPartHomePage extends StatelessWidget {
           _SectionLead(title: _easySellTitle),
           const SizedBox(height: _blockGap),
           ProductListViewHorizontal(
-            products: storefrontState.products
-                .take(12)
-                .toList(growable: false),
+            products: storefrontState.products.take(12).toList(growable: false),
             scrollController: flashSaleController,
             visibleCountOverride: visibleCount,
             horizontalInset: 0,
@@ -258,12 +257,24 @@ class AllPartHomePage extends StatelessWidget {
   List<_DiscoveryChipData> _chipsForFocus() {
     const base = <String, _DiscoveryChipData>{
       'all': _DiscoveryChipData(title: 'All', subtitle: 'Compact browse'),
-      'whatsapp': _DiscoveryChipData(title: 'WhatsApp', subtitle: 'Quick replies'),
+      'whatsapp': _DiscoveryChipData(
+        title: 'WhatsApp',
+        subtitle: 'Quick replies',
+      ),
       'facebook': _DiscoveryChipData(title: 'Facebook', subtitle: 'Post-ready'),
       'cod': _DiscoveryChipData(title: 'COD', subtitle: 'Low promise risk'),
-      'lowRisk': _DiscoveryChipData(title: 'Low risk', subtitle: 'Safer fulfilment'),
-      'goodMargin': _DiscoveryChipData(title: 'Margin', subtitle: 'Better spread'),
-      'repeat': _DiscoveryChipData(title: 'Repeat', subtitle: 'Neighbour demand'),
+      'lowRisk': _DiscoveryChipData(
+        title: 'Low risk',
+        subtitle: 'Safer fulfilment',
+      ),
+      'goodMargin': _DiscoveryChipData(
+        title: 'Margin',
+        subtitle: 'Better spread',
+      ),
+      'repeat': _DiscoveryChipData(
+        title: 'Repeat',
+        subtitle: 'Neighbour demand',
+      ),
     };
     final ordered = {
       discoveryFocus,
@@ -326,13 +337,7 @@ class AllPartHomePage extends StatelessWidget {
   }
 }
 
-enum _ResellerTaskRoute {
-  sellingList,
-  orders,
-  buyers,
-  payouts,
-  saved,
-}
+enum _ResellerTaskRoute { sellingList, orders, buyers, payouts, saved }
 
 class _ResellerTaskRail extends StatelessWidget {
   const _ResellerTaskRail({
@@ -445,11 +450,7 @@ class _ResellerTaskCard extends StatelessWidget {
                 color: AppColor.primarySoft,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: AppHugeIcon(
-                task.icon,
-                size: 18,
-                color: AppColor.primary,
-              ),
+              child: AppHugeIcon(task.icon, size: 18, color: AppColor.primary),
             ),
             const SizedBox(height: 10),
             Text(
@@ -523,10 +524,11 @@ class _DiscoveryMomentumStrip extends StatelessWidget {
                     children: [
                       Text(
                         chip.title,
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: AppColor.text,
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: AppColor.text,
+                              fontWeight: FontWeight.w800,
+                            ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -548,20 +550,14 @@ class _DiscoveryMomentumStrip extends StatelessWidget {
 }
 
 class _DiscoveryChipData {
-  const _DiscoveryChipData({
-    required this.title,
-    required this.subtitle,
-  });
+  const _DiscoveryChipData({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
 }
 
 class _SectionLead extends StatelessWidget {
-  const _SectionLead({
-    required this.title,
-    this.onTap,
-  });
+  const _SectionLead({required this.title, this.onTap});
 
   final String title;
   final VoidCallback? onTap;
@@ -576,9 +572,9 @@ class _SectionLead extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             softWrap: false,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
         if (onTap != null)

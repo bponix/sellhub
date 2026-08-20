@@ -22,7 +22,6 @@ query ($hid: String!, $childId: Int, $childType: Int, $percentage: JSON, $isRese
     comparePrice(childId: $childId, childType: $childType)
     cost(childId: $childId, childType: $childType, isReseller: $isReseller)
     createdAt
-    createdById
     currency
     deliveryCharge(childId: $childId, childType: $childType)
     deliveryTime(childId: $childId, childType: $childType)
@@ -110,7 +109,6 @@ query ($hid: String!, $childId: Int, $childType: Int, $percentage: JSON, $isRese
     }
     rewardPoints(childId: $childId, childType: $childType)
     salePrice(childId: $childId, childType: $childType)
-    shops
     siteId
     sku
     slug
@@ -119,7 +117,6 @@ query ($hid: String!, $childId: Int, $childType: Int, $percentage: JSON, $isRese
     stoppages
     subCategories
     subSubCategories
-    supplierId
     tags
     thumbnail
     title(childId: $childId, childType: $childType)
@@ -127,7 +124,6 @@ query ($hid: String!, $childId: Int, $childType: Int, $percentage: JSON, $isRese
     unit
     unitType
     updatedAt
-    updatedById
     validFor(childId: $childId, childType: $childType)
     vat(childId: $childId, childType: $childType)
     variants {

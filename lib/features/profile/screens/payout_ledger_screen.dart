@@ -13,6 +13,7 @@ import 'package:sellhub/features/profile/data/model/order_res_model.dart';
 import 'package:sellhub/features/profile/data/model/payout_adjustment_entry.dart';
 import 'package:sellhub/features/profile/data/model/payout_batch_entry.dart';
 import 'package:sellhub/features/profile/data/model/payout_dispute_entry.dart';
+import 'package:sellhub/features/profile/data/model/reseller_payout_readiness.dart';
 import 'package:sellhub/features/profile/data/model/profile_res-Model.dart';
 import 'package:sellhub/features/profile/data/model/self_store_customer.dart';
 import 'package:sellhub/features/profile/data/profile_repository.dart';
@@ -75,6 +76,12 @@ class _PayoutLedgerScreenState extends State<PayoutLedgerScreen> {
     final disputesFuture = userId > 0
         ? repo.fetchPayoutDisputes(userId: userId, siteId: siteId)
         : Future<List<PayoutDisputeEntry>>.value(const <PayoutDisputeEntry>[]);
+    final readinessFuture = userId > 0
+        ? repo
+              .fetchPayoutReadiness(siteId: siteId)
+              .then<ResellerPayoutReadiness?>((value) => value)
+              .catchError((_) => null)
+        : Future<ResellerPayoutReadiness?>.value(null);
 
     final results = await Future.wait<dynamic>([
       customerFuture,
@@ -83,6 +90,7 @@ class _PayoutLedgerScreenState extends State<PayoutLedgerScreen> {
       batchesFuture,
       adjustmentsFuture,
       disputesFuture,
+      readinessFuture,
     ]);
 
     final orders = (results[1] as List<OrderHistoryResModelProfile>).toList()
@@ -102,6 +110,7 @@ class _PayoutLedgerScreenState extends State<PayoutLedgerScreen> {
       batches: results[3] as List<PayoutBatchEntry>,
       adjustments: results[4] as List<PayoutAdjustmentEntry>,
       disputes: results[5] as List<PayoutDisputeEntry>,
+      readiness: results[6] as ResellerPayoutReadiness?,
     );
   }
 
@@ -110,6 +119,89 @@ class _PayoutLedgerScreenState extends State<PayoutLedgerScreen> {
       _future = _loadData();
     });
     await _future;
+  }
+
+  Future<void> _requestPayout(_PayoutLedgerData data) async {
+    final readiness = data.readiness;
+    if (readiness == null || !readiness.canWithdraw) return;
+    final amountController = TextEditingController(
+      text: readiness.withdrawableAmount.toStringAsFixed(0),
+    );
+    final noteController = TextEditingController();
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('Request withdrawal'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: amountController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                helperText:
+                    'Available ${_currency(readiness.withdrawableAmount)}',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteController,
+              maxLength: 180,
+              decoration: const InputDecoration(
+                labelText: 'Note',
+                hintText: 'Optional payout reference',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Request'),
+          ),
+        ],
+      ),
+    );
+    if (submitted != true || !mounted) {
+      amountController.dispose();
+      noteController.dispose();
+      return;
+    }
+    final amount = double.tryParse(amountController.text.trim()) ?? 0;
+    final note = noteController.text.trim();
+    amountController.dispose();
+    noteController.dispose();
+    try {
+      await di.sl<ProfileRepository>().createPayoutRequest(
+        userId: data.userId,
+        siteId: data.siteId,
+        amount: amount,
+        note: note,
+        operationKey:
+            'sellhub-payout:${data.siteId}:${data.userId}:${DateTime.now().millisecondsSinceEpoch}',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Withdrawal request sent to Store.')),
+      );
+      await _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
   }
 
   Future<void> _pickDateRange() async {
@@ -127,33 +219,40 @@ class _PayoutLedgerScreenState extends State<PayoutLedgerScreen> {
     });
   }
 
-  Future<void> _shareLedger(_LedgerSummary summary) async {
+  Future<void> _shareLedger(
+    _LedgerSummary summary,
+    ResellerPayoutReadiness? readiness,
+  ) async {
     final cashState = _summaryCashStateLabel(summary);
     final nextMove = _payoutPromise(summary);
     final channelStatus = _hasConfiguredPayoutChannel(summary)
         ? 'Ready'
         : 'Setup needed';
     final text = StringBuffer()
-      ..writeln('SellHub payout ledger (Local MVP record)')
+      ..writeln('SellHub payout readiness')
       ..writeln('Cash state: $cashState')
       ..writeln('Next move: $nextMove')
       ..writeln('Channel status: $channelStatus')
       ..writeln('Total earned: ${_currency(summary.totalEarned)}')
-      ..writeln('Payable now: ${_currency(summary.payableNow)}')
-      ..writeln('Processing: ${_currency(summary.processing)}')
-      ..writeln('Released: ${_currency(summary.released)}')
-      ..writeln('Paid out: ${_currency(summary.paidOut)}')
+      ..writeln(
+        'Withdrawable: ${_currency(readiness?.withdrawableAmount ?? summary.payableNow)}',
+      )
+      ..writeln(
+        'Pending payout: ${_currency(readiness?.pendingPayoutAmount ?? summary.processing)}',
+      )
+      ..writeln(
+        'Paid out: ${_currency(readiness?.paidAmount ?? summary.paidOut)}',
+      )
+      ..writeln('Blocked: ${_currency(readiness?.blockedPayoutAmount ?? 0)}')
+      ..writeln('Disputed: ${_currency(readiness?.disputedAmount ?? 0)}')
       ..writeln('Deductions: ${_currency(summary.deductions)}')
       ..writeln('Return adjustments: ${_currency(summary.returnAdjustments)}')
-      ..writeln('Record mode: Local MVP record')
+      ..writeln('Proof source: Store payout and reseller ledgers')
       ..writeln('Payout channel: ${summary.payoutChannel}')
       ..writeln(
         'Estimated next payout: ${summary.estimatedNextPayoutDate == null ? 'Shows after the first payable batch' : formatDateTime(summary.estimatedNextPayoutDate)}',
       );
-    await Share.share(
-      text.toString(),
-      subject: 'SellHub payout ledger (Local MVP record)',
-    );
+    await Share.share(text.toString(), subject: 'SellHub payout readiness');
   }
 
   Future<void> _reportMismatch(
@@ -170,12 +269,12 @@ class _PayoutLedgerScreenState extends State<PayoutLedgerScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text('Create local dispute'),
+          title: const Text('Create payout dispute'),
           content: TextField(
             controller: controller,
             maxLines: 4,
             decoration: const InputDecoration(
-              hintText: 'Describe the payout issue to track locally.',
+              hintText: 'Describe the payout issue for Store operations.',
               border: OutlineInputBorder(),
             ),
           ),
@@ -187,18 +286,31 @@ class _PayoutLedgerScreenState extends State<PayoutLedgerScreen> {
             FilledButton(
               onPressed: () =>
                   Navigator.of(context).pop(controller.text.trim()),
-              child: const Text('Save local dispute'),
+              child: const Text('Submit dispute'),
             ),
           ],
         );
       },
     );
     if (!mounted || note == null) return;
+    final sourceOrder = data.orders
+        .cast<OrderHistoryResModelProfile?>()
+        .firstWhere(
+          (order) => order?.orderId == row.orderId,
+          orElse: () => null,
+        );
+    final numericOrderId = sourceOrder?.id ?? 0;
+    if (numericOrderId <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Store order identity is unavailable.')),
+      );
+      return;
+    }
     final repo = di.sl<ProfileRepository>();
     await repo.reportPayoutDispute(
       userId: data.userId,
       siteId: data.siteId,
-      orderId: row.orderId,
+      orderId: numericOrderId,
       batchId: row.batch?.id,
       reason: 'Payout mismatch',
       note: note,
@@ -206,45 +318,7 @@ class _PayoutLedgerScreenState extends State<PayoutLedgerScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Local dispute saved for ${row.orderId}.'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    await _refresh();
-  }
-
-  Future<void> _deleteDispute(_PayoutOrderRowData row) async {
-    final dispute = row.dispute;
-    if (dispute == null) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          title: const Text('Delete local dispute'),
-          content: Text(
-            'Delete the local dispute record for ${row.orderId}?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete local record'),
-            ),
-          ],
-        );
-      },
-    );
-    if (confirmed != true || !mounted) return;
-    final repo = di.sl<ProfileRepository>();
-    await repo.deletePayoutDispute(dispute.id);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Local payout dispute deleted.'),
+        content: Text('Payout dispute submitted for ${row.orderId}.'),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -360,8 +434,15 @@ class _PayoutLedgerScreenState extends State<PayoutLedgerScreen> {
               children: [
                 _PayoutHero(
                   summary: summary,
-                  onShare: () => _shareLedger(summary),
+                  onShare: () => _shareLedger(summary, data.readiness),
                   onOpenPayoutSetup: () => AppRouter.goToProfile(context),
+                ),
+                const SizedBox(height: 16),
+                _PayoutReadinessCard(
+                  readiness: data.readiness,
+                  onRequest: data.readiness?.canWithdraw == true
+                      ? () => _requestPayout(data)
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 _PayoutOperatorCard(summary: summary),
@@ -409,9 +490,6 @@ class _PayoutLedgerScreenState extends State<PayoutLedgerScreen> {
                         );
                       },
                       onReportMismatch: () => _reportMismatch(data, row),
-                      onDeleteDispute: row.dispute == null
-                          ? null
-                          : () => _deleteDispute(row),
                     ),
                   ),
                 const SizedBox(height: 16),
@@ -467,6 +545,7 @@ class _PayoutLedgerData {
     required this.batches,
     required this.adjustments,
     required this.disputes,
+    required this.readiness,
   });
 
   final int siteId;
@@ -478,6 +557,7 @@ class _PayoutLedgerData {
   final List<PayoutBatchEntry> batches;
   final List<PayoutAdjustmentEntry> adjustments;
   final List<PayoutDisputeEntry> disputes;
+  final ResellerPayoutReadiness? readiness;
 
   List<_PayoutOrderRowData> buildRows() {
     return orders
@@ -491,7 +571,8 @@ class _PayoutLedgerData {
               .where((item) => item.orderId == orderId)
               .toList(growable: false);
           final dispute = disputes.cast<PayoutDisputeEntry?>().firstWhere(
-            (item) => item?.orderId == orderId,
+            (item) =>
+                item?.orderId == orderId || item?.orderId == '${order.id ?? 0}',
             orElse: () => null,
           );
           return _PayoutOrderRowData.fromOrder(
@@ -507,6 +588,196 @@ class _PayoutLedgerData {
           a.sortDate ?? DateTime(2000),
         ),
       );
+  }
+}
+
+class _PayoutReadinessCard extends StatelessWidget {
+  const _PayoutReadinessCard({required this.readiness, this.onRequest});
+
+  final ResellerPayoutReadiness? readiness;
+  final VoidCallback? onRequest;
+
+  static const Map<String, String> _labels = <String, String>{
+    'pending': 'Pending',
+    'withdrawable': 'Withdrawable',
+    'pending_payout': 'Pending payout',
+    'paid': 'Paid',
+    'requested_payout': 'Requested',
+    'processing_payout': 'Processing',
+    'settled_payout': 'Settled',
+    'blocked_payout': 'Blocked',
+    'disputed': 'Disputed',
+    'reversed': 'Reversed',
+    'proof_needed': 'Proof needed',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final value = readiness;
+    if (value == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xfffff8e5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xffffdf8a)),
+        ),
+        child: const Row(
+          children: [
+            AppHugeIcon(HugeIcons.strokeRoundedAlert02, size: 20),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Store payout proof is temporarily unavailable. Refresh before requesting money.',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    final buckets = value.buckets.isNotEmpty
+        ? value.buckets
+        : <ResellerPayoutBucket>[
+            ResellerPayoutBucket(key: 'pending', amount: value.pendingAmount),
+            ResellerPayoutBucket(
+              key: 'withdrawable',
+              amount: value.withdrawableAmount,
+            ),
+            ResellerPayoutBucket(
+              key: 'pending_payout',
+              amount: value.pendingPayoutAmount,
+            ),
+            ResellerPayoutBucket(key: 'paid', amount: value.paidAmount),
+          ];
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColor.safe),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: value.canWithdraw
+                      ? const Color(0xffe9f8ee)
+                      : AppColor.safe1,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: AppHugeIcon(
+                  value.canWithdraw
+                      ? HugeIcons.strokeRoundedWalletDone02
+                      : HugeIcons.strokeRoundedWallet02,
+                  size: 21,
+                  color: AppColor.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'STORE PAYOUT PROOF',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColor.neutral2,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      value.primaryAction,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      value.canWithdraw
+                          ? 'Verified withdrawable profit is ready.'
+                          : 'Pending, blocked, disputed, reversed, and proof-needed money stays separated.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColor.neutral2),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: buckets
+                .take(8)
+                .map(
+                  (bucket) => Container(
+                    width: 142,
+                    padding: const EdgeInsets.all(11),
+                    decoration: BoxDecoration(
+                      color: AppColor.safe1,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _labels[bucket.key] ?? bucket.key,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColor.neutral2,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _currency(bucket.amount),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '${value.openPayoutCount} open request${value.openPayoutCount == 1 ? '' : 's'} · ${value.blockedPayoutCount} blocked',
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (onRequest != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onRequest,
+                icon: const AppHugeIcon(
+                  HugeIcons.strokeRoundedMoneySend02,
+                  size: 18,
+                  color: Colors.white,
+                ),
+                label: const Text('Request withdrawal'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
@@ -729,7 +1000,9 @@ class _PayoutOrderRowData {
       );
     }
     if (delivered) {
-      final estimatedEligibleDate = order.updatedAt?.add(const Duration(days: 2));
+      final estimatedEligibleDate = order.updatedAt?.add(
+        const Duration(days: 2),
+      );
       return _PayoutOrderRowData(
         orderId: order.orderId ?? 'Order',
         buyerName: (order.customerName ?? 'Buyer').trim(),
@@ -758,7 +1031,9 @@ class _PayoutOrderRowData {
       );
     }
     if (status >= 4) {
-      final estimatedEligibleDate = order.updatedAt?.add(const Duration(days: 2));
+      final estimatedEligibleDate = order.updatedAt?.add(
+        const Duration(days: 2),
+      );
       return _PayoutOrderRowData(
         orderId: order.orderId ?? 'Order',
         buyerName: (order.customerName ?? 'Buyer').trim(),
@@ -1068,25 +1343,25 @@ class _PayoutOperatorCard extends StatelessWidget {
           Text(
             'What matters now',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             cashState,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             nextStep,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 10),
           _MetaStrip(
@@ -1214,20 +1489,20 @@ class _PayoutPromiseTimelineCard extends StatelessWidget {
                       children: [
                         Text(
                           step.title,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppColor.text,
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: AppColor.text,
+                                fontWeight: FontWeight.w800,
+                              ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           step.subtitle,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColor.neutral2,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: AppColor.neutral2,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ],
                     ),
@@ -1280,13 +1555,11 @@ class _LedgerOrderRow extends StatelessWidget {
     required this.row,
     required this.onCopyOrderId,
     required this.onReportMismatch,
-    required this.onDeleteDispute,
   });
 
   final _PayoutOrderRowData row;
   final VoidCallback onCopyOrderId;
   final VoidCallback onReportMismatch;
-  final VoidCallback? onDeleteDispute;
 
   @override
   Widget build(BuildContext context) {
@@ -1373,10 +1646,7 @@ class _LedgerOrderRow extends StatelessWidget {
                 label: 'Cash state',
                 value: _cashReadinessLabel(row),
               ),
-              _LedgerMetric(
-                label: 'Batch',
-                value: row.batchStatusLabel,
-              ),
+              _LedgerMetric(label: 'Batch', value: row.batchStatusLabel),
             ],
           ),
           const SizedBox(height: 10),
@@ -1457,17 +1727,9 @@ class _LedgerOrderRow extends StatelessWidget {
                 onPressed: onReportMismatch,
                 icon: const Icon(Icons.report_gmailerrorred_rounded, size: 18),
                 label: Text(
-                  row.dispute == null
-                      ? 'Create local dispute'
-                      : 'Edit local dispute',
+                  row.dispute == null ? 'Create dispute' : 'Update dispute',
                 ),
               ),
-              if (onDeleteDispute != null)
-                TextButton.icon(
-                  onPressed: onDeleteDispute,
-                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                  label: const Text('Delete local record'),
-                ),
             ],
           ),
         ],
@@ -1583,7 +1845,9 @@ String _disputeStatusLabel(String status) {
 String _disputeLifecycleHint(PayoutDisputeEntry dispute) {
   final status = dispute.status.trim().toLowerCase();
   final updatedAt = dispute.updatedAt ?? dispute.createdAt;
-  final updatedLabel = updatedAt == null ? '' : ' Last update ${formatDateTime(updatedAt)}.';
+  final updatedLabel = updatedAt == null
+      ? ''
+      : ' Last update ${formatDateTime(updatedAt)}.';
   switch (status) {
     case 'reviewing':
       return 'Support is checking the payout mismatch and batch math.$updatedLabel';

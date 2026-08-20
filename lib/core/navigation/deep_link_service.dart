@@ -32,7 +32,7 @@ class DeepLinkService {
   static const String _payloadTokenKey = 'payloadToken';
   static const String _installHandoffTimestamp = 'handoffTs';
   static const Duration _installHandoffWindow = Duration(hours: 6);
-  static const String _handoffHost = 'sellhub.bponi.com';
+  static const String _handoffHost = 'reseller.store.bponi.com';
   static const String _eventHost = 'bponi.com';
 
   static final Set<String> _publicRouteNames = <String>{
@@ -107,11 +107,14 @@ class DeepLinkService {
   }
 
   static Future<bool> consumePendingLink() async {
-    final pending = await LocalStorage.getString(LocalStorage.pendingDeepLinkKey);
+    final pending = await LocalStorage.getString(
+      LocalStorage.pendingDeepLinkKey,
+    );
     if (pending == null || pending.isEmpty) return false;
     try {
       final uri =
-          await _resolveSignedPayloadUri(Uri.parse(pending)) ?? Uri.parse(pending);
+          await _resolveSignedPayloadUri(Uri.parse(pending)) ??
+          Uri.parse(pending);
       await PendingProductDeepLinkHandler.persistFromUri(uri);
       final routed = _routeUri(uri);
       if (routed) {
@@ -175,7 +178,10 @@ class DeepLinkService {
     final routeName =
         uri.queryParameters['routeName'] ?? uri.queryParameters['route'];
     if (store != null && routeName != null && routeName.trim().isNotEmpty) {
-      await LocalStorage.saveString(LocalStorage.pendingDeepLinkKey, uri.toString());
+      await LocalStorage.saveString(
+        LocalStorage.pendingDeepLinkKey,
+        uri.toString(),
+      );
     }
     if (store != null) {
       StoreRegistry.currentStore = store;
@@ -364,11 +370,7 @@ class DeepLinkService {
           deferredPaths: _deferredRawPaths,
         ) ==
         DeepLinkRouteAccess.reject) {
-      _recordEvent(
-        'rejected_path',
-        uri: uri,
-        reason: normalizedPath,
-      );
+      _recordEvent('rejected_path', uri: uri, reason: normalizedPath);
       return false;
     }
     AppRouter.go(_buildLocation(normalizedPath, query));
@@ -390,9 +392,7 @@ class DeepLinkService {
     final context = AppRouter.navigatorKey.currentContext;
     if (context == null) return;
     Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const UnsupportedLinkScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const UnsupportedLinkScreen()),
     );
   }
 
@@ -439,9 +439,7 @@ class DeepLinkService {
     try {
       await http.post(
         Uri.https(_eventHost, '/d/events'),
-        headers: const <String, String>{
-          'Content-Type': 'application/json',
-        },
+        headers: const <String, String>{'Content-Type': 'application/json'},
         body: jsonEncode(<String, Object?>{
           'app': 'sellhub',
           'event': event,
@@ -461,7 +459,8 @@ class DeepLinkService {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final raw = data?.text?.trim();
       final uri =
-          await _redeemSignedInstallHandoff(raw) ?? _extractInstallHandoffUri(raw);
+          await _redeemSignedInstallHandoff(raw) ??
+          _extractInstallHandoffUri(raw);
       if (uri == null) return;
       _recordEvent('install_handoff_detected', uri: uri);
       await Clipboard.setData(const ClipboardData(text: ''));

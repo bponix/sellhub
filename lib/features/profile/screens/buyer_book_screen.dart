@@ -185,31 +185,40 @@ class _BuyerBookScreenState extends State<BuyerBookScreen> {
           : buyer.district.trim();
       grouped.putIfAbsent(district, () => <BuyerBookProfile>[]).add(buyer);
     }
-    final clusters = grouped.entries.map((entry) {
-      final districtBuyers = entry.value;
-      final repeatCount = districtBuyers.where((item) => item.isRepeatBuyer).length;
-      final riskyCount = districtBuyers.where((item) => item.isRisky).length;
-      final bestProductFrequency = <String, int>{};
-      for (final buyer in districtBuyers) {
-        for (final product in buyer.preferredProducts) {
-          bestProductFrequency[product] = (bestProductFrequency[product] ?? 0) + 1;
-        }
-      }
-      String topProduct = 'Build local history';
-      if (bestProductFrequency.isNotEmpty) {
-        final sorted = bestProductFrequency.entries.toList(growable: false)
-          ..sort((a, b) => b.value.compareTo(a.value));
-        topProduct = sorted.first.key;
-      }
-      return _NeighborhoodCluster(
-        district: entry.key,
-        buyerCount: districtBuyers.length,
-        repeatCount: repeatCount,
-        riskyCount: riskyCount,
-        topProduct: topProduct,
-      );
-    }).toList(growable: false)
-      ..sort((a, b) => b.buyerCount.compareTo(a.buyerCount));
+    final clusters =
+        grouped.entries
+            .map((entry) {
+              final districtBuyers = entry.value;
+              final repeatCount = districtBuyers
+                  .where((item) => item.isRepeatBuyer)
+                  .length;
+              final riskyCount = districtBuyers
+                  .where((item) => item.isRisky)
+                  .length;
+              final bestProductFrequency = <String, int>{};
+              for (final buyer in districtBuyers) {
+                for (final product in buyer.preferredProducts) {
+                  bestProductFrequency[product] =
+                      (bestProductFrequency[product] ?? 0) + 1;
+                }
+              }
+              String topProduct = 'Build local history';
+              if (bestProductFrequency.isNotEmpty) {
+                final sorted = bestProductFrequency.entries.toList(
+                  growable: false,
+                )..sort((a, b) => b.value.compareTo(a.value));
+                topProduct = sorted.first.key;
+              }
+              return _NeighborhoodCluster(
+                district: entry.key,
+                buyerCount: districtBuyers.length,
+                repeatCount: repeatCount,
+                riskyCount: riskyCount,
+                topProduct: topProduct,
+              );
+            })
+            .toList(growable: false)
+          ..sort((a, b) => b.buyerCount.compareTo(a.buyerCount));
     return clusters.take(4).toList(growable: false);
   }
 
@@ -293,7 +302,7 @@ class _BuyerBookScreenState extends State<BuyerBookScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Buyer local record',
+                    'Buyer record',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: AppColor.text,
@@ -361,7 +370,7 @@ class _BuyerBookScreenState extends State<BuyerBookScreen> {
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('Save local record'),
+                      child: const Text('Save buyer record'),
                     ),
                   ),
                 ],
@@ -387,8 +396,12 @@ class _BuyerBookScreenState extends State<BuyerBookScreen> {
       isBlocked: isBlocked,
     );
     noteController.dispose();
-    if (!success || !mounted) return;
-    CustomToast.info('Local buyer record updated');
+    if (!mounted) return;
+    if (!success) {
+      CustomToast.info('Saved offline. Reopen this buyer to sync with Store.');
+      return;
+    }
+    CustomToast.info('Buyer record updated');
     await _refresh();
   }
 
@@ -402,31 +415,19 @@ class _BuyerBookScreenState extends State<BuyerBookScreen> {
   void _openRepeatSearch(String productTitle) {
     final query = productTitle.trim();
     if (_isBuyerBookPlaceholderProduct(query)) return;
-    AppRouter.pushSearchScreen(
-      context,
-      mode: 'repeat',
-      query: query,
-    );
+    AppRouter.pushSearchScreen(context, mode: 'repeat', query: query);
   }
 
   void _openReferralSearch(String productTitle) {
     final query = productTitle.trim();
     if (_isBuyerBookPlaceholderProduct(query)) return;
-    AppRouter.pushSearchScreen(
-      context,
-      mode: 'facebook',
-      query: query,
-    );
+    AppRouter.pushSearchScreen(context, mode: 'facebook', query: query);
   }
 
   void _openNeighborhoodSearch(String productTitle) {
     final query = productTitle.trim();
     if (query.isEmpty || query.toLowerCase() == 'build local history') return;
-    AppRouter.pushSearchScreen(
-      context,
-      mode: 'repeat',
-      query: query,
-    );
+    AppRouter.pushSearchScreen(context, mode: 'repeat', query: query);
   }
 
   Future<void> _resetBuyerMeta(BuyerBookProfile buyer) async {
@@ -435,7 +436,7 @@ class _BuyerBookScreenState extends State<BuyerBookScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text('Reset local record'),
+          title: const Text('Reset buyer record'),
           content: Text(
             'Remove the saved note, source tag, and risk flags for ${buyer.name}? Order history will remain.',
           ),
@@ -453,11 +454,15 @@ class _BuyerBookScreenState extends State<BuyerBookScreen> {
       },
     );
     if (confirmed != true) return;
-    final success = await di.sl<ProfileRepository>().deleteBuyerProfileMeta(
-      buyer.id,
+    final userId = await LocalStorage.getUserID() ?? 0;
+    if (!mounted || userId <= 0) return;
+    final success = await di.sl<ProfileRepository>().resetBuyerProfileMeta(
+      buyer: buyer,
+      userId: userId,
+      siteId: StoreScope.activeSiteId(context),
     );
-    if (!mounted || !success) return;
-    CustomToast.info('Local buyer record reset');
+    if (!mounted) return;
+    CustomToast.info(success ? 'Buyer record reset' : 'Reset saved offline');
     await _refresh();
   }
 
@@ -501,8 +506,7 @@ class _BuyerBookScreenState extends State<BuyerBookScreen> {
                 .length;
             final referralBuyers = buyers
                 .where(
-                  (buyer) =>
-                      buyer.sourceTag.trim().toLowerCase() == 'referral',
+                  (buyer) => buyer.sourceTag.trim().toLowerCase() == 'referral',
                 )
                 .length;
             final readyToResell = buyers
@@ -582,8 +586,9 @@ class _BuyerBookScreenState extends State<BuyerBookScreen> {
                     onFindProduct: _openNeighborhoodSearch,
                     onSelectDistrict: (district) {
                       setState(() {
-                        _selectedDistrict =
-                            _selectedDistrict == district ? null : district;
+                        _selectedDistrict = _selectedDistrict == district
+                            ? null
+                            : district;
                       });
                     },
                   ),
@@ -605,7 +610,10 @@ class _BuyerBookScreenState extends State<BuyerBookScreen> {
                     runSpacing: 8,
                     children: [
                       ActionChip(
-                        avatar: const Icon(Icons.location_on_outlined, size: 16),
+                        avatar: const Icon(
+                          Icons.location_on_outlined,
+                          size: 16,
+                        ),
                         label: Text('Area: $_selectedDistrict'),
                         onPressed: () {},
                       ),
@@ -686,7 +694,9 @@ class _BuyerBookScreenState extends State<BuyerBookScreen> {
                       onReset: () => _resetBuyerMeta(buyer),
                       onFindProduct: buyer.preferredProducts.isEmpty
                           ? null
-                          : () => _openRepeatSearch(buyer.preferredProducts.first),
+                          : () => _openRepeatSearch(
+                              buyer.preferredProducts.first,
+                            ),
                       onUseForNextOrder: () => _useForNextOrder(buyer),
                       onRemindTomorrow: () =>
                           _scheduleReminder(buyer, daysFromNow: 1),
@@ -818,10 +828,7 @@ class _BuyerCard extends StatelessWidget {
                     : 'Order history only',
                 tone: buyer.hasProfileMeta ? _TagTone.good : _TagTone.neutral,
               ),
-              _TagPill(
-                label: _buyerRiskLabel(),
-                tone: _buyerRiskTone(),
-              ),
+              _TagPill(label: _buyerRiskLabel(), tone: _buyerRiskTone()),
               if (buyer.hasPendingBuyerRisk)
                 const _TagPill(
                   label: 'Pending / unpaid',
@@ -842,20 +849,14 @@ class _BuyerCard extends StatelessWidget {
                 label: 'Last order',
                 value: _lastOrderLabel(buyer.lastOrderedAt),
               ),
-              _SummaryPill(
-                label: 'Record',
-                value: _profileTruthLabel(),
-              ),
+              _SummaryPill(label: 'Record', value: _profileTruthLabel()),
               _SummaryPill(
                 label: 'Pending cash',
                 value: buyer.unpaidOrders > 0
                     ? '${buyer.unpaidOrders}'
                     : 'Clear',
               ),
-              _SummaryPill(
-                label: 'Risk',
-                value: _buyerRiskLabel(),
-              ),
+              _SummaryPill(label: 'Risk', value: _buyerRiskLabel()),
               _SummaryPill(
                 label: 'Sell again',
                 value: buyer.preferredProducts.isNotEmpty
@@ -1105,18 +1106,18 @@ class _BuyerBookOverviewCard extends StatelessWidget {
           Text(
             'Buyer record snapshot',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             'Start from repeat buyers, then clear risky COD and unpaid buyer records early.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                  height: 1.35,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -1240,9 +1241,7 @@ class _ReferralLoopCard extends StatelessWidget {
                             _isBuyerBookPlaceholderProduct(prompt.leadProduct)
                                 ? prompt.buyerName
                                 : '${prompt.buyerName} • ${prompt.leadProduct}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: AppColor.text,
                                   fontWeight: FontWeight.w800,
@@ -1344,9 +1343,7 @@ class _RepeatSellPromptCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             '${prompt.buyerName} • ${prompt.productTitle}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: AppColor.text,
                                   fontWeight: FontWeight.w800,
@@ -1380,10 +1377,7 @@ class _RepeatSellPromptCard extends StatelessWidget {
                           label: 'Last order',
                           value: prompt.lastOrderLabel,
                         ),
-                        _SummaryPill(
-                          label: 'District',
-                          value: prompt.district,
-                        ),
+                        _SummaryPill(label: 'District', value: prompt.district),
                         _SummaryPill(
                           label: 'Avg basket',
                           value: _currency(prompt.averageBasketSize),
@@ -1458,62 +1452,63 @@ class _NeighborhoodClusterCard extends StatelessWidget {
                 onTap: () => onSelectDistrict(cluster.district),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: selectedDistrict == cluster.district
-                      ? AppColor.primarySoft
-                      : AppColor.safe1,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColor.safe),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      cluster.district,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (cluster.topProduct.trim().isNotEmpty &&
-                        cluster.topProduct.trim().toLowerCase() !=
-                            'build local history') ...[
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: () => onFindProduct(cluster.topProduct),
-                          child: const Text('Find top product'),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: selectedDistrict == cluster.district
+                        ? AppColor.primarySoft
+                        : AppColor.safe1,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColor.safe),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        cluster.district,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColor.text,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                    ],
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _SummaryPill(
-                          label: 'Buyers',
-                          value: '${cluster.buyerCount}',
+                      const SizedBox(height: 8),
+                      if (cluster.topProduct.trim().isNotEmpty &&
+                          cluster.topProduct.trim().toLowerCase() !=
+                              'build local history') ...[
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: () => onFindProduct(cluster.topProduct),
+                            child: const Text('Find top product'),
+                          ),
                         ),
-                        _SummaryPill(
-                          label: 'Repeat',
-                          value: '${cluster.repeatCount}',
-                        ),
-                        _SummaryPill(
-                          label: 'Risky',
-                          value: '${cluster.riskyCount}',
-                        ),
-                        _SummaryPill(
-                          label: 'Top product',
-                          value: cluster.topProduct,
-                        ),
+                        const SizedBox(height: 4),
                       ],
-                    ),
-                  ],
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _SummaryPill(
+                            label: 'Buyers',
+                            value: '${cluster.buyerCount}',
+                          ),
+                          _SummaryPill(
+                            label: 'Repeat',
+                            value: '${cluster.repeatCount}',
+                          ),
+                          _SummaryPill(
+                            label: 'Risky',
+                            value: '${cluster.riskyCount}',
+                          ),
+                          _SummaryPill(
+                            label: 'Top product',
+                            value: cluster.topProduct,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              )),
+              ),
             ),
           ),
         ],
@@ -1563,79 +1558,89 @@ class _ReminderQueueCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          ...reminders.take(4).map(
-            (reminder) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: reminder.isDue ? AppColor.primarySoft : AppColor.safe1,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColor.safe),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+          ...reminders
+              .take(4)
+              .map(
+                (reminder) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: reminder.isDue
+                          ? AppColor.primarySoft
+                          : AppColor.safe1,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColor.safe),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            _isBuyerBookPlaceholderProduct(reminder.productTitle)
-                                ? reminder.buyerName
-                                : '${reminder.buyerName} • ${reminder.productTitle}',
-                            style:
-                                Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _isBuyerBookPlaceholderProduct(
+                                      reminder.productTitle,
+                                    )
+                                    ? reminder.buyerName
+                                    : '${reminder.buyerName} • ${reminder.productTitle}',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
                                       color: AppColor.text,
                                       fontWeight: FontWeight.w800,
                                     ),
-                          ),
+                              ),
+                            ),
+                            if (!_isBuyerBookPlaceholderProduct(
+                              reminder.productTitle,
+                            ))
+                              TextButton(
+                                onPressed: () =>
+                                    onFindProduct(reminder.productTitle),
+                                child: const Text('Find product'),
+                              ),
+                            TextButton(
+                              onPressed: () async =>
+                                  onUseBuyer(reminder.buyerPhone),
+                              child: const Text('Start order'),
+                            ),
+                          ],
                         ),
-                        if (!_isBuyerBookPlaceholderProduct(reminder.productTitle))
-                          TextButton(
-                            onPressed: () => onFindProduct(reminder.productTitle),
-                            child: const Text('Find product'),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _SummaryPill(
+                              label: 'When',
+                              value: reminder.scheduledFor == null
+                                  ? 'Open'
+                                  : formatDateTime(reminder.scheduledFor),
+                            ),
+                            _SummaryPill(
+                              label: 'District',
+                              value: reminder.district,
+                            ),
+                            _SummaryPill(
+                              label: 'Status',
+                              value: reminder.isDue ? 'Due now' : 'Planned',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: () async => onDismiss(reminder.id),
+                          icon: const AppHugeIcon(
+                            HugeIcons.strokeRoundedDelete02,
+                            size: 16,
                           ),
-                        TextButton(
-                          onPressed: () async => onUseBuyer(reminder.buyerPhone),
-                          child: const Text('Start order'),
+                          label: const Text('Dismiss reminder'),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _SummaryPill(
-                          label: 'When',
-                          value: reminder.scheduledFor == null
-                              ? 'Open'
-                              : formatDateTime(reminder.scheduledFor),
-                        ),
-                        _SummaryPill(
-                          label: 'District',
-                          value: reminder.district,
-                        ),
-                        _SummaryPill(
-                          label: 'Status',
-                          value: reminder.isDue ? 'Due now' : 'Planned',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: () async => onDismiss(reminder.id),
-                      icon: const AppHugeIcon(
-                        HugeIcons.strokeRoundedDelete02,
-                        size: 16,
-                      ),
-                      label: const Text('Dismiss reminder'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
         ],
       ),
     );
@@ -1691,7 +1696,7 @@ class _BuyerStatusPill extends StatelessWidget {
   }
 }
 
-enum _TagTone { neutral, good, warning }
+enum _TagTone { neutral, good, warning, alert }
 
 enum _BuyerSegment { all, repeat, referral, pending, risky, blocked }
 
@@ -1747,11 +1752,13 @@ class _TagPill extends StatelessWidget {
       _TagTone.neutral => AppColor.primary,
       _TagTone.good => AppColor.green,
       _TagTone.warning => AppColor.warning,
+      _TagTone.alert => AppColor.alert,
     };
     final background = switch (tone) {
       _TagTone.neutral => AppColor.safe1,
       _TagTone.good => AppColor.safe1,
       _TagTone.warning => AppColor.warningLight,
+      _TagTone.alert => AppColor.alertLight,
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

@@ -71,10 +71,8 @@ class ProductViabilityEngine {
     final minSell = product.minResellPrice ?? product.price ?? 0;
     final maxSell =
         product.maxResellPrice ?? product.comparePrice ?? product.price ?? 0;
-    final minMargin =
-        (minSell - baseCost).clamp(0, double.infinity).toDouble();
-    final maxMargin =
-        (maxSell - baseCost).clamp(0, double.infinity).toDouble();
+    final minMargin = (minSell - baseCost).clamp(0, double.infinity).toDouble();
+    final maxMargin = (maxSell - baseCost).clamp(0, double.infinity).toDouble();
     final marginPct = baseCost <= 0 ? 0 : (minMargin / baseCost) * 100;
     final rating = (product.rating ?? 0).clamp(0, 5);
     final ratingTotal = (product.ratingTotal ?? 0).clamp(0, 9999);
@@ -83,28 +81,35 @@ class ProductViabilityEngine {
     final isHomeLike = _matches(product, const ['home', 'kitchen', 'storage']);
     final isFashionLike = _matches(product, const ['fashion', 'shirt', 'bag']);
 
-    final demandScore = (
-      28 +
-      (rating * 11) +
-      (ratingTotal >= 80 ? 18 : ratingTotal >= 30 ? 10 : 4) +
-      (isFlash ? 12 : 0) +
-      (trust.score * 0.22)
-    ).clamp(0, 100).toDouble();
+    final demandScore =
+        (28 +
+                (rating * 11) +
+                (ratingTotal >= 80
+                    ? 18
+                    : ratingTotal >= 30
+                    ? 10
+                    : 4) +
+                (isFlash ? 12 : 0) +
+                (trust.score * 0.22))
+            .clamp(0, 100)
+            .toDouble();
 
-    final shareabilityScore = (
-      22 +
-      (marginPct.clamp(0, 35) * 1.1) +
-      (isFashionLike ? 12 : 0) +
-      (isBeautyLike ? 10 : 0) +
-      ((product.comparePrice ?? 0) > (product.price ?? 0) ? 8 : 0) +
-      (trust.score * 0.18)
-    ).clamp(0, 100).toDouble();
+    final shareabilityScore =
+        (22 +
+                (marginPct.clamp(0, 35) * 1.1) +
+                (isFashionLike ? 12 : 0) +
+                (isBeautyLike ? 10 : 0) +
+                ((product.comparePrice ?? 0) > (product.price ?? 0) ? 8 : 0) +
+                (trust.score * 0.18))
+            .clamp(0, 100)
+            .toDouble();
 
-    final deliveryRiskValue = (
-      (trust.averageDeliveryDays ?? 3.5) * 14 +
-      ((product.weight ?? 0.3) * 18) +
-      (trust.score < 55 ? 18 : 0)
-    ).clamp(0, 100).toDouble();
+    final deliveryRiskValue =
+        ((trust.averageDeliveryDays ?? 3.5) * 14 +
+                ((product.weight ?? 0.3) * 18) +
+                (trust.score < 55 ? 18 : 0))
+            .clamp(0, 100)
+            .toDouble();
     final deliveryRisk = _riskLevel(
       deliveryRiskValue,
       reverse: true,
@@ -112,11 +117,12 @@ class ProductViabilityEngine {
       highCutoff: 62,
     );
 
-    final returnSensitivityValue = (
-      (trust.returnRate ?? 6) * 8 +
-      (isFashionLike ? 16 : 0) +
-      (isBeautyLike ? 10 : 0)
-    ).clamp(0, 100).toDouble();
+    final returnSensitivityValue =
+        ((trust.returnRate ?? 6) * 8 +
+                (isFashionLike ? 16 : 0) +
+                (isBeautyLike ? 10 : 0))
+            .clamp(0, 100)
+            .toDouble();
     final returnSensitivity = _riskLevel(
       returnSensitivityValue,
       reverse: true,
@@ -129,7 +135,8 @@ class ProductViabilityEngine {
       if (marginPct >= 18 || minMargin >= 150) 'Good margin',
       if (trust.score >= 72 &&
           deliveryRisk != ViabilityRiskLevel.high &&
-          minMargin >= 80) 'Beginner friendly',
+          minMargin >= 80)
+        'Beginner friendly',
       if (isBeautyLike || isHomeLike) 'High repeat potential',
       if (deliveryRisk == ViabilityRiskLevel.high) 'Risky delivery zone',
       if (trust.score < 55) 'Low trust supplier',
@@ -214,25 +221,27 @@ List<ProductResCommon> applyProductViability(
   ProductViabilityFilter filter = ProductViabilityFilter.all,
   ProductViabilitySort sort = ProductViabilitySort.featured,
 }) {
-  final filtered = products.where((product) {
-    final profile = ProductViabilityEngine.build(product);
-    switch (filter) {
-      case ProductViabilityFilter.all:
-        return true;
-      case ProductViabilityFilter.fastMover:
-        return profile.labels.contains('Fast mover');
-      case ProductViabilityFilter.goodMargin:
-        return profile.labels.contains('Good margin');
-      case ProductViabilityFilter.beginnerFriendly:
-        return profile.labels.contains('Beginner friendly');
-      case ProductViabilityFilter.highRepeatPotential:
-        return profile.labels.contains('High repeat potential');
-      case ProductViabilityFilter.riskyDeliveryZone:
-        return profile.labels.contains('Risky delivery zone');
-      case ProductViabilityFilter.lowTrustSupplier:
-        return profile.labels.contains('Low trust supplier');
-    }
-  }).toList(growable: false);
+  final filtered = products
+      .where((product) {
+        final profile = ProductViabilityEngine.build(product);
+        switch (filter) {
+          case ProductViabilityFilter.all:
+            return true;
+          case ProductViabilityFilter.fastMover:
+            return profile.labels.contains('Fast mover');
+          case ProductViabilityFilter.goodMargin:
+            return profile.labels.contains('Good margin');
+          case ProductViabilityFilter.beginnerFriendly:
+            return profile.labels.contains('Beginner friendly');
+          case ProductViabilityFilter.highRepeatPotential:
+            return profile.labels.contains('High repeat potential');
+          case ProductViabilityFilter.riskyDeliveryZone:
+            return profile.labels.contains('Risky delivery zone');
+          case ProductViabilityFilter.lowTrustSupplier:
+            return profile.labels.contains('Low trust supplier');
+        }
+      })
+      .toList(growable: false);
 
   final sorted = List<ProductResCommon>.from(filtered);
   sorted.sort((a, b) {
@@ -265,7 +274,8 @@ double _featuredScore(ProductViabilityProfile profile) {
 }
 
 double _riskScore(ProductViabilityProfile profile) {
-  return _riskValue(profile.deliveryRisk) + _riskValue(profile.returnSensitivity);
+  return _riskValue(profile.deliveryRisk) +
+      _riskValue(profile.returnSensitivity);
 }
 
 double _beginnerScore(ProductViabilityProfile profile) {

@@ -21,7 +21,9 @@ class CartState extends Equatable {
     return items.fold(
       0,
       (sum, item) =>
-          sum + ((item.sellPrice - (item.product.price?.round() ?? 0)) * item.quantity),
+          sum +
+          ((item.sellPrice - (item.product.price?.round() ?? 0)) *
+              item.quantity),
     );
   }
 

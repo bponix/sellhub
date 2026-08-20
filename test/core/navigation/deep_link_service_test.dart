@@ -15,7 +15,7 @@ void main() {
     test('recognizes canonical host and store payload links', () {
       expect(
         DeepLinkService.canHandleUri(
-          Uri.parse('https://sellhub.bponi.com/app?routeName=orders'),
+          Uri.parse('https://reseller.store.bponi.com/app?routeName=orders'),
         ),
         isTrue,
       );
@@ -30,7 +30,7 @@ void main() {
     test('extracts store payload from query params', () {
       final store = DeepLinkService.extractStoreForTesting(
         Uri.parse(
-          'https://sellhub.bponi.com/app?domain=demo.com&siteId=55&title=Demo&logo=https://cdn.example/logo.png',
+          'https://reseller.store.bponi.com/app?domain=demo.com&siteId=55&title=Demo&logo=https://cdn.example/logo.png',
         ),
       );
 
@@ -44,7 +44,7 @@ void main() {
     test('merges direct query params and nested payload params', () {
       final params = DeepLinkService.payloadParamsForTesting(
         Uri.parse(
-          'https://sellhub.bponi.com/app?routeName=search&keyword=milk&params=%7B%22hid%22%3A%22P-1%22%2C%22category%22%3A%22grocery%22%7D',
+          'https://reseller.store.bponi.com/app?routeName=search&keyword=milk&params=%7B%22hid%22%3A%22P-1%22%2C%22category%22%3A%22grocery%22%7D',
         ),
       );
 
@@ -90,12 +90,12 @@ void main() {
 
     test('normalizes encoded deep links and rejects unsafe schemes', () {
       final encoded = DeepLinkService.normalizeExternalUri(
-        'https%3A%2F%2Fsellhub.bponi.com%2Fapp%3FrouteName%3Dorders',
+        'https%3A%2F%2Freseller.store.bponi.com%2Fapp%3FrouteName%3Dorders',
       );
       final unsafe = DeepLinkService.normalizeExternalUri('javascript:alert(1)');
 
       expect(encoded, isNotNull);
-      expect(encoded!.host, 'sellhub.bponi.com');
+      expect(encoded!.host, 'reseller.store.bponi.com');
       expect(unsafe, isNull);
     });
   });

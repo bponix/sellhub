@@ -55,6 +55,7 @@ mutation selfStoreOrderCreateByCustomer(
   $vat: Float!
   $vatAmount: Float!
   $weight: Float!
+  $idempotencyKey: String
   $products: [StoreOrderCartCreate!]
 ) {
   selfStoreOrderCreateByCustomer(
@@ -115,6 +116,7 @@ mutation selfStoreOrderCreateByCustomer(
       vat: $vat
       vatAmount: $vatAmount
       weight: $weight
+      idempotencyKey: $idempotencyKey
     }
     products: $products
   ) {
@@ -125,6 +127,8 @@ mutation selfStoreOrderCreateByCustomer(
     customerNote
     customerPhone
     currency
+    createdAt
+    cost
     gatewayText
     id
     isPaid
@@ -133,11 +137,22 @@ mutation selfStoreOrderCreateByCustomer(
     logisticsText
     orderId
     paid
+    profit
+    resellAmount
+    resellerAdvanceCollect
+    resellerCommission
+    resellerId
+    resellerIsPaid
     source
     sourceId
     status
     total
     updatedAt
+    lines {
+      cost currency id image isActive productId productHid productName
+      productSku quantity resellPrice source unit price unitType variant vat
+    }
+    events { id eventType note createdAt }
   }
 }
 ''';

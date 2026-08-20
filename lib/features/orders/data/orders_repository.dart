@@ -41,16 +41,4 @@ class OrdersRepository {
       note: note,
     );
   }
-
-  Future<bool> deleteLatestCustomerOrderEvent({
-    required int siteId,
-    required int orderId,
-    required int eventType,
-  }) {
-    return _checkoutRepository.deleteLatestCustomerOrderEvent(
-      siteId: siteId,
-      orderId: orderId,
-      eventType: eventType,
-    );
-  }
 }

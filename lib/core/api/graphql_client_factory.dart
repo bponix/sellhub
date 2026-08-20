@@ -13,7 +13,8 @@ GraphQLClient createGraphQLClient({
   Duration queryTimeout = const Duration(seconds: 30),
   Link? link,
 }) {
-  final resolvedLogger = logger ??
+  final resolvedLogger =
+      logger ??
       (String message) {
         if (kDebugMode) {
           debugPrint(message);

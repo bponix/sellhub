@@ -126,10 +126,7 @@ class SupplierTrustVerifiedBadge extends StatelessWidget {
 }
 
 class SupplierTrustCompactFacts extends StatelessWidget {
-  const SupplierTrustCompactFacts({
-    super.key,
-    required this.profile,
-  });
+  const SupplierTrustCompactFacts({super.key, required this.profile});
 
   final SupplierTrustProfile profile;
 
@@ -140,7 +137,8 @@ class SupplierTrustCompactFacts extends StatelessWidget {
       '${formatTrustDays(profile.averageDeliveryDays)} avg delivery',
       '${formatTrustPercent(profile.returnRate)} returns',
       '${formatTrustCount(profile.shippedOrders30d)} shipped / 30d',
-      if (profile.updatedAt != null) _supplierTrustFreshnessLabel(profile.updatedAt),
+      if (profile.updatedAt != null)
+        _supplierTrustFreshnessLabel(profile.updatedAt),
     ].where((item) => !item.contains('--')).toList(growable: false);
 
     return Text(
@@ -209,7 +207,8 @@ class SupplierTrustCompactBadges extends StatelessWidget {
           ),
         if (profile.minimumIssueRate != null)
           _CompactTrustPill(
-            label: 'Issue floor ${formatTrustPercent(profile.minimumIssueRate)}',
+            label:
+                'Issue floor ${formatTrustPercent(profile.minimumIssueRate)}',
             textColor: (profile.minimumIssueRate ?? 100) <= 3
                 ? AppColor.green
                 : AppColor.warning,
@@ -544,10 +543,7 @@ class SupplierTrustMetricsCard extends StatelessWidget {
 }
 
 class SupplierTrustDecisionCard extends StatelessWidget {
-  const SupplierTrustDecisionCard({
-    super.key,
-    required this.profile,
-  });
+  const SupplierTrustDecisionCard({super.key, required this.profile});
 
   final SupplierTrustProfile profile;
 
@@ -558,12 +554,15 @@ class SupplierTrustDecisionCard extends StatelessWidget {
     final issueRate = profile.minimumIssueRate ?? 0;
     final slowDelivery = (profile.averageDeliveryDays ?? 0) >= 6;
     final payoutNeedsReview = profile.paysResellersOnTime == false;
-    final watch = style.band == SupplierTrustBand.watchlist ||
+    final watch =
+        style.band == SupplierTrustBand.watchlist ||
         returnRate >= 10 ||
         issueRate >= 6 ||
         slowDelivery ||
         payoutNeedsReview;
-    final title = watch ? 'Confirm before you push this supplier' : 'Supplier is safe to push now';
+    final title = watch
+        ? 'Confirm before you push this supplier'
+        : 'Supplier is safe to push now';
     final guidance = watch
         ? 'Use this supplier after buyer confirmation, careful COD handling, and a tighter delivery promise.'
         : 'This supplier looks stable enough for normal reseller flow and faster quote-to-order work.';
@@ -571,12 +570,15 @@ class SupplierTrustDecisionCard extends StatelessWidget {
         ? 'Share first, confirm buyer intent, then place supplier order.'
         : 'You can quote confidently and move to order after buyer confirmation.';
     final reasons = <String>[
-      if (profile.updatedAt != null) _supplierTrustFreshnessLabel(profile.updatedAt),
+      if (profile.updatedAt != null)
+        _supplierTrustFreshnessLabel(profile.updatedAt),
       if ((profile.fulfillmentSuccessRate ?? 0) > 0)
         '${formatTrustPercent(profile.fulfillmentSuccessRate)} fulfilled',
-      if (slowDelivery) '${formatTrustDays(profile.averageDeliveryDays)} delivery',
+      if (slowDelivery)
+        '${formatTrustDays(profile.averageDeliveryDays)} delivery',
       if (returnRate > 0) '${formatTrustPercent(profile.returnRate)} returns',
-      if (issueRate > 0) '${formatTrustPercent(profile.minimumIssueRate)} issue floor',
+      if (issueRate > 0)
+        '${formatTrustPercent(profile.minimumIssueRate)} issue floor',
       if (payoutNeedsReview) 'Payout timing needs review',
       if (profile.paysResellersOnTime == true) 'Pays resellers on time',
     ];

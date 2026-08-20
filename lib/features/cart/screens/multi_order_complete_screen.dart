@@ -8,19 +8,13 @@ import 'package:sellhub/core/widget/sellhub_top_app_bar.dart';
 import 'package:sellhub/features/cart/data/models/order_create_res.dart';
 
 class MultiOrderCompleteScreen extends StatelessWidget {
-  const MultiOrderCompleteScreen({
-    super.key,
-    required this.orders,
-  });
+  const MultiOrderCompleteScreen({super.key, required this.orders});
 
   final List<OrderCreateRes> orders;
 
   @override
   Widget build(BuildContext context) {
-    final total = orders.fold<int>(
-      0,
-      (sum, order) => sum + (order.total ?? 0),
-    );
+    final total = orders.fold<int>(0, (sum, order) => sum + (order.total ?? 0));
     final itemCount = orders.fold<int>(
       0,
       (sum, order) =>
@@ -77,10 +71,7 @@ class MultiOrderCompleteScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: _SummaryTile(
-                        label: 'Items',
-                        value: '$itemCount',
-                      ),
+                      child: _SummaryTile(label: 'Items', value: '$itemCount'),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -171,7 +162,9 @@ class _SupplierLegCard extends StatelessWidget {
         .where((value) => value.isNotEmpty)
         .toSet()
         .join(', ');
-    final supplierLabel = supplierScope.isEmpty ? 'Supplier leg' : supplierScope;
+    final supplierLabel = supplierScope.isEmpty
+        ? 'Supplier leg'
+        : supplierScope;
     final itemCount = order.lines.fold<int>(
       0,
       (sum, line) => sum + (line.quantity ?? 0),
@@ -234,16 +227,14 @@ class _SupplierLegCard extends StatelessWidget {
             children: [
               _LegPill(label: '$itemCount items'),
               _LegPill(
-                label:
-                    (order.logisticsText ?? '').trim().isEmpty
-                        ? 'Delivery lane pending'
-                        : order.logisticsText!.trim(),
+                label: (order.logisticsText ?? '').trim().isEmpty
+                    ? 'Delivery lane pending'
+                    : order.logisticsText!.trim(),
               ),
               _LegPill(
-                label:
-                    (order.gatewayText ?? '').trim().isEmpty
-                        ? 'Payment pending'
-                        : order.gatewayText!.trim(),
+                label: (order.gatewayText ?? '').trim().isEmpty
+                    ? 'Payment pending'
+                    : order.gatewayText!.trim(),
               ),
             ],
           ),
@@ -274,34 +265,38 @@ class _SupplierLegCard extends StatelessWidget {
           ),
           if (order.lines.isNotEmpty) ...[
             const SizedBox(height: 12),
-            ...order.lines.take(3).map(
-              (line) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        line.productName ?? 'Product',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColor.text,
-                          fontWeight: FontWeight.w700,
+            ...order.lines
+                .take(3)
+                .map(
+                  (line) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            line.productName ?? 'Product',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppColor.text,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'x${line.quantity ?? 0} • ৳${convertToBengaliNumber(line.price ?? 0)}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: AppColor.neutral2,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'x${line.quantity ?? 0} • ৳${convertToBengaliNumber(line.price ?? 0)}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColor.neutral2,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
           ],
         ],
       ),
@@ -335,10 +330,7 @@ class _LegPill extends StatelessWidget {
 }
 
 class _SummaryTile extends StatelessWidget {
-  const _SummaryTile({
-    required this.label,
-    required this.value,
-  });
+  const _SummaryTile({required this.label, required this.value});
 
   final String label;
   final String value;

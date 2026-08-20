@@ -282,10 +282,7 @@ class titlePriceColor extends StatelessWidget {
 }
 
 class _DecisionPill extends StatelessWidget {
-  const _DecisionPill({
-    required this.icon,
-    required this.label,
-  });
+  const _DecisionPill({required this.icon, required this.label});
 
   final List<List<dynamic>> icon;
   final String label;

@@ -3,8 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:sellhub/core/constants/app_color.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
 
-class SellHubTopAppBar extends StatelessWidget
-    implements PreferredSizeWidget {
+class SellHubTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   const SellHubTopAppBar({
     super.key,
     required this.title,
@@ -30,7 +29,8 @@ class SellHubTopAppBar extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    final resolvedSubtitle = showSubtitle && (subtitle?.trim().isNotEmpty ?? false)
+    final resolvedSubtitle =
+        showSubtitle && (subtitle?.trim().isNotEmpty ?? false)
         ? subtitle!.trim()
         : null;
     return AppBar(
@@ -80,7 +80,8 @@ class SellHubTopAppBar extends StatelessWidget
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).appBarTheme.titleTextStyle?.copyWith(
+                    style:
+                        Theme.of(context).appBarTheme.titleTextStyle?.copyWith(
                           color: AppColor.text,
                           fontSize: 16.5,
                           fontWeight: FontWeight.w800,
@@ -100,11 +101,11 @@ class SellHubTopAppBar extends StatelessWidget
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColor.neutral2,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                            height: 1.0,
-                          ),
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        height: 1.0,
+                      ),
                     ),
                   ] else if (!showBackButton) ...[
                     const SizedBox(height: 1),
@@ -113,11 +114,11 @@ class SellHubTopAppBar extends StatelessWidget
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColor.neutral2,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                            height: 1.0,
-                          ),
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        height: 1.0,
+                      ),
                     ),
                   ],
                 ],
@@ -137,10 +138,9 @@ class SellHubTopAppBar extends StatelessWidget
           ],
         ),
       ),
-      actions: [
-        const SizedBox.shrink(),
-      ],
-      bottom: bottom ??
+      actions: [const SizedBox.shrink()],
+      bottom:
+          bottom ??
           const PreferredSize(
             preferredSize: Size.fromHeight(1),
             child: Divider(height: 1, thickness: 1, color: AppColor.safe),

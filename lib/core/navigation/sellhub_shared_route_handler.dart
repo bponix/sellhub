@@ -52,9 +52,7 @@ class SellHubSharedRouteHandler {
         final base = ProductResCommon(
           brands: item.brand?.isNotEmpty == true
               ? <String>[item.brand!]
-              : <String>[
-                  ...details.brands.map((value) => value.toString()),
-                ],
+              : <String>[...details.brands.map((value) => value.toString())],
           features: const <Feature>[],
           hid: details.hid ?? item.hid,
           id: details.id,

@@ -6,6 +6,7 @@ import 'package:sellhub/core/navigation/pending_product_deep_link.dart';
 import 'package:sellhub/core/config/app_text.dart';
 import 'package:sellhub/core/constants/app_color.dart';
 import 'package:sellhub/core/store/store_context_cubit.dart';
+import 'package:sellhub/core/store/store_context_state.dart';
 import 'package:sellhub/core/utils/app_router.dart';
 import 'package:sellhub/core/utils/constants.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
@@ -109,59 +110,123 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<StoreShellCubit, StoreShellState>(
-      builder: (context, shellState) {
-        final appBarData = _tabAppBarDataForIndex(shellState.currentIndex);
-        return BlocBuilder<StorefrontCubit, StorefrontState>(
-          builder: (context, storefrontState) {
-            return Scaffold(
-              appBar: SellHubTopAppBar(
-                title: appBarData.title,
-                subtitle: appBarData.subtitle,
-                showSubtitle: true,
-                icon: appBarData.icon,
-              ),
-              endDrawer: AppDrawerFull(
-                onOpenCategories: () =>
-                    context.read<StoreShellCubit>().setIndex(1),
-              ),
-              body: Column(
-                children: [
-                  Expanded(
-                    child: IndexedStack(
-                      index: shellState.currentIndex,
-                      children: _screens,
-                    ),
+    return BlocBuilder<StoreContextCubit, StoreContextState>(
+      builder: (context, storeContextState) {
+        return BlocBuilder<StoreShellCubit, StoreShellState>(
+          builder: (context, shellState) {
+            final appBarData = _tabAppBarDataForIndex(shellState.currentIndex);
+            return BlocBuilder<StorefrontCubit, StorefrontState>(
+              builder: (context, storefrontState) {
+                return Scaffold(
+                  appBar: SellHubTopAppBar(
+                    title: appBarData.title,
+                    subtitle: appBarData.subtitle,
+                    showSubtitle: true,
+                    icon: appBarData.icon,
                   ),
-                  if (storefrontState.status == StorefrontStatus.failure &&
-                      storefrontState.siteDetails == null)
-                    _StorefrontBootstrapError(
-                      onRetry: () {
-                        final activeStore = context
-                            .read<StoreContextCubit>()
-                            .state
-                            .activeStore;
-                        context.read<StorefrontCubit>().preload(
-                          domain:
-                              activeStore?.domain ??
-                              AppConstants.kDefaultDomain,
-                          siteId:
-                              activeStore?.siteId ??
-                              AppConstants.kDefaultSiteId,
-                          first: AppConstants.kDefaultFirst,
-                          forceRefresh: true,
-                        );
-                      },
-                    ),
-                ],
-              ),
-              bottomNavigationBar: SellerBottomNavBar(
-                currentIndex: shellState.currentIndex,
-              ),
+                  endDrawer: AppDrawerFull(
+                    onOpenCategories: () =>
+                        context.read<StoreShellCubit>().setIndex(1),
+                  ),
+                  body:
+                      storeContextState.status == StoreContextStatus.unavailable
+                      ? _StoreUnavailableView(
+                          title: storeContextState.unavailableTitle,
+                          message: storeContextState.unavailableMessage,
+                        )
+                      : Column(
+                          children: [
+                            Expanded(
+                              child: IndexedStack(
+                                index: shellState.currentIndex,
+                                children: _screens,
+                              ),
+                            ),
+                            if (storefrontState.status ==
+                                    StorefrontStatus.failure &&
+                                storefrontState.siteDetails == null)
+                              _StorefrontBootstrapError(
+                                onRetry: () {
+                                  final activeStore = context
+                                      .read<StoreContextCubit>()
+                                      .state
+                                      .activeStore;
+                                  context.read<StorefrontCubit>().preload(
+                                    domain:
+                                        activeStore?.domain ??
+                                        AppConstants.kDefaultDomain,
+                                    siteId:
+                                        activeStore?.siteId ??
+                                        AppConstants.kDefaultSiteId,
+                                    first: AppConstants.kDefaultFirst,
+                                    forceRefresh: true,
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                  bottomNavigationBar: SellerBottomNavBar(
+                    currentIndex: shellState.currentIndex,
+                  ),
+                );
+              },
             );
           },
         );
       },
+    );
+  }
+}
+
+class _StoreUnavailableView extends StatelessWidget {
+  const _StoreUnavailableView({this.title, this.message});
+
+  final String? title;
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF4F4),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColor.safe),
+              ),
+              child: const AppHugeIcon(
+                HugeIcons.strokeRoundedStore03,
+                color: AppColor.alert,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title ?? 'Supplier unavailable',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppColor.text,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message ?? 'This supplier is not ready for SellHub yet.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColor.neutral2,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

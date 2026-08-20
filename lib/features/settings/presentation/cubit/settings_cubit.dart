@@ -24,7 +24,8 @@ class SettingsCubit extends SafeCubit<SettingsState> {
         notificationGranted:
             notificationPermission?.authorizationStatus !=
             AuthorizationStatus.denied,
-        locationGranted: locationPermission == LocationPermission.always ||
+        locationGranted:
+            locationPermission == LocationPermission.always ||
             locationPermission == LocationPermission.whileInUse,
       ),
     );
@@ -39,7 +40,8 @@ class SettingsCubit extends SafeCubit<SettingsState> {
     final permission = await Geolocator.requestPermission();
     emit(
       state.copyWith(
-        locationGranted: permission == LocationPermission.always ||
+        locationGranted:
+            permission == LocationPermission.always ||
             permission == LocationPermission.whileInUse,
       ),
     );

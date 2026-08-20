@@ -8,6 +8,7 @@ import 'package:sellhub/core/local/local_storage.dart';
 import 'package:sellhub/core/utils/convertBengaliNumber.dart';
 import 'package:sellhub/core/utils/debouncer.dart';
 import 'package:sellhub/core/store/store_scope.dart';
+import 'package:sellhub/core/store/store_registry.dart';
 import 'package:sellhub/core/services/analytics_service.dart';
 import 'package:sellhub/core/utils/custom_toast.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
@@ -66,6 +67,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _lastBuyerRiskFingerprint;
   String? _pendingOperationalDraftKey;
 
+  bool get _hasValidPhone =>
+      StoreRegistry.currentStore?.market.isPhoneValid(_phoneController.text) ??
+      false;
+
   @override
   void initState() {
     super.initState();
@@ -74,9 +79,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       StoreScope.siteIdFromState(storefront),
     );
     context.read<CheckoutCubit>().fetchDeliveryPlace(
-      storefront.siteDetails?.createdById ??
-          storefront.siteDetails?.createdBy?.id ??
-          0,
+      StoreScope.siteIdFromState(storefront),
     );
     _loadCustomerContext();
     _hydratePendingBuyer();
@@ -171,7 +174,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             .toString();
     var appliedAny = false;
 
-    final savedAddressId = (draft['selectedShippingAddressId'] as num?)?.toInt();
+    final savedAddressId = (draft['selectedShippingAddressId'] as num?)
+        ?.toInt();
     if (savedAddressId != null &&
         checkoutState.savedShippingAddresses.isNotEmpty) {
       final address = checkoutState.savedShippingAddresses
@@ -229,7 +233,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             checkoutState.deliveryPlace.isEmpty ||
         (paymentMethodId != null || paymentLabel.isNotEmpty) &&
             checkoutState.paymentMethod.isEmpty ||
-        (savedAddressId != null && checkoutState.savedShippingAddresses.isEmpty);
+        (savedAddressId != null &&
+            checkoutState.savedShippingAddresses.isEmpty);
 
     _pendingOperationalDraftKey = needsOperationalSync && !appliedAny
         ? draftKey
@@ -264,17 +269,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           .map(
             (item) => <String, dynamic>{
               'id': item.product.id,
-              'title':
-                  ((item.product.translation ?? '').trim().isNotEmpty
-                      ? item.product.translation!.trim()
-                      : (item.product.title ?? 'Product')),
+              'title': ((item.product.translation ?? '').trim().isNotEmpty
+                  ? item.product.translation!.trim()
+                  : (item.product.title ?? 'Product')),
               'quantity': item.quantity,
               'basePrice': ((item.product.price ?? 0).toDouble()).round(),
               'sellPrice': item.sellPrice,
               'siteId': item.product.siteId ?? activeSiteId,
-              'supplierName': item.product.siteId != null
-                  ? 'Supplier ${item.product.siteId}'
-                  : 'Supplier',
+              'supplierName': 'Anonymous supply source',
               'thumbnail': item.product.thumbnail ?? '',
             },
           )
@@ -288,9 +290,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'basePrice': widget.payPrice ?? 0,
         'sellPrice': widget.payPrice ?? 0,
         'siteId': activeSiteId,
-        'supplierName':
-            context.read<StorefrontCubit>().state.siteDetails?.title?.trim() ??
-            'Supplier',
+        'supplierName': 'Anonymous supply source',
         'thumbnail': widget.thumbnail ?? '',
       },
     ];
@@ -320,7 +320,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return <String, dynamic>{
       'id': existingDraft?['id'],
       'draftId': existingDraft?['draftId'],
-      'title': widget.isCart ? 'Quick order draft' : (widget.title ?? 'Quick order'),
+      'title': widget.isCart
+          ? 'Quick order draft'
+          : (widget.title ?? 'Quick order'),
       'buyerName': _nameController.text.trim(),
       'buyerPhone': _phoneController.text.trim().startsWith('88')
           ? _phoneController.text.trim()
@@ -328,15 +330,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       'buyerAddress': _addressController.text.trim(),
       'note': '',
       'status': 'draft',
-      'deliveryLabel':
-          checkoutState.deliveryWay.trim().isNotEmpty
-              ? checkoutState.deliveryWay.trim()
-              : 'Delivery pending',
+      'deliveryLabel': checkoutState.deliveryWay.trim().isNotEmpty
+          ? checkoutState.deliveryWay.trim()
+          : 'Delivery pending',
       'deliveryPlaceId': checkoutState.logisticId > 0
           ? checkoutState.logisticId
           : null,
       'deliveryCharge': checkoutState.deliveryCharge.round(),
-      'paymentMethodId': checkoutState.paymentMethod.isNotEmpty &&
+      'paymentMethodId':
+          checkoutState.paymentMethod.isNotEmpty &&
               checkoutState.paySelect >= 0 &&
               checkoutState.paySelect < checkoutState.paymentMethod.length
           ? checkoutState.paymentMethod[checkoutState.paySelect].id
@@ -378,7 +380,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     CustomToast.info('Quick-order draft saved');
   }
 
-  Future<void> _restoreStoredQuickOrderDraft(CheckoutState checkoutState) async {
+  Future<void> _restoreStoredQuickOrderDraft(
+    CheckoutState checkoutState,
+  ) async {
     final draft = checkoutState.quickOrderDraft;
     if (draft == null) return;
     _applyQuickOrderDraft(draft);
@@ -388,9 +392,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _clearStoredQuickOrderDraft(CheckoutState checkoutState) async {
     final checkoutCubit = context.read<CheckoutCubit>();
     final siteId = StoreScope.activeSiteId(context);
-    final draftId = (checkoutState.quickOrderDraft?['id'] ??
-            checkoutState.quickOrderDraft?['draftId'])
-        ?.toString();
+    final draftId =
+        (checkoutState.quickOrderDraft?['id'] ??
+                checkoutState.quickOrderDraft?['draftId'])
+            ?.toString();
     final userId = await LocalStorage.getUserID() ?? 0;
     if (userId <= 0) return;
     final deleted = await checkoutCubit.deleteQuickOrderDraft(
@@ -408,7 +413,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (!widget.isCart) {
       return <_CheckoutSupplierPreview>[
         _CheckoutSupplierPreview(
-          label: 'Supplier order',
+          label: 'Supply source order',
           itemCount: 1,
           supplierBase: widget.payPrice ?? 0,
           buyerTotal: widget.payPrice ?? 0,
@@ -423,34 +428,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       grouped.putIfAbsent(siteId, () => <CartItem>[]).add(item);
     }
 
-    return grouped.entries.map((entry) {
-      final items = entry.value;
-      final supplierBase = items.fold<int>(
-        0,
-        (sum, item) =>
-            sum +
-            (((item.product.price ?? 0).toDouble()).round() * item.quantity),
-      );
-      final buyerTotal = items.fold<int>(
-        0,
-        (sum, item) => sum + (item.sellPrice * item.quantity),
-      );
-      return _CheckoutSupplierPreview(
-        label: grouped.length == 1 ? 'Supplier order' : 'Supplier ${entry.key}',
-        itemCount: items.fold<int>(0, (sum, item) => sum + item.quantity),
-        supplierBase: supplierBase,
-        buyerTotal: buyerTotal,
-        itemTitles: items
-            .map<String>(
-              (item) =>
-                  ((item.product.translation ?? '').trim().isNotEmpty
+    return grouped.entries
+        .map((entry) {
+          final items = entry.value;
+          final supplierBase = items.fold<int>(
+            0,
+            (sum, item) =>
+                sum +
+                (((item.product.price ?? 0).toDouble()).round() *
+                    item.quantity),
+          );
+          final buyerTotal = items.fold<int>(
+            0,
+            (sum, item) => sum + (item.sellPrice * item.quantity),
+          );
+          return _CheckoutSupplierPreview(
+            label: grouped.length == 1
+                ? 'Supply source order'
+                : 'Anonymous supply source ${entry.key}',
+            itemCount: items.fold<int>(0, (sum, item) => sum + item.quantity),
+            supplierBase: supplierBase,
+            buyerTotal: buyerTotal,
+            itemTitles: items
+                .map<String>(
+                  (item) => ((item.product.translation ?? '').trim().isNotEmpty
                       ? item.product.translation!.trim()
                       : (item.product.title ?? 'Product')),
-            )
-            .take(3)
-            .toList(growable: false),
-      );
-    }).toList(growable: false);
+                )
+                .take(3)
+                .toList(growable: false),
+          );
+        })
+        .toList(growable: false);
   }
 
   @override
@@ -499,7 +508,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    final normalizedPhone = rawPhone.startsWith('88') ? rawPhone : '88$rawPhone';
+    final normalizedPhone = rawPhone.startsWith('88')
+        ? rawPhone
+        : '88$rawPhone';
     final buyerName = _nameController.text.trim();
     final buyerAddress = _addressController.text.trim();
     final cartState = context.read<CartCubit>().state;
@@ -524,7 +535,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       checkoutState.gateWayText,
     ].join('|');
     if (_lastBuyerRiskFingerprint == fingerprint &&
-        checkoutState.buyerRiskDecisionStatus == CheckoutResourceStatus.success) {
+        checkoutState.buyerRiskDecisionStatus ==
+            CheckoutResourceStatus.success) {
       return;
     }
 
@@ -554,10 +566,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   void _onPhoneChanged() {
     _debouncer.run(() async {
-      if (_phoneController.text.length != 11) return;
-      final fullPhone = _phoneController.text.startsWith('88')
-          ? _phoneController.text.trim()
-          : '88${_phoneController.text.trim()}';
+      final market = StoreRegistry.currentStore?.market;
+      if (market == null || !market.isPhoneValid(_phoneController.text)) return;
+      final fullPhone = market.normalizeInternationalPhone(
+        _phoneController.text,
+      );
 
       try {
         final user = await context.read<AuthCubit>().checkUser(fullPhone);
@@ -604,10 +617,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               final itemCount = widget.isCart ? cartState.totalItems : 1;
               final supplierCount = widget.isCart
                   ? cartState.items
-                            .map((item) => item.product.siteId ?? 0)
-                            .where((siteId) => siteId > 0)
-                            .toSet()
-                            .length
+                        .map((item) => item.product.siteId ?? 0)
+                        .where((siteId) => siteId > 0)
+                        .toSet()
+                        .length
                   : 1;
               final supplierPreview = _supplierPreview(cartState);
               final selectedDeliveryPlace =
@@ -655,8 +668,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                   null,
                               voucherCode: checkoutState.voucherCode,
                               supplierCount: supplierCount,
-                              draftStatus:
-                                  checkoutState.quickOrderDraftStatus,
+                              draftStatus: checkoutState.quickOrderDraftStatus,
                               onSaveDraft: () => _saveCurrentQuickOrderDraft(
                                 checkoutState,
                                 cartState,
@@ -836,11 +848,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               ),
                               if (checkoutState.buyerRiskDecisionStatus !=
                                       CheckoutResourceStatus.initial ||
-                                  _phoneController.text.trim().length >= 11) ...[
+                                  _hasValidPhone) ...[
                                 SizedBox(height: 12.h),
                                 _BuyerRiskDecisionCard(
-                                  status:
-                                      checkoutState.buyerRiskDecisionStatus,
+                                  status: checkoutState.buyerRiskDecisionStatus,
                                   decision: checkoutState.buyerRiskDecision,
                                 ),
                               ],
@@ -993,7 +1004,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                       decoration: BoxDecoration(
                                         color: AppColor.safe1,
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: AppColor.safe),
+                                        border: Border.all(
+                                          color: AppColor.safe,
+                                        ),
                                       ),
                                       child: Text(
                                         'Creates $supplierCount supplier orders.',
@@ -1066,9 +1079,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         }
                         if (checkoutState.buyerRiskDecisionStatus ==
                             CheckoutResourceStatus.loading) {
-                          CustomToast.info(
-                            'Wait for buyer check',
-                          );
+                          CustomToast.info('Wait for buyer check');
                           return;
                         }
                         if (checkoutState.buyerRiskDisposition == 'blocked') {
@@ -1077,7 +1088,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           );
                           return;
                         }
-                        if (_phoneController.text.trim().length >= 11 &&
+                        if (_hasValidPhone &&
                             checkoutState.buyerRiskDecisionStatus ==
                                 CheckoutResourceStatus.initial) {
                           _scheduleBuyerRiskEvaluation();
@@ -1762,9 +1773,7 @@ class _BuyerLookupInsight extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: risky ? AppColor.alert : AppColor.safe,
-        ),
+        border: Border.all(color: risky ? AppColor.alert : AppColor.safe),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1824,12 +1833,7 @@ class _BuyerLookupInsight extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: operationalActions
-                  .map(
-                    (action) => _CheckoutTag(
-                      label: 'Next',
-                      value: action,
-                    ),
-                  )
+                  .map((action) => _CheckoutTag(label: 'Next', value: action))
                   .toList(growable: false),
             ),
           ],
@@ -1900,10 +1904,7 @@ class _CheckoutHintCard extends StatelessWidget {
 }
 
 class _BuyerRiskDecisionCard extends StatelessWidget {
-  const _BuyerRiskDecisionCard({
-    required this.status,
-    required this.decision,
-  });
+  const _BuyerRiskDecisionCard({required this.status, required this.decision});
 
   final CheckoutResourceStatus status;
   final Map<String, dynamic>? decision;
@@ -1961,10 +1962,11 @@ class _BuyerRiskDecisionCard extends StatelessWidget {
         (resolvedDecision['summary'] as String?)?.trim().isNotEmpty == true
         ? (resolvedDecision['summary'] as String).trim()
         : 'Check buyer before payment.';
-    final reasons = ((resolvedDecision['reasons'] as List?) ?? const <dynamic>[])
-        .map((reason) => reason.toString())
-        .where((reason) => reason.trim().isNotEmpty)
-        .toList(growable: false);
+    final reasons =
+        ((resolvedDecision['reasons'] as List?) ?? const <dynamic>[])
+            .map((reason) => reason.toString())
+            .where((reason) => reason.trim().isNotEmpty)
+            .toList(growable: false);
     final toneColor = disposition == 'blocked'
         ? AppColor.alert
         : disposition == 'review'
@@ -2052,7 +2054,7 @@ class _BuyerRiskDecisionCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-                children: reasons
+              children: reasons
                   .take(3)
                   .map(
                     (reason) => _CheckoutTag(
@@ -2069,12 +2071,7 @@ class _BuyerRiskDecisionCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: actions
-                  .map(
-                    (action) => _CheckoutTag(
-                      label: 'Next',
-                      value: action,
-                    ),
-                  )
+                  .map((action) => _CheckoutTag(label: 'Next', value: action))
                   .toList(growable: false),
             ),
           ],
@@ -2113,9 +2110,9 @@ class _CheckoutSummaryCard extends StatelessWidget {
           Text(
             'Start order',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -2123,9 +2120,9 @@ class _CheckoutSummaryCard extends StatelessWidget {
                 ? 'Buyer first, then split'
                 : 'Buyer first, then price and lane',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -2133,7 +2130,7 @@ class _CheckoutSummaryCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               _CheckoutTag(label: 'Items', value: '$itemCount'),
-              _CheckoutTag(label: 'Suppliers', value: '$supplierCount'),
+              _CheckoutTag(label: 'Supply sources', value: '$supplierCount'),
               _CheckoutTag(
                 label: 'Base',
                 value: '৳ ${convertToBengaliNumber(payableAmount)}',
@@ -2292,8 +2289,7 @@ class _CheckoutDeliveryConfidenceCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            area.recommendedAction ??
-                'Check landmark and ETA before order',
+            area.recommendedAction ?? 'Check landmark and ETA before order',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColor.neutral2,
               fontWeight: FontWeight.w600,
@@ -2450,17 +2446,17 @@ class _CheckoutTag extends StatelessWidget {
       child: RichText(
         text: TextSpan(
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColor.neutral2,
-                fontWeight: FontWeight.w700,
-              ),
+            color: AppColor.neutral2,
+            fontWeight: FontWeight.w700,
+          ),
           children: [
             TextSpan(text: '$label: '),
             TextSpan(
               text: value,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColor.text,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: AppColor.text,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),

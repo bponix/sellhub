@@ -5,10 +5,7 @@ import 'package:sellhub/core/utils/app_router.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
 
 class AppDrawerFull extends StatelessWidget {
-  const AppDrawerFull({
-    super.key,
-    required this.onOpenCategories,
-  });
+  const AppDrawerFull({super.key, required this.onOpenCategories});
 
   final VoidCallback onOpenCategories;
 

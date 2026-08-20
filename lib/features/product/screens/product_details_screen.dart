@@ -685,10 +685,11 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                                 : 'Base unavailable',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: AppColor.text,
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  color: AppColor.text,
+                                  fontWeight: FontWeight.w800,
+                                ),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -698,9 +699,7 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                             vertical: 7,
                           ),
                           decoration: BoxDecoration(
-                            color: isCart
-                                ? Colors.white
-                                : AppColor.primarySoft,
+                            color: isCart ? Colors.white : AppColor.primarySoft,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -819,10 +818,11 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
                                 if (isCart) {
                                   CustomToast.info('Already in selling list');
                                 } else {
-                                  final sellPrice = await showResellerPriceSheet(
-                                    context,
-                                    product: common,
-                                  );
+                                  final sellPrice =
+                                      await showResellerPriceSheet(
+                                        context,
+                                        product: common,
+                                      );
                                   if (sellPrice == null || !context.mounted) {
                                     return;
                                   }
@@ -956,10 +956,7 @@ class _ProductDetailsViewState extends State<_ProductDetailsView> {
 }
 
 class _SellerSignalChip extends StatelessWidget {
-  const _SellerSignalChip({
-    required this.icon,
-    required this.label,
-  });
+  const _SellerSignalChip({required this.icon, required this.label});
 
   final List<List<dynamic>> icon;
   final String label;
@@ -1026,7 +1023,6 @@ class _ProductShareAction extends StatelessWidget {
     );
   }
 }
-
 
 class _ProductDetailsSkeleton extends StatelessWidget {
   const _ProductDetailsSkeleton();

@@ -24,7 +24,7 @@ class LocalEntityRecord {
 
 class LocalEntityDatabase {
   static const _databaseName = 'sellhub_local_graphql_v2.db';
-  static const _databaseVersion = 2;
+  static const _databaseVersion = 7;
   static const _tableName = 'entities';
 
   Database? _database;
@@ -213,8 +213,59 @@ class LocalEntityDatabase {
           await _createSchema(db);
         },
         onUpgrade: (db, oldVersion, newVersion) async {
-          await db.execute('DROP TABLE IF EXISTS $_tableName');
-          await _createSchema(db);
+          if (oldVersion < 2) {
+            await db.execute('DROP TABLE IF EXISTS $_tableName');
+            await _createSchema(db);
+          }
+          if (oldVersion < 3) {
+            await db.delete(
+              _tableName,
+              where: 'collection IN (?, ?, ?)',
+              whereArgs: const <Object?>[
+                'commerce_payout_batches',
+                'commerce_payout_adjustments',
+                'commerce_payout_disputes',
+              ],
+            );
+          }
+          if (oldVersion < 4) {
+            await db.delete(
+              _tableName,
+              where: 'collection IN (?, ?)',
+              whereArgs: const <Object?>[
+                'commerce_users',
+                'commerce_auth_meta',
+              ],
+            );
+          }
+          if (oldVersion < 5) {
+            await db.delete(
+              _tableName,
+              where: 'collection IN (?, ?)',
+              whereArgs: const <Object?>[
+                'commerce_payment_methods',
+                'commerce_delivery_places',
+              ],
+            );
+          }
+          if (oldVersion < 6) {
+            await db.delete(
+              _tableName,
+              where: 'collection = ?',
+              whereArgs: const <Object?>['commerce_pricing_memory'],
+            );
+          }
+          if (oldVersion < 7) {
+            await db.delete(
+              _tableName,
+              where: 'collection IN (?, ?, ?)',
+              whereArgs: const <Object?>[
+                'commerce_customers',
+                'commerce_orders',
+                'commerce_reviews',
+              ],
+            );
+          }
         },
       ),
     );

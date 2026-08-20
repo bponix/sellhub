@@ -33,8 +33,7 @@ class SupplierTrustSeedFactory {
 
     final score = 58 + (hash % 38);
     final fulfillment = 85 + ((hash >> 3) % 14);
-    final averageDeliveryDays =
-        1.2 + (((hash >> 5) % 22) / 10.0);
+    final averageDeliveryDays = 1.2 + (((hash >> 5) % 22) / 10.0);
     final returnRate = 1 + ((hash >> 7) % 8);
     final shippedOrders30d = 36 + ((hash >> 9) % 540);
     final minimumIssueRate = 1 + ((hash >> 11) % 5);

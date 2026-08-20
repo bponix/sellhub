@@ -288,11 +288,11 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
                     color: AppColor.safe1,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                    child: Text(
-                      buyerShareText,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w600,
+                  child: Text(
+                    buyerShareText,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColor.text,
+                      fontWeight: FontWeight.w600,
                       height: 1.5,
                     ),
                   ),
@@ -421,9 +421,7 @@ class _QuoteTrustStrip extends StatelessWidget {
       children: [
         const _MetaPill(label: 'Cash on delivery'),
         _MetaPill(label: quote.deliveryEstimate),
-        _MetaPill(
-          label: 'Clear total ৳${convertToBengaliNumber(quote.total)}',
-        ),
+        _MetaPill(label: 'Clear total ৳${convertToBengaliNumber(quote.total)}'),
       ],
     );
   }
@@ -661,7 +659,9 @@ List<_QuoteShareVariant> _buildQuoteShareVariants({
   final banglaLead = productTitles.isEmpty
       ? 'আপনার জন্য অফার প্রস্তুত আছে।'
       : '$productTitles নিয়ে আপনার জন্য অফার প্রস্তুত আছে।';
-  final buyerName = quote.buyerName.trim().isEmpty ? 'buyer' : quote.buyerName.trim();
+  final buyerName = quote.buyerName.trim().isEmpty
+      ? 'buyer'
+      : quote.buyerName.trim();
   final generic = _buildBuyerShareText(storeName: storeName, quote: quote);
   final trustLine =
       'Buyer total: ৳${convertToBengaliNumber(quote.total)} • ${quote.deliveryEstimate} • Cash on delivery';

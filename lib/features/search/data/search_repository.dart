@@ -1,13 +1,17 @@
-import 'package:sellhub/core/local_seed/sellhub_catalog_local_store.dart';
+import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:sellhub/features/product/data/models/product_res_common.dart';
 import 'package:sellhub/features/search/data/models/search_product_res.dart';
+import 'package:sellhub/features/search/query/fetchProductBySearch.dart';
 
 class SearchRepository {
-  final SellHubCatalogLocalStore _catalogStore;
-  SearchRepository(Object? client, this._catalogStore);
+  final GraphQLClient _client;
+  SearchRepository(this._client);
 
   Future<List<SearchProductRes>> searchProduct(String query, int siteId) async {
-    return _catalogStore.searchProducts(query, siteId);
+    final rows = await _search(query: query, siteId: siteId, first: 12);
+    return rows
+        .map((row) => SearchProductRes.fromJson(row))
+        .toList(growable: false);
   }
 
   Future<List<ProductResCommon>> fetchSearchProductDetails(
@@ -15,10 +19,41 @@ class SearchRepository {
     int first,
     String search,
   ) async {
-    final products = await _catalogStore.loadProducts(
-      siteId: siteId,
-      search: search,
+    final rows = await _search(query: search, siteId: siteId, first: first);
+    return rows.map(ProductResCommon.fromJson).toList(growable: false);
+  }
+
+  Future<List<Map<String, dynamic>>> _search({
+    required String query,
+    required int siteId,
+    required int first,
+  }) async {
+    final normalized = query.trim();
+    if (normalized.isEmpty) return const <Map<String, dynamic>>[];
+    final result = await _client.query(
+      QueryOptions(
+        document: gql(FETCHPRODUCTDETAILSBYSEARCH),
+        variables: <String, dynamic>{
+          'siteId': <int>[siteId],
+          'search': normalized,
+          'isPrivate': false,
+          'isReseller': true,
+          'isBasePrice': true,
+          'first': first,
+          'offset': 0,
+          'after': null,
+        },
+        fetchPolicy: FetchPolicy.networkOnly,
+      ),
     );
-    return products.take(first).toList(growable: false);
+    if (result.hasException) throw result.exception!;
+    final edges = result.data?['storeProducts']?['edges'];
+    if (edges is! List) return const <Map<String, dynamic>>[];
+    return edges
+        .whereType<Map>()
+        .map((edge) => edge['node'])
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
   }
 }

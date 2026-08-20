@@ -241,7 +241,9 @@ class _SubCategoryProductsScreenState extends State<SubCategoryProductsScreen> {
                         activeFilter: categoriesState.queryType,
                         catalogLabel: widget.brandId != null
                             ? 'Brand catalog'
-                            : (widget.seeAll ? 'Whole category' : 'Subcategory'),
+                            : (widget.seeAll
+                                  ? 'Whole category'
+                                  : 'Subcategory'),
                       ),
                     ),
                   ),
@@ -294,11 +296,15 @@ class _SubCategoryProductsScreenState extends State<SubCategoryProductsScreen> {
                                 ),
                                 _CatalogChip(
                                   icon: HugeIcons.strokeRoundedFilterHorizontal,
-                                  label: _filterLabel(categoriesState.queryType),
+                                  label: _filterLabel(
+                                    categoriesState.queryType,
+                                  ),
                                 ),
                                 _CatalogChip(
                                   icon: HugeIcons.strokeRoundedAiIdea,
-                                  label: _viabilityFilterLabel(_viabilityFilter),
+                                  label: _viabilityFilterLabel(
+                                    _viabilityFilter,
+                                  ),
                                 ),
                                 _CatalogChip(
                                   icon: HugeIcons
@@ -390,10 +396,8 @@ class _SubCategoryProductsScreenState extends State<SubCategoryProductsScreen> {
     final selected = await showModalBottomSheet<_ViabilitySelection>(
       context: context,
       backgroundColor: Colors.white,
-      builder: (context) => _ViabilityPickerSheet(
-        filter: _viabilityFilter,
-        sort: _viabilitySort,
-      ),
+      builder: (context) =>
+          _ViabilityPickerSheet(filter: _viabilityFilter, sort: _viabilitySort),
     );
     if (selected == null || !mounted) return;
     setState(() {
@@ -471,9 +475,9 @@ class _ViabilityPickerSheetState extends State<_ViabilityPickerSheet> {
           children: [
             Text(
               'Product viability',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -494,10 +498,8 @@ class _ViabilityPickerSheetState extends State<_ViabilityPickerSheet> {
               initialValue: _sort,
               items: ProductViabilitySort.values
                   .map(
-                    (sort) => DropdownMenuItem(
-                      value: sort,
-                      child: Text(sort.name),
-                    ),
+                    (sort) =>
+                        DropdownMenuItem(value: sort, child: Text(sort.name)),
                   )
                   .toList(growable: false),
               onChanged: (value) {
@@ -559,10 +561,7 @@ class _CatalogHero extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFF6FADD),
-                  Color(0xFFE8F2C9),
-                ],
+                colors: [Color(0xFFF6FADD), Color(0xFFE8F2C9)],
               ),
               borderRadius: BorderRadius.circular(18),
             ),
@@ -650,10 +649,7 @@ class _CatalogHero extends StatelessWidget {
 }
 
 class _CatalogIntentCard extends StatelessWidget {
-  const _CatalogIntentCard({
-    required this.lens,
-    required this.onSelectLens,
-  });
+  const _CatalogIntentCard({required this.lens, required this.onSelectLens});
 
   final String lens;
   final ValueChanged<String> onSelectLens;
@@ -748,10 +744,7 @@ class _CatalogIntentCard extends StatelessWidget {
 }
 
 class _CatalogChip extends StatelessWidget {
-  const _CatalogChip({
-    required this.icon,
-    required this.label,
-  });
+  const _CatalogChip({required this.icon, required this.label});
 
   final List<List<dynamic>> icon;
   final String label;
@@ -824,10 +817,7 @@ class _CatalogActionChip extends StatelessWidget {
 }
 
 class _CatalogStateCard extends StatelessWidget {
-  const _CatalogStateCard({
-    required this.icon,
-    required this.title,
-  });
+  const _CatalogStateCard({required this.icon, required this.title});
 
   final List<List<dynamic>> icon;
   final String title;
@@ -853,9 +843,9 @@ class _CatalogStateCard extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
             ],
           ),

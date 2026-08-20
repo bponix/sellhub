@@ -8,6 +8,7 @@ import 'package:sellhub/core/constants/app_color.dart';
 import 'package:sellhub/core/local/local_storage.dart';
 import 'package:sellhub/core/pricing/smart_pricing.dart';
 import 'package:sellhub/core/store/store_scope.dart';
+import 'package:sellhub/core/store/store_registry.dart';
 import 'package:sellhub/core/utils/convertBengaliNumber.dart';
 import 'package:sellhub/core/utils/custom_toast.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
@@ -335,7 +336,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
 
     final blocked = buyer.isBlocked;
-    final risky = blocked ||
+    final risky =
+        blocked ||
         buyer.isRisky ||
         buyer.unpaidOrders > 0 ||
         buyer.returnCount > 0;
@@ -389,11 +391,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final confidenceScore = area.confidenceScore ?? 0;
     final codLabel = (area.codSupportLabel ?? '').toLowerCase();
     final isCod = (gate?.title ?? '').toLowerCase().contains('cod');
-    final blocked = isCod &&
+    final blocked =
+        isCod &&
         (confidenceScore > 0 && confidenceScore < 40 ||
             codLabel.contains('avoid') ||
             codLabel.contains('not'));
-    final risky = blocked ||
+    final risky =
+        blocked ||
         (confidenceScore > 0 && confidenceScore < 60) ||
         ((area.zoneLabel ?? '').toLowerCase().contains('risky')) ||
         ((area.confidenceLabel ?? '').toLowerCase().contains('watch'));
@@ -459,10 +463,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         .map(
           (entry) => _SupplierOrderGroup(
             siteId: entry.key,
-            supplierLabel:
-                grouped.length == 1
-                    ? 'Supplier order'
-                    : 'Supplier ${entry.key}',
+            supplierLabel: grouped.length == 1
+                ? 'Supplier order'
+                : 'Supplier ${entry.key}',
             lines: entry.value,
           ),
         )
@@ -482,11 +485,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final groupProducts = group.lines
         .map(
           (line) => ProductOrderCreate(
-            cost: 0,
+            cost: line.basePrice,
             id: line.id,
-            price: line.sellPrice,
+            price: line.basePrice,
             quantity: line.quantity,
-            resellPrice: line.basePrice,
+            resellPrice: line.sellPrice,
             thumbnail: line.thumbnail,
             title: line.title,
             variant: '',
@@ -503,8 +506,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       0,
       (sum, line) => sum + line.lineBaseTotal,
     );
-    final profitAmount = orderSubtotal - resellerBaseTotal;
     final finalSubtotal = max(0, orderSubtotal - voucherDiscount).toInt();
+    final profitAmount = max(0, finalSubtotal - resellerBaseTotal).toInt();
     final finalTotal =
         finalSubtotal + (selectedArea.chargeMerchantDefined ?? 0).toInt();
 
@@ -516,8 +519,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       browser: null,
       cashbackBalance: 0,
       charge: 0,
-      cost: 0,
-      currency: 'BDT',
+      cost: resellerBaseTotal,
+      currency: StoreRegistry.currentStore?.market.currencyCode ?? 'BDT',
       customerAddress: widget.address,
       customerId: customerId > 0 ? customerId : null,
       customerName: widget.name,
@@ -540,7 +543,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       logisticsStoppageId: null,
       logisticsText: (selectedArea.title ?? '').trim(),
       longitude: 90.4125181,
-      netAmount: finalSubtotal,
+      netAmount: finalTotal,
       otp: otp,
       paid: 0,
       parentSiteId: null,
@@ -548,7 +551,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       products: groupProducts,
       profit: profitAmount,
       referCode: '6',
-      resellAmount: resellerBaseTotal,
+      resellAmount: finalSubtotal,
       resellerAdvanceCollect: 0,
       resellerCommission: profitAmount,
       rewardPoints: 0,
@@ -563,6 +566,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       vat: 0,
       vatAmount: 0,
       weight: 0,
+      idempotencyKey:
+          'sellhub-order:${group.siteId}:$customerId:$otp:${groupProducts.map((item) => item.id).join('-')}',
     );
   }
 
@@ -700,8 +705,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
             builder: (context, cartState) {
               final draftLines = _draftLines(cartState);
               final supplierCount = _supplierCount(cartState);
-              final deliveryChargePerSupplier =
-                  checkoutState.deliveryCharge.toInt();
+              final deliveryChargePerSupplier = checkoutState.deliveryCharge
+                  .toInt();
               final totalDeliveryCharge =
                   deliveryChargePerSupplier * supplierCount;
               final payAmount = draftLines.fold<int>(
@@ -722,16 +727,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       checkoutState.paySelect >= 0 &&
                       checkoutState.paySelect <
                           checkoutState.paymentMethod.length
-                  ? (checkoutState.paymentMethod[checkoutState.paySelect].title ??
+                  ? (checkoutState
+                            .paymentMethod[checkoutState.paySelect]
+                            .title ??
                         '')
                   : '';
               final supplierGroups = _groupLinesBySupplier(
                 cartState,
                 draftLines
                     .map(
-                      (line) => line.copyWith(
-                        sellPrice: _resolvedSellPrice(line),
-                      ),
+                      (line) =>
+                          line.copyWith(sellPrice: _resolvedSellPrice(line)),
                     )
                     .toList(growable: false),
               );
@@ -880,14 +886,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                   const SizedBox(height: 12),
                                   Builder(
                                     builder: (context) {
-                                      final selectedArea = checkoutState
-                                          .deliveryPlace[checkoutState.areaSelect];
+                                      final selectedArea =
+                                          checkoutState
+                                              .deliveryPlace[checkoutState
+                                              .areaSelect];
                                       final selectedGate =
-                                          checkoutState.paymentMethod.isNotEmpty &&
+                                          checkoutState
+                                                  .paymentMethod
+                                                  .isNotEmpty &&
                                               checkoutState.paySelect >= 0 &&
                                               checkoutState.paySelect <
-                                                  checkoutState.paymentMethod.length
-                                          ? checkoutState.paymentMethod[checkoutState.paySelect]
+                                                  checkoutState
+                                                      .paymentMethod
+                                                      .length
+                                          ? checkoutState
+                                                .paymentMethod[checkoutState
+                                                .paySelect]
                                           : null;
                                       final deliverySnapshot =
                                           _deliveryLaneSnapshot(
@@ -1251,24 +1265,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                     color: AppColor.safe1,
                                   ),
                                   child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        supplierCount > 1
-                                            ? 'Split order mode: each supplier gets its own order and delivery tracking.'
-                                            : checkoutState.paymentMethod
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          supplierCount > 1
+                                              ? 'Split order mode: each supplier gets its own order and delivery tracking.'
+                                              : checkoutState.paymentMethod
                                                     .where(
                                                       (method) =>
                                                           (method.title ?? '')
                                                               .toLowerCase()
-                                                              .contains('cash') ||
+                                                              .contains(
+                                                                'cash',
+                                                              ) ||
                                                           (method.title ?? '')
                                                               .toLowerCase()
                                                               .contains('cod'),
                                                     )
                                                     .isNotEmpty
-                                            ? 'COD-friendly order. Confirm buyer phone and area before dispatch.'
-                                            : 'Advance or gateway payment may be safer for this order.',
+                                              ? 'COD-friendly order. Confirm buyer phone and area before dispatch.'
+                                              : 'Advance or gateway payment may be safer for this order.',
                                           style: const TextStyle(
                                             color: AppColor.primary,
                                             fontWeight: FontWeight.w700,
@@ -1406,6 +1422,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final selectedArea =
           checkoutState.deliveryPlace[checkoutState.areaSelect];
       final selectedGate = checkoutState.paymentMethod[checkoutState.paySelect];
+      if ((selectedGate.title ?? '').toLowerCase().contains('cod') &&
+          !(StoreRegistry.currentStore?.market.cashOnDeliveryEnabled ?? true)) {
+        CustomToast.error(
+          'Cash on delivery is disabled for this SellHub channel.',
+        );
+        return;
+      }
       final deliverySnapshot = _deliveryLaneSnapshot(
         area: selectedArea,
         gate: selectedGate,
@@ -1446,13 +1469,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
           activeSourceId: activeSourceId,
           activeDomain: activeDomain,
         );
-        if ((quoteId ?? '').isNotEmpty) {
+        if ((quoteId ?? '').isNotEmpty &&
+            orders.length == 1 &&
+            userId != null) {
           await checkoutCubit.markQuoteConverted(
             quoteId: quoteId!,
-            orderId: orders
-                .map((order) => order.orderId ?? '')
-                .where((value) => value.isNotEmpty)
-                .join(', '),
+            orderId: '${orders.single.id ?? 0}',
+            userId: userId,
+            siteId: activeSiteId,
           );
         }
         if (!context.mounted) return;
@@ -1477,13 +1501,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
           activeSourceId: activeSourceId,
           activeDomain: activeDomain,
         );
-        if ((quoteId ?? '').isNotEmpty) {
+        if ((quoteId ?? '').isNotEmpty &&
+            orders.length == 1 &&
+            userId != null) {
           await checkoutCubit.markQuoteConverted(
             quoteId: quoteId!,
-            orderId: orders
-                .map((order) => order.orderId ?? '')
-                .where((value) => value.isNotEmpty)
-                .join(', '),
+            orderId: '${orders.single.id ?? 0}',
+            userId: userId,
+            siteId: activeSiteId,
           );
         }
         if (!context.mounted) return;
@@ -1500,7 +1525,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           gatewayId: selectedGate.id,
           amount: finalTotal,
           cancelUrl: _normalizeGatewayUrl('$activeDomain/payment-cancel'),
-          currency: 'BDT',
+          currency: StoreRegistry.currentStore?.market.currencyCode ?? 'BDT',
           customerName: widget.name,
           emiDuration: 0,
           emiInterest: 0,
@@ -1556,13 +1581,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
           activeSourceId: activeSourceId,
           activeDomain: activeDomain,
         );
-        if ((quoteId ?? '').isNotEmpty) {
+        if ((quoteId ?? '').isNotEmpty &&
+            orders.length == 1 &&
+            userId != null) {
           await checkoutCubit.markQuoteConverted(
             quoteId: quoteId!,
-            orderId: orders
-                .map((order) => order.orderId ?? '')
-                .where((value) => value.isNotEmpty)
-                .join(', '),
+            orderId: '${orders.single.id ?? 0}',
+            userId: userId,
+            siteId: activeSiteId,
           );
         }
         if (!context.mounted) return;
@@ -1968,8 +1994,7 @@ class _DeliveryConfidenceCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            area.recommendedAction ??
-                'Check landmark and phone before order.',
+            area.recommendedAction ?? 'Check landmark and phone before order.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColor.neutral2,
               fontWeight: FontWeight.w600,
@@ -1980,10 +2005,7 @@ class _DeliveryConfidenceCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _DecisionFactPill(
-                label: area.zoneLabel ?? 'Zone',
-                risky: risky,
-              ),
+              _DecisionFactPill(label: area.zoneLabel ?? 'Zone', risky: risky),
               _DecisionFactPill(
                 label: area.confidenceLabel ?? 'Manual check',
                 risky: risky,
@@ -2406,10 +2428,8 @@ class _PaymentDeliveryDecisionCard extends StatelessWidget {
               runSpacing: 8,
               children: snapshot.facts
                   .map(
-                    (fact) => _DecisionFactPill(
-                      label: fact,
-                      risky: snapshot.risky,
-                    ),
+                    (fact) =>
+                        _DecisionFactPill(label: fact, risky: snapshot.risky),
                   )
                   .toList(growable: false),
             ),
@@ -2421,10 +2441,8 @@ class _PaymentDeliveryDecisionCard extends StatelessWidget {
               runSpacing: 8,
               children: snapshot.actions
                   .map(
-                    (action) => _DecisionFactPill(
-                      label: action,
-                      risky: snapshot.risky,
-                    ),
+                    (action) =>
+                        _DecisionFactPill(label: action, risky: snapshot.risky),
                   )
                   .toList(growable: false),
             ),
@@ -2466,19 +2484,17 @@ class _PaymentOverviewCard extends StatelessWidget {
           Text(
             'Confirm the math',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
-            supplierCount > 1
-                ? 'Split by supplier'
-                : 'Single supplier order',
+            supplierCount > 1 ? 'Split by supplier' : 'Single supplier order',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -2526,17 +2542,17 @@ class _PaymentInfoPill extends StatelessWidget {
       child: RichText(
         text: TextSpan(
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColor.neutral2,
-                fontWeight: FontWeight.w700,
-              ),
+            color: AppColor.neutral2,
+            fontWeight: FontWeight.w700,
+          ),
           children: [
             TextSpan(text: '$label: '),
             TextSpan(
               text: value,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColor.text,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: AppColor.text,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),
@@ -2599,7 +2615,9 @@ class _PaymentRouteCard extends StatelessWidget {
       if (deliveryLabel.trim().isNotEmpty) 'Area: ${deliveryLabel.trim()}',
       if (paymentLabel.trim().isNotEmpty) 'Payment: ${paymentLabel.trim()}',
       if (voucherCode.trim().isNotEmpty) 'Voucher: ${voucherCode.trim()}',
-      supplierCount > 1 ? 'Split: $supplierCount supplier orders' : 'Route: Direct order',
+      supplierCount > 1
+          ? 'Split: $supplierCount supplier orders'
+          : 'Route: Direct order',
     ];
     return Container(
       width: double.infinity,
@@ -2712,10 +2730,7 @@ class _SupplierSplitPreviewCard extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _PaymentInfoPill(
-                          label: 'Items',
-                          value: '$itemCount',
-                        ),
+                        _PaymentInfoPill(label: 'Items', value: '$itemCount'),
                         _PaymentInfoPill(
                           label: 'Sell',
                           value: '৳${convertToBengaliNumber(buyerSubtotal)}',

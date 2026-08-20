@@ -39,8 +39,7 @@ class categoryTextSeeAll extends StatelessWidget {
             ),
           ),
         ),
-        if (onTap != null)
-          const SizedBox(width: 8),
+        if (onTap != null) const SizedBox(width: 8),
         if (onTap != null)
           InkWell(
             onTap: onTap,

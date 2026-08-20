@@ -52,8 +52,10 @@ class ProfileCubit extends SafeCubit<ProfileState> {
           isAuthenticated: true,
           profile: profile,
           selfStoreCustomerRes: customer,
-          shippingAddresses: customer?.shippingAddress ?? const <StoreCustomerAddressModel>[],
-          billingAddresses: customer?.billingAddress ?? const <StoreCustomerAddressModel>[],
+          shippingAddresses:
+              customer?.shippingAddress ?? const <StoreCustomerAddressModel>[],
+          billingAddresses:
+              customer?.billingAddress ?? const <StoreCustomerAddressModel>[],
           clearError: true,
         ),
       );
@@ -133,8 +135,10 @@ class ProfileCubit extends SafeCubit<ProfileState> {
     emit(
       state.copyWith(
         selfStoreCustomerRes: data,
-        shippingAddresses: data?.shippingAddress ?? const <StoreCustomerAddressModel>[],
-        billingAddresses: data?.billingAddress ?? const <StoreCustomerAddressModel>[],
+        shippingAddresses:
+            data?.shippingAddress ?? const <StoreCustomerAddressModel>[],
+        billingAddresses:
+            data?.billingAddress ?? const <StoreCustomerAddressModel>[],
       ),
     );
   }
@@ -149,7 +153,10 @@ class ProfileCubit extends SafeCubit<ProfileState> {
     required int siteId,
     required StoreCustomerAddressModel address,
   }) async {
-    final customerId = state.selfStoreCustomerRes?.id ?? await LocalStorage.getCustomerID() ?? 0;
+    final customerId =
+        state.selfStoreCustomerRes?.id ??
+        await LocalStorage.getCustomerID() ??
+        0;
     if (customerId <= 0) return false;
     emit(state.copyWith(addressActionInFlight: true, clearError: true));
     try {
@@ -180,7 +187,10 @@ class ProfileCubit extends SafeCubit<ProfileState> {
     required int siteId,
     required StoreCustomerAddressModel address,
   }) async {
-    final customerId = state.selfStoreCustomerRes?.id ?? await LocalStorage.getCustomerID() ?? 0;
+    final customerId =
+        state.selfStoreCustomerRes?.id ??
+        await LocalStorage.getCustomerID() ??
+        0;
     if (customerId <= 0) return false;
     emit(state.copyWith(addressActionInFlight: true, clearError: true));
     try {
@@ -211,7 +221,10 @@ class ProfileCubit extends SafeCubit<ProfileState> {
     required int siteId,
     required StoreCustomerAddressModel address,
   }) async {
-    final customerId = state.selfStoreCustomerRes?.id ?? await LocalStorage.getCustomerID() ?? 0;
+    final customerId =
+        state.selfStoreCustomerRes?.id ??
+        await LocalStorage.getCustomerID() ??
+        0;
     if (customerId <= 0) return false;
     emit(state.copyWith(addressActionInFlight: true, clearError: true));
     try {
@@ -242,7 +255,10 @@ class ProfileCubit extends SafeCubit<ProfileState> {
     required int siteId,
     required StoreCustomerAddressModel address,
   }) async {
-    final customerId = state.selfStoreCustomerRes?.id ?? await LocalStorage.getCustomerID() ?? 0;
+    final customerId =
+        state.selfStoreCustomerRes?.id ??
+        await LocalStorage.getCustomerID() ??
+        0;
     if (customerId <= 0) return false;
     emit(state.copyWith(addressActionInFlight: true, clearError: true));
     try {

@@ -18,6 +18,9 @@ import 'package:sellhub/features/orders/data/orders_repository.dart';
 import 'package:sellhub/features/orders/presentation/cubit/orders_cubit.dart';
 import 'package:sellhub/features/orders/presentation/cubit/orders_state.dart';
 import 'package:sellhub/features/profile/data/model/order_res_model.dart';
+import 'package:sellhub/features/profile/data/model/reseller_profit_proof.dart';
+import 'package:sellhub/features/profile/data/model/reseller_payout_evidence.dart';
+import 'package:sellhub/features/profile/data/profile_repository.dart';
 import 'package:sellhub/core/local/local_storage.dart';
 import 'package:sellhub/features/storefront/presentation/cubit/storefront_cubit.dart';
 import 'package:sellhub/injection_container.dart' as di;
@@ -40,6 +43,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   late Future<List<OrderEventModel>> _eventsFuture;
   late Future<SupplierTrustProfile?> _supplierTrustFuture;
   late Future<OrderIssueReport?> _issueReportFuture;
+  late Future<ResellerProfitProof?> _profitProofFuture;
+  late Future<ResellerPayoutEvidence?> _payoutEvidenceFuture;
 
   @override
   void initState() {
@@ -50,6 +55,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
     _supplierTrustFuture = _loadSupplierTrust();
     _issueReportFuture = _loadIssueReport();
+    _profitProofFuture = _loadProfitProof();
+    _payoutEvidenceFuture = _loadPayoutEvidence();
   }
 
   Future<void> _reload() async {
@@ -60,6 +67,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       );
       _supplierTrustFuture = _loadSupplierTrust();
       _issueReportFuture = _loadIssueReport();
+      _profitProofFuture = _loadProfitProof();
+      _payoutEvidenceFuture = _loadPayoutEvidence();
     });
     await _eventsFuture;
   }
@@ -77,6 +86,26 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     return LocalStorage.getLatestOrderIssueReport(
       siteId: widget.siteId,
       orderId: widget.order.orderId ?? '',
+    );
+  }
+
+  Future<ResellerProfitProof?> _loadProfitProof() {
+    final orderId = widget.order.id ?? 0;
+    if (orderId <= 0) return Future.value(null);
+    return di.sl<ProfileRepository>().fetchProfitProof(
+      siteId: widget.siteId,
+      orderId: orderId,
+    );
+  }
+
+  Future<ResellerPayoutEvidence?> _loadPayoutEvidence() async {
+    final orderId = widget.order.id ?? 0;
+    final userId = await LocalStorage.getUserID() ?? 0;
+    if (orderId <= 0 || userId <= 0) return null;
+    return di.sl<ProfileRepository>().fetchPayoutEvidence(
+      userId: userId,
+      siteId: widget.siteId,
+      orderId: orderId,
     );
   }
 
@@ -298,6 +327,24 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           children: [
             _OrderHero(order: widget.order),
             const SizedBox(height: 16),
+            FutureBuilder<ResellerProfitProof?>(
+              future: _profitProofFuture,
+              builder: (context, snapshot) => _ProfitProofCard(
+                proof: snapshot.data,
+                loading: snapshot.connectionState == ConnectionState.waiting,
+                failed: snapshot.hasError,
+              ),
+            ),
+            const SizedBox(height: 12),
+            FutureBuilder<ResellerPayoutEvidence?>(
+              future: _payoutEvidenceFuture,
+              builder: (context, snapshot) => _PayoutEvidenceCard(
+                evidence: snapshot.data,
+                loading: snapshot.connectionState == ConnectionState.waiting,
+                failed: snapshot.hasError,
+              ),
+            ),
+            const SizedBox(height: 16),
             BlocBuilder<OrdersCubit, OrdersState>(
               builder: (context, state) {
                 final isBusy =
@@ -335,22 +382,12 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 if (profile == null) {
                   return const SizedBox.shrink();
                 }
-                final supplierName = context
-                    .read<StorefrontCubit>()
-                    .state
-                    .siteDetails
-                    ?.title
-                    ?.trim();
                 return Column(
                   children: [
                     _OrderSupplierExecutionCard(
                       order: widget.order,
                       profile: profile,
-                      supplierName: (supplierName?.isNotEmpty ?? false)
-                          ? supplierName!
-                          : (profile.supplierName?.trim().isNotEmpty ?? false)
-                          ? profile.supplierName!.trim()
-                          : 'Active supplier',
+                      supplierName: 'Anonymous fulfillment source',
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -691,6 +728,335 @@ class _OrderActionChip extends StatelessWidget {
   }
 }
 
+class _ProfitProofCard extends StatelessWidget {
+  const _ProfitProofCard({
+    required this.proof,
+    required this.loading,
+    required this.failed,
+  });
+
+  final ResellerProfitProof? proof;
+  final bool loading;
+  final bool failed;
+
+  static const Map<String, String> _statusLabels = <String, String>{
+    'paid': 'Profit paid',
+    'withdrawable': 'Profit withdrawable',
+    'pending': 'Profit pending',
+    'reversed': 'Profit reversed',
+    'proof_needed': 'Needs proof',
+    'no_profit': 'No profit',
+    'quote_only': 'Quote only',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final value = proof;
+    final line = value?.lineSummary;
+    final title = loading
+        ? 'Checking Store profit proof'
+        : failed || value == null
+        ? 'Profit proof unavailable'
+        : _statusLabels[value.proofStatus] ?? value.proofStatus;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: failed ? AppColor.warning : AppColor.safe),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: failed ? AppColor.warningLight : AppColor.safe1,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: AppHugeIcon(
+                  failed
+                      ? HugeIcons.strokeRoundedAlert02
+                      : HugeIcons.strokeRoundedMoneyBag02,
+                  size: 20,
+                  color: failed ? AppColor.warning : AppColor.primary,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'RESELLER PROFIT PROOF',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (loading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            failed || value == null
+                ? 'Do not rely on the displayed order margin until Store proof is available.'
+                : 'Store links buyer price, base cost, anonymous supplier lines, commission, wallet movement, payout, and reversals.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColor.neutral2),
+          ),
+          if (value != null) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ProfitMetric(
+                  label: 'Buyer paid',
+                  value: _currency(
+                    value.orderResellAmount > 0
+                        ? value.orderResellAmount
+                        : line?.buyerTotal,
+                  ),
+                ),
+                _ProfitMetric(
+                  label: 'Base cost',
+                  value: _currency(line?.baseTotal),
+                ),
+                _ProfitMetric(
+                  label: 'Expected',
+                  value: _currency(
+                    line?.expectedProfit ?? value.orderResellerCommission,
+                  ),
+                ),
+                _ProfitMetric(
+                  label: 'Wallet',
+                  value: _currency(value.orderResellerCommission),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${line?.supplierCount ?? 0} anonymous source${(line?.supplierCount ?? 0) == 1 ? '' : 's'} · ${value.proofRows.length} proof row${value.proofRows.length == 1 ? '' : 's'}${value.quoteId == null ? '' : ' · Quote #${value.quoteId} ${value.conversionStatus ?? ''}'}',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColor.neutral2,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (value.buckets.any((bucket) => bucket.amount > 0)) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: value.buckets
+                    .where((bucket) => bucket.amount > 0)
+                    .take(6)
+                    .map(
+                      (bucket) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColor.safe1,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '${bucket.key.replaceAll('_', ' ')} ${_currency(bucket.amount)}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfitMetric extends StatelessWidget {
+  const _ProfitMetric({required this.label, required this.value});
+  final String label;
+  final String value;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 134,
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: AppColor.safe1,
+      borderRadius: BorderRadius.circular(11),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: AppColor.neutral2),
+        ),
+        const SizedBox(height: 3),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w900)),
+      ],
+    ),
+  );
+}
+
+class _PayoutEvidenceCard extends StatelessWidget {
+  const _PayoutEvidenceCard({
+    required this.evidence,
+    required this.loading,
+    required this.failed,
+  });
+
+  final ResellerPayoutEvidence? evidence;
+  final bool loading;
+  final bool failed;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = evidence;
+    final blocked =
+        value != null &&
+        const {'disputed', 'reversed', 'proof_needed'}.contains(value.status);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(
+          color: failed || blocked ? AppColor.warning : AppColor.safe,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              AppHugeIcon(
+                blocked
+                    ? HugeIcons.strokeRoundedAlert02
+                    : HugeIcons.strokeRoundedWallet02,
+                size: 20,
+                color: blocked ? AppColor.warning : AppColor.primary,
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ORDER-TO-WITHDRAWAL EVIDENCE',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      loading
+                          ? 'Checking wallet and payout proof'
+                          : failed || value == null
+                          ? 'Payout evidence unavailable'
+                          : value.status.replaceAll('_', ' '),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ],
+                ),
+              ),
+              if (loading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          if (value != null) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ProfitMetric(
+                  label: 'Expected',
+                  value: _currency(value.expectedProfit),
+                ),
+                _ProfitMetric(
+                  label: 'Wallet credit',
+                  value: _currency(value.walletCreditedAmount),
+                ),
+                _ProfitMetric(
+                  label: 'Allocated',
+                  value: _currency(value.allocatedAmount),
+                ),
+                _ProfitMetric(
+                  label: 'Proof gap',
+                  value: _currency(
+                    value.orderProofGap + value.payoutAllocationGap,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              value.nextAction,
+              style: const TextStyle(
+                color: AppColor.neutral2,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (value.blockers.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ...value.blockers.map(
+                (blocker) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    blocker,
+                    style: const TextStyle(
+                      color: AppColor.warning,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _DetailsSupportSheet extends StatelessWidget {
   const _DetailsSupportSheet({
     required this.order,
@@ -707,14 +1073,14 @@ class _DetailsSupportSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final orderId = order.orderId ?? 'Order';
-    final status = OrdersScreen.statusNames[order.status] ?? 'Pending';
+    final status = _OrderHero._statusNames[order.status] ?? 'Pending';
     final cashState = order.isSettle == true
         ? 'Paid out'
         : (order.status ?? 0) >= 10
-            ? 'Ready for payout'
-            : (order.status ?? 0) >= 4
-                ? 'Clearing now'
-                : 'Delivery lock';
+        ? 'Ready for payout'
+        : (order.status ?? 0) >= 4
+        ? 'Clearing now'
+        : 'Delivery lock';
     final rows = <({String label, String value})>[
       (label: 'Order', value: orderId),
       (label: 'Status', value: status),
@@ -820,10 +1186,7 @@ class _DetailsSupportRow extends StatelessWidget {
 }
 
 class _OrderIssueReportSheet extends StatefulWidget {
-  const _OrderIssueReportSheet({
-    required this.siteId,
-    required this.orderId,
-  });
+  const _OrderIssueReportSheet({required this.siteId, required this.orderId});
 
   final int siteId;
   final String orderId;
@@ -871,12 +1234,12 @@ class _OrderIssueReportSheetState extends State<_OrderIssueReportSheet> {
                 fontWeight: FontWeight.w800,
               ),
             ),
-          const SizedBox(height: 6),
-          Text(
-            'Capture the issue once so follow-up stays consistent.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColor.neutral2,
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 6),
+            Text(
+              'Capture the issue once so follow-up stays consistent.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColor.neutral2,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 14),
@@ -1174,7 +1537,8 @@ class _OrderSupplierExecutionCard extends StatelessWidget {
                 background: trustStyle.softColor,
               ),
               _HeroPill(
-                label: 'Issue floor ${formatTrustPercent(profile.minimumIssueRate)}',
+                label:
+                    'Issue floor ${formatTrustPercent(profile.minimumIssueRate)}',
                 toneColor: (profile.minimumIssueRate ?? 100) <= 3
                     ? AppColor.green
                     : AppColor.warning,

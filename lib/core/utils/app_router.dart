@@ -156,6 +156,7 @@ class AppRouter {
         builder: (context, state) => TeamInviteScreen(
           teamId: state.uri.queryParameters['teamId']?.trim() ?? '',
           memberId: state.uri.queryParameters['memberId']?.trim() ?? '',
+          inviteCode: state.uri.queryParameters['inviteCode']?.trim(),
           ownerUserId:
               int.tryParse(state.uri.queryParameters['ownerUserId'] ?? '') ?? 0,
           siteId: int.tryParse(state.uri.queryParameters['siteId'] ?? '') ?? 0,
@@ -270,12 +271,12 @@ class AppRouter {
     String? mode,
     String? query,
   }) => context.pushNamed(
-        RouteNames.search,
-        queryParameters: <String, dynamic>{
-          if ((mode ?? '').trim().isNotEmpty) 'mode': mode!.trim(),
-          if ((query ?? '').trim().isNotEmpty) 'query': query!.trim(),
-        },
-      );
+    RouteNames.search,
+    queryParameters: <String, dynamic>{
+      if ((mode ?? '').trim().isNotEmpty) 'mode': mode!.trim(),
+      if ((query ?? '').trim().isNotEmpty) 'query': query!.trim(),
+    },
+  );
 
   static void goToStoreReturnTarget(
     BuildContext context, {
@@ -297,9 +298,7 @@ class AppRouter {
     final uri = Uri.tryParse(value);
     if (uri == null) return null;
     final path = uri.path.toLowerCase();
-    const disallowedPaths = <String>{
-      '/${RouteNames.splash}',
-    };
+    const disallowedPaths = <String>{'/${RouteNames.splash}'};
     if (path.isEmpty || disallowedPaths.contains(path)) {
       return null;
     }
@@ -338,7 +337,6 @@ class AppRouter {
     };
     return protectedPaths.contains(path);
   }
-
 }
 
 /*

@@ -10,12 +10,23 @@ class SellHubShareLinkBuilder {
   const SellHubShareLinkBuilder._();
 
   static Uri buildStoreUri({required ActiveStore store, String? referCode}) {
-    return Uri.https('sellhub.bponi.com', '/app', <String, String>{
+    final normalizedReferCode = referCode?.trim();
+    final referralParams =
+        normalizedReferCode != null && normalizedReferCode.isNotEmpty
+        ? <String, String>{
+            'refer': normalizedReferCode,
+            'resellerCode': normalizedReferCode,
+          }
+        : <String, String>{};
+    return Uri.https('reseller.store.bponi.com', '/app', <String, String>{
       'domain': store.domain,
       'siteId': '${store.siteId}',
+      'source': 'reseller',
+      'utm_source': 'sellhub',
+      'utm_medium': 'mobile_share',
       if (_hasValue(store.title)) 'title': store.title!.trim(),
       if (_hasValue(store.logoUrl)) 'logo': store.logoUrl!.trim(),
-      if (_hasValue(referCode)) 'refer': referCode!.trim(),
+      ...referralParams,
     });
   }
 
@@ -23,16 +34,24 @@ class SellHubShareLinkBuilder {
     required ActiveStore store,
     required ProductResCommon product,
     String? referCode,
+    int? sellPrice,
   }) {
+    final basePrice = product.price?.round();
+    final minSellPrice = product.minResellPrice?.round();
+    final maxSellPrice = product.maxResellPrice?.round();
     return buildStoreUri(store: store, referCode: referCode).replace(
       queryParameters: <String, String>{
         ...buildStoreUri(store: store, referCode: referCode).queryParameters,
+        'routeName': RouteNames.home,
         if (_hasValue(product.hid)) 'hid': product.hid!.trim(),
         if (_hasValue(_productTitle(product)))
           'productTitle': _productTitle(product)!,
         if (_hasValue(_productImage(product)))
           'productImage': _productImage(product)!,
-        if ((product.price ?? 0) > 0) 'price': '${product.price!.round()}',
+        if ((basePrice ?? 0) > 0) 'price': '$basePrice',
+        if ((sellPrice ?? 0) > 0) 'sellPrice': '$sellPrice',
+        if ((minSellPrice ?? 0) > 0) 'minSellPrice': '$minSellPrice',
+        if ((maxSellPrice ?? 0) > 0) 'maxSellPrice': '$maxSellPrice',
         if (_hasValue(_firstBrand(product))) 'brand': _firstBrand(product)!,
       },
     );
@@ -144,20 +163,27 @@ class SellHubShareLinkBuilder {
     required ActiveStore store,
     required ProductResCommon product,
     String? referCode,
+    int? sellPrice,
   }) {
     final title = _productTitle(product) ?? 'Product';
     final brand = _firstBrand(product);
-    final price = (product.price ?? 0) > 0
-        ? '৳${product.price!.round()}'
+    final basePrice = product.price?.round();
+    final buyerPrice =
+        sellPrice ?? product.minResellPrice?.round() ?? basePrice;
+    final profit = buyerPrice != null && basePrice != null
+        ? (buyerPrice - basePrice).clamp(0, 1 << 30)
         : null;
+    final price = buyerPrice != null && buyerPrice > 0 ? '৳$buyerPrice' : null;
     final parts = <String>[
       title,
       if (_hasValue(brand)) brand!,
       if (_hasValue(price)) price!,
+      if (profit != null && profit > 0) 'Expected profit: ৳$profit',
       buildProductUri(
         store: store,
         product: product,
         referCode: referCode,
+        sellPrice: sellPrice,
       ).toString(),
     ];
     return parts.join('\n');
@@ -181,6 +207,7 @@ class SellHubShareLinkBuilder {
     required ActiveStore store,
     required String teamId,
     required String memberId,
+    String? inviteCode,
     required int ownerUserId,
     required int siteId,
     required String teamName,
@@ -193,6 +220,7 @@ class SellHubShareLinkBuilder {
         'routeName': RouteNames.teamInvite,
         'teamId': teamId,
         'memberId': memberId,
+        if (_hasValue(inviteCode)) 'inviteCode': inviteCode!.trim(),
         'ownerUserId': '$ownerUserId',
         'siteId': '$siteId',
         'teamName': teamName,
@@ -206,6 +234,7 @@ class SellHubShareLinkBuilder {
     required ActiveStore store,
     required String teamId,
     required String memberId,
+    String? inviteCode,
     required int ownerUserId,
     required int siteId,
     required String teamName,
@@ -216,6 +245,7 @@ class SellHubShareLinkBuilder {
       store: store,
       teamId: teamId,
       memberId: memberId,
+      inviteCode: inviteCode,
       ownerUserId: ownerUserId,
       siteId: siteId,
       teamName: teamName,

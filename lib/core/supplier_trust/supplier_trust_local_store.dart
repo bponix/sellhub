@@ -17,7 +17,8 @@ class SupplierTrustLocalStore {
   final GraphQLClient _client;
 
   static const String _seedKey = 'supplier_trust_seed';
-  static const String _collection = LocalGraphqlCollections.supplierTrustProfiles;
+  static const String _collection =
+      LocalGraphqlCollections.supplierTrustProfiles;
   Future<void>? _seedFuture;
 
   static final String _seedVersion = 'supplier_trust_v1';
@@ -104,11 +105,15 @@ class SupplierTrustLocalStore {
     return profiles;
   }
 
-  Future<void> _ensureSeededInternal(Iterable<SupplierTrustSeedInput> stores) async {
+  Future<void> _ensureSeededInternal(
+    Iterable<SupplierTrustSeedInput> stores,
+  ) async {
     final seedInputs = <SupplierTrustSeedInput>[];
     for (final item in stores) {
       if (item.siteId <= 0) continue;
-      if (seedInputs.any((existing) => existing.siteId == item.siteId)) continue;
+      if (seedInputs.any((existing) => existing.siteId == item.siteId)) {
+        continue;
+      }
       seedInputs.add(item);
     }
     if (seedInputs.isEmpty) return;
@@ -126,7 +131,11 @@ class SupplierTrustLocalStore {
     }
 
     if (shouldWriteVersion) {
-      await saveLocalSeedVersion(_client, seedKey: _seedKey, version: _seedVersion);
+      await saveLocalSeedVersion(
+        _client,
+        seedKey: _seedKey,
+        version: _seedVersion,
+      );
     }
   }
 

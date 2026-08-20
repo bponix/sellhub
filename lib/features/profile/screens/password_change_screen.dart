@@ -75,7 +75,8 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> {
                 const _InlineLead(
                   icon: HugeIcons.strokeRoundedLock,
                   title: 'Credentials',
-                  subtitle: 'Confirm your old password before saving the new one.',
+                  subtitle:
+                      'Confirm your old password before saving the new one.',
                 ),
                 SizedBox(height: 16.h),
                 CustomTextFormField(

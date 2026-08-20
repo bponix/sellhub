@@ -32,11 +32,7 @@ enum _SearchDiscoveryMode {
 }
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({
-    super.key,
-    this.initialMode,
-    this.initialQuery,
-  });
+  const SearchScreen({super.key, this.initialMode, this.initialQuery});
 
   final String? initialMode;
   final String? initialQuery;
@@ -348,7 +344,9 @@ class _SearchScreenState extends State<SearchScreen> {
                                   .map(
                                     (item) => ActionChip(
                                       backgroundColor: Colors.white,
-                                      side: const BorderSide(color: AppColor.safe),
+                                      side: const BorderSide(
+                                        color: AppColor.safe,
+                                      ),
                                       avatar: const AppHugeIcon(
                                         HugeIcons.strokeRoundedSearch01,
                                         size: 14,
@@ -395,14 +393,14 @@ class _SearchScreenState extends State<SearchScreen> {
                     return const _SearchEmptyState(
                       icon: HugeIcons.strokeRoundedFilterVertical,
                       title: 'No matches for this lens',
-                      subtitle: 'Try another reseller focus like margin, repeat, or low risk.',
+                      subtitle:
+                          'Try another reseller focus like margin, repeat, or low risk.',
                     );
                   }
                   return ListView.separated(
                     itemCount: filteredProducts.length + 1,
-                    separatorBuilder: (_, index) => SizedBox(
-                      height: index == 0 ? 12 : 10,
-                    ),
+                    separatorBuilder: (_, index) =>
+                        SizedBox(height: index == 0 ? 12 : 10),
                     itemBuilder: (context, index) {
                       if (index == 0) {
                         return Column(
@@ -410,7 +408,8 @@ class _SearchScreenState extends State<SearchScreen> {
                           children: [
                             Text(
                               '${filteredProducts.length} matches',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
                                     fontWeight: FontWeight.w800,
                                     color: AppColor.text,
                                   ),
@@ -433,7 +432,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         );
                       }
                       final item = filteredProducts[index - 1];
-                      final mappedProduct = SearchToProductMapper.toProduct(item);
+                      final mappedProduct = SearchToProductMapper.toProduct(
+                        item,
+                      );
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 0),
@@ -480,13 +481,17 @@ class _SearchScreenState extends State<SearchScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         item.title,
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
                                               fontWeight: FontWeight.w700,
                                               color: AppColor.text,
                                               height: 1.25,
@@ -511,7 +516,9 @@ class _SearchScreenState extends State<SearchScreen> {
                                           ),
                                           const SizedBox(width: 8),
                                           _SearchCuePill(
-                                            label: _productCueLabel(mappedProduct),
+                                            label: _productCueLabel(
+                                              mappedProduct,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -571,34 +578,36 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   List<dynamic> _filterQuickMatches(List<dynamic> items) {
-    return items.where((item) {
-      final product = SearchToProductMapper.toProduct(item);
-      final viability = ProductViabilityEngine.build(product);
-      switch (_discoveryMode) {
-        case _SearchDiscoveryMode.all:
-          return true;
-        case _SearchDiscoveryMode.whatsapp:
-          return !product.isOutOfStock &&
-              _hasLabel(viability, 'Good margin') &&
-              viability.shareabilityScore >= 68;
-        case _SearchDiscoveryMode.facebook:
-          return !product.isOutOfStock &&
-              (_hasLabel(viability, 'High repeat potential') ||
-                  viability.demandScore >= 72);
-        case _SearchDiscoveryMode.cod:
-          return !product.isOutOfStock &&
-              (product.price ?? 0) <= 2500 &&
-              _isLowRisk(viability);
-        case _SearchDiscoveryMode.lowRisk:
-          return !product.isOutOfStock && _isLowRisk(viability);
-        case _SearchDiscoveryMode.goodMargin:
-          return _hasLabel(viability, 'Good margin') ||
-              viability.maxMargin >= 150;
-        case _SearchDiscoveryMode.repeat:
-          return _hasLabel(viability, 'High repeat potential') ||
-              viability.shareabilityScore >= 74;
-      }
-    }).toList(growable: false);
+    return items
+        .where((item) {
+          final product = SearchToProductMapper.toProduct(item);
+          final viability = ProductViabilityEngine.build(product);
+          switch (_discoveryMode) {
+            case _SearchDiscoveryMode.all:
+              return true;
+            case _SearchDiscoveryMode.whatsapp:
+              return !product.isOutOfStock &&
+                  _hasLabel(viability, 'Good margin') &&
+                  viability.shareabilityScore >= 68;
+            case _SearchDiscoveryMode.facebook:
+              return !product.isOutOfStock &&
+                  (_hasLabel(viability, 'High repeat potential') ||
+                      viability.demandScore >= 72);
+            case _SearchDiscoveryMode.cod:
+              return !product.isOutOfStock &&
+                  (product.price ?? 0) <= 2500 &&
+                  _isLowRisk(viability);
+            case _SearchDiscoveryMode.lowRisk:
+              return !product.isOutOfStock && _isLowRisk(viability);
+            case _SearchDiscoveryMode.goodMargin:
+              return _hasLabel(viability, 'Good margin') ||
+                  viability.maxMargin >= 150;
+            case _SearchDiscoveryMode.repeat:
+              return _hasLabel(viability, 'High repeat potential') ||
+                  viability.shareabilityScore >= 74;
+          }
+        })
+        .toList(growable: false);
   }
 
   String get _modeHintLabel {
@@ -679,10 +688,7 @@ class _SearchScreenState extends State<SearchScreen> {
 }
 
 class _SearchShortcutChip extends StatelessWidget {
-  const _SearchShortcutChip({
-    required this.label,
-    required this.onTap,
-  });
+  const _SearchShortcutChip({required this.label, required this.onTap});
 
   final String label;
   final VoidCallback onTap;
@@ -766,17 +772,17 @@ class _SearchStartCard extends StatelessWidget {
           Text(
             _title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             _subtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -811,22 +817,22 @@ class _SearchEmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            AppHugeIcon(icon, size: 36, color: AppColor.neutral2),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
+              AppHugeIcon(icon, size: 36, color: AppColor.neutral2),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColor.neutral2,
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColor.neutral2),
               ),
-            ),
             ],
           ),
         ),
@@ -844,14 +850,26 @@ class _SearchDiscoveryModeStrip extends StatelessWidget {
   final _SearchDiscoveryMode current;
   final ValueChanged<_SearchDiscoveryMode> onChanged;
 
-  static const List<(_SearchDiscoveryMode, String, List<List<dynamic>>)> _items = <
-      (_SearchDiscoveryMode, String, List<List<dynamic>>)>[
+  static const List<(_SearchDiscoveryMode, String, List<List<dynamic>>)>
+  _items = <(_SearchDiscoveryMode, String, List<List<dynamic>>)>[
     (_SearchDiscoveryMode.all, 'All', HugeIcons.strokeRoundedSparkles),
-    (_SearchDiscoveryMode.whatsapp, 'WhatsApp', HugeIcons.strokeRoundedWhatsapp),
-    (_SearchDiscoveryMode.facebook, 'Facebook', HugeIcons.strokeRoundedFacebook02),
+    (
+      _SearchDiscoveryMode.whatsapp,
+      'WhatsApp',
+      HugeIcons.strokeRoundedWhatsapp,
+    ),
+    (
+      _SearchDiscoveryMode.facebook,
+      'Facebook',
+      HugeIcons.strokeRoundedFacebook02,
+    ),
     (_SearchDiscoveryMode.cod, 'COD', HugeIcons.strokeRoundedDeliveryTruck01),
     (_SearchDiscoveryMode.lowRisk, 'Low risk', HugeIcons.strokeRoundedShield01),
-    (_SearchDiscoveryMode.goodMargin, 'Margin', HugeIcons.strokeRoundedWallet02),
+    (
+      _SearchDiscoveryMode.goodMargin,
+      'Margin',
+      HugeIcons.strokeRoundedWallet02,
+    ),
     (_SearchDiscoveryMode.repeat, 'Repeat', HugeIcons.strokeRoundedReload),
   ];
 
@@ -896,7 +914,8 @@ class _SearchDiscoveryModeStrip extends StatelessWidget {
                         const SizedBox(width: 6),
                         Text(
                           item.$2,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
                                 color: current == item.$1
                                     ? AppColor.primary
                                     : AppColor.text,
@@ -916,10 +935,7 @@ class _SearchDiscoveryModeStrip extends StatelessWidget {
 }
 
 class _SearchContextHint extends StatelessWidget {
-  const _SearchContextHint({
-    required this.label,
-    required this.icon,
-  });
+  const _SearchContextHint({required this.label, required this.icon});
 
   final String label;
   final List<List<dynamic>> icon;
@@ -942,9 +958,9 @@ class _SearchContextHint extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColor.text,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: AppColor.text,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -969,9 +985,9 @@ class _SearchCuePill extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColor.primary,
-              fontWeight: FontWeight.w800,
-            ),
+          color: AppColor.primary,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }

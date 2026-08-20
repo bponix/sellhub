@@ -46,10 +46,7 @@ class AppNetworkImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final child = !_hasImage
-        ? _FallbackImage(
-            icon: icon,
-            backgroundColor: backgroundColor,
-          )
+        ? _FallbackImage(icon: icon, backgroundColor: backgroundColor)
         : CachedNetworkImage(
             imageUrl: _normalizedImageUrl,
             width: width,
@@ -61,10 +58,8 @@ class AppNetworkImage extends StatelessWidget {
               radius: (borderRadius?.topLeft.x ?? 14),
               tinted: true,
             ),
-            errorWidget: (_, __, ___) => _FallbackImage(
-              icon: icon,
-              backgroundColor: backgroundColor,
-            ),
+            errorWidget: (_, __, ___) =>
+                _FallbackImage(icon: icon, backgroundColor: backgroundColor),
           );
 
     Widget wrapped = child;
@@ -79,10 +74,7 @@ class AppNetworkImage extends StatelessWidget {
 }
 
 class _FallbackImage extends StatelessWidget {
-  const _FallbackImage({
-    required this.icon,
-    this.backgroundColor,
-  });
+  const _FallbackImage({required this.icon, this.backgroundColor});
 
   final List<List<dynamic>> icon;
   final Color? backgroundColor;
@@ -92,8 +84,7 @@ class _FallbackImage extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact =
-            constraints.maxHeight.isFinite &&
-            constraints.maxHeight < 64 ||
+            constraints.maxHeight.isFinite && constraints.maxHeight < 64 ||
             constraints.maxWidth.isFinite && constraints.maxWidth < 64;
         final iconBoxSize = compact ? 30.0 : 38.0;
 
@@ -103,10 +94,7 @@ class _FallbackImage extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                backgroundColor ?? AppColor.safe1,
-                Colors.white,
-              ],
+              colors: [backgroundColor ?? AppColor.safe1, Colors.white],
             ),
           ),
           alignment: Alignment.center,

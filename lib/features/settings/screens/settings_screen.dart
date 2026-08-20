@@ -43,7 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     storeName: activeStore?.title?.trim().isNotEmpty == true
                         ? activeStore!.title!.trim()
                         : 'Default supplier context',
-                    domain: activeStore?.domain ?? 'sellhub.bponi.com',
+                    domain: activeStore?.domain ?? 'reseller.store.bponi.com',
                   ),
                   const SizedBox(height: 12),
                   const _SettingsOperatorCard(),
@@ -65,7 +65,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Notification permission'),
                           subtitle: Text(
-                            state.notificationGranted ? 'Granted' : 'Not granted',
+                            state.notificationGranted
+                                ? 'Granted'
+                                : 'Not granted',
                           ),
                           trailing: const AppHugeIcon(
                             HugeIcons.strokeRoundedNotificationSquare,
@@ -120,7 +122,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ListTile(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Domain'),
-                          subtitle: Text(activeStore?.domain ?? 'sellhub.bponi.com'),
+                          subtitle: Text(
+                            activeStore?.domain ?? 'reseller.store.bponi.com',
+                          ),
                           trailing: const AppHugeIcon(
                             HugeIcons.strokeRoundedGlobe02,
                             size: 20,
@@ -141,10 +145,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 class _SettingsOverviewCard extends StatelessWidget {
-  const _SettingsOverviewCard({
-    required this.storeName,
-    required this.domain,
-  });
+  const _SettingsOverviewCard({required this.storeName, required this.domain});
 
   final String storeName;
   final String domain;
@@ -221,17 +222,17 @@ class _SettingsOperatorCard extends StatelessWidget {
           Text(
             'Keep this page practical',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColor.text,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColor.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             'Only device permissions and active supplier context should live here. Operational selling actions belong in the main app routes.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

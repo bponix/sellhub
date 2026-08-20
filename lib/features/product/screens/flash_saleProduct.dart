@@ -36,11 +36,7 @@ class _FlashSaleProductState extends State<FlashSaleProduct> {
       final cubit = context.read<StorefrontCubit>();
       final state = cubit.state;
       if (state.flashSale.isEmpty && !state.isLoading) {
-        cubit.fetchFlashSale(
-          StoreScope.activeSiteId(context),
-          16,
-          0,
-        );
+        cubit.fetchFlashSale(StoreScope.activeSiteId(context), 16, 0);
       }
     });
   }
@@ -184,9 +180,9 @@ class _CollectionHero extends StatelessWidget {
             child: Text(
               title,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColor.text,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: AppColor.text,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           Container(
@@ -198,9 +194,9 @@ class _CollectionHero extends StatelessWidget {
             child: Text(
               '$count items',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColor.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: AppColor.primary,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],

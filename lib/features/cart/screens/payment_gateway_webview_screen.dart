@@ -137,7 +137,9 @@ class _PaymentGatewayWebViewScreenState
   }
 
   bool _hasCallbackKeyword(String value, List<String> keywords) {
-    if (value.isEmpty || value.startsWith('about:') || value.startsWith('data:')) {
+    if (value.isEmpty ||
+        value.startsWith('about:') ||
+        value.startsWith('data:')) {
       return false;
     }
     final lower = value.toLowerCase();

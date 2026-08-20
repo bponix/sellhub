@@ -17,6 +17,8 @@ class ResellerQuote {
     required this.status,
     required this.lines,
     this.orderId,
+    this.shareCode,
+    this.sharePath,
   });
 
   final String id;
@@ -35,6 +37,8 @@ class ResellerQuote {
   final DateTime createdAt;
   final String status;
   final String? orderId;
+  final String? shareCode;
+  final String? sharePath;
   final List<ResellerQuoteLine> lines;
 
   factory ResellerQuote.fromJson(Map<String, dynamic> json) {
@@ -57,6 +61,8 @@ class ResellerQuote {
           DateTime.now(),
       status: (json['status'] as String?) ?? 'draft',
       orderId: json['orderId'] as String?,
+      shareCode: json['shareCode'] as String?,
+      sharePath: json['sharePath'] as String?,
       lines: (json['lines'] as List<dynamic>? ?? const <dynamic>[])
           .whereType<Map>()
           .map(
@@ -86,11 +92,18 @@ class ResellerQuote {
       'createdAt': createdAt.toIso8601String(),
       'status': status,
       'orderId': orderId,
+      'shareCode': shareCode,
+      'sharePath': sharePath,
       'lines': lines.map((item) => item.toJson()).toList(growable: false),
     };
   }
 
-  ResellerQuote copyWith({String? status, String? orderId}) {
+  ResellerQuote copyWith({
+    String? status,
+    String? orderId,
+    String? shareCode,
+    String? sharePath,
+  }) {
     return ResellerQuote(
       id: id,
       siteId: siteId,
@@ -108,6 +121,8 @@ class ResellerQuote {
       createdAt: createdAt,
       status: status ?? this.status,
       orderId: orderId ?? this.orderId,
+      shareCode: shareCode ?? this.shareCode,
+      sharePath: sharePath ?? this.sharePath,
       lines: lines,
     );
   }

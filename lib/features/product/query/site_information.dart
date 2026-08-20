@@ -18,7 +18,6 @@ query ($domain: String!) {
     completedStep
     coverImage
     createdAt
-    createdById
     currency
     desktopLogo
     desktopTheme
@@ -82,19 +81,6 @@ query ($domain: String!) {
     whiteLabel
     whiteLabelUrl
     withdraw
-    createdBy {
-      address
-      avatar
-      country
-      currency
-      email
-      firstName
-      id
-      isStaff
-      name
-      phone
-      username
-    }
   }
 }
  ''';

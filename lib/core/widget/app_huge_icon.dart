@@ -60,7 +60,8 @@ class AppHugeIcon extends StatelessWidget {
       ),
     );
 
-    final decoratedIcon = backgroundColor == null &&
+    final decoratedIcon =
+        backgroundColor == null &&
             borderColor == null &&
             padding == null &&
             borderRadius == null

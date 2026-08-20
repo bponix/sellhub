@@ -1,4 +1,5 @@
 import 'package:sellhub/core/bloc/safe_cubit.dart';
+import 'package:sellhub/core/capabilities/store_surface_capabilities.dart';
 import 'package:sellhub/core/local/local_storage.dart';
 import 'package:sellhub/core/store/active_store.dart';
 import 'package:sellhub/core/store/store_registry.dart';
@@ -17,10 +18,7 @@ class StoreContextCubit extends SafeCubit<StoreContextState> {
     }
     StoreRegistry.currentStore = store;
     emit(
-      state.copyWith(
-        status: StoreContextStatus.selected,
-        activeStore: store,
-      ),
+      state.copyWith(status: StoreContextStatus.selected, activeStore: store),
     );
   }
 
@@ -29,9 +27,43 @@ class StoreContextCubit extends SafeCubit<StoreContextState> {
     await LocalStorage.pushRecentStore(store);
     StoreRegistry.currentStore = store;
     emit(
+      state.copyWith(status: StoreContextStatus.selected, activeStore: store),
+    );
+  }
+
+  Future<void> setActiveStoreWithSurface(
+    ActiveStore store,
+    StoreSurfaceCapabilitySet surface,
+  ) async {
+    await LocalStorage.saveActiveStore(store);
+    await LocalStorage.pushRecentStore(store);
+    StoreRegistry.currentStore = store;
+    emit(
       state.copyWith(
         status: StoreContextStatus.selected,
         activeStore: store,
+        surfaceCapabilities: surface,
+        clearUnavailable: true,
+      ),
+    );
+  }
+
+  Future<void> markUnavailable({
+    required ActiveStore store,
+    required StoreSurfaceCapabilitySet? surface,
+    required String title,
+    required String message,
+  }) async {
+    await LocalStorage.saveActiveStore(store);
+    await LocalStorage.pushRecentStore(store);
+    StoreRegistry.currentStore = store;
+    emit(
+      state.copyWith(
+        status: StoreContextStatus.unavailable,
+        activeStore: store,
+        surfaceCapabilities: surface,
+        unavailableTitle: title,
+        unavailableMessage: message,
       ),
     );
   }
@@ -39,6 +71,13 @@ class StoreContextCubit extends SafeCubit<StoreContextState> {
   Future<void> clear() async {
     await LocalStorage.clearActiveStore();
     StoreRegistry.currentStore = null;
-    emit(state.copyWith(status: StoreContextStatus.none, clearStore: true));
+    emit(
+      state.copyWith(
+        status: StoreContextStatus.none,
+        clearStore: true,
+        clearSurface: true,
+        clearUnavailable: true,
+      ),
+    );
   }
 }

@@ -58,9 +58,7 @@ class ItemListWidget extends StatelessWidget {
                       Text(
                         items[index],
                         style: TextStyle(
-                          color: isSelected
-                              ? AppColor.primary
-                              : AppColor.text,
+                          color: isSelected ? AppColor.primary : AppColor.text,
                           fontWeight: isSelected
                               ? FontWeight.w800
                               : FontWeight.w700,
@@ -83,6 +81,12 @@ class ItemListWidget extends StatelessWidget {
         return HugeIcons.strokeRoundedHome03;
       case 'order':
         return HugeIcons.strokeRoundedInvoice03;
+      case 'buyers':
+        return HugeIcons.strokeRoundedUserGroup;
+      case 'payouts':
+        return HugeIcons.strokeRoundedWallet02;
+      case 'team':
+        return HugeIcons.strokeRoundedUserMultiple02;
       case 'password':
         return HugeIcons.strokeRoundedLockPassword;
       case 'notifications':

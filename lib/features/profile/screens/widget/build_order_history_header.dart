@@ -15,10 +15,7 @@ class buildHeaderOrderHistoryTable extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColor.safe,
-          width: 1,
-        ),
+        border: Border.all(color: AppColor.safe, width: 1),
       ),
       child: Row(
         children: [

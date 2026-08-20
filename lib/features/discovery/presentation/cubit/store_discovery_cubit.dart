@@ -58,13 +58,18 @@ class StoreDiscoveryCubit extends SafeCubit<StoreDiscoveryState> {
   void search(String query) {
     _searchDebounce?.cancel();
     if (query.trim().isEmpty) {
-      emit(state.copyWith(searchResults: const <StoreSummary>[], searching: false));
+      emit(
+        state.copyWith(searchResults: const <StoreSummary>[], searching: false),
+      );
       return;
     }
     emit(state.copyWith(searching: true, clearError: true));
     _searchDebounce = Timer(const Duration(milliseconds: 350), () async {
       try {
-        final stores = await _repository.fetchStores(search: query, queryType: 'latest');
+        final stores = await _repository.fetchStores(
+          search: query,
+          queryType: 'latest',
+        );
         emit(state.copyWith(searchResults: stores, searching: false));
       } catch (error) {
         emit(

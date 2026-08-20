@@ -6,6 +6,7 @@ import 'package:sellhub/core/constants/app_color.dart';
 import 'package:sellhub/core/local/local_storage.dart';
 import 'package:sellhub/core/share/sellhub_share_link_builder.dart';
 import 'package:sellhub/core/store/store_context_cubit.dart';
+import 'package:sellhub/core/utils/custom_toast.dart';
 import 'package:sellhub/core/widget/app_huge_icon.dart';
 import 'package:sellhub/features/profile/data/model/team_member_entry.dart';
 import 'package:sellhub/features/profile/data/model/team_shared_list_entry.dart';
@@ -181,6 +182,7 @@ class _TeamSellingScreenState extends State<TeamSellingScreen> {
         store: activeStore,
         teamId: overview.teamId,
         memberId: member.id,
+        inviteCode: member.inviteCode,
         ownerUserId: overview.ownerUserId,
         siteId: overview.siteId,
         teamName: overview.teamName,
@@ -205,9 +207,7 @@ class _TeamSellingScreenState extends State<TeamSellingScreen> {
       text: existing == null ? '' : existing.productTitles.join(', '),
     );
     final noteController = TextEditingController(text: existing?.note ?? '');
-    final memberIds = <String>{
-      ...?existing?.sharedWithMemberIds,
-    };
+    final memberIds = <String>{...?existing?.sharedWithMemberIds};
     final action = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -224,7 +224,9 @@ class _TeamSellingScreenState extends State<TeamSellingScreen> {
                   children: [
                     TextField(
                       controller: titleController,
-                      decoration: const InputDecoration(labelText: 'List title'),
+                      decoration: const InputDecoration(
+                        labelText: 'List title',
+                      ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
@@ -309,7 +311,9 @@ class _TeamSellingScreenState extends State<TeamSellingScreen> {
     }
     if (action != 'save') return;
     final entry = TeamSharedListEntry(
-      id: existing?.id ?? 'team-list-${_siteId!}-${DateTime.now().millisecondsSinceEpoch}',
+      id:
+          existing?.id ??
+          'team-list-${_siteId!}-${DateTime.now().millisecondsSinceEpoch}',
       teamId: overview.teamId,
       ownerUserId: _userId!,
       siteId: _siteId!,
@@ -346,7 +350,13 @@ class _TeamSellingScreenState extends State<TeamSellingScreen> {
   }
 
   Future<void> _removeMember(TeamMemberEntry member) async {
-    await di.sl<ProfileRepository>().deleteTeamMember(member.id);
+    final removed = await di.sl<ProfileRepository>().deleteTeamMember(member);
+    if (!mounted) return;
+    if (!removed) {
+      CustomToast.info('Team member could not be disabled in Store.');
+      return;
+    }
+    CustomToast.info('Team member disabled');
     await _refresh();
   }
 
@@ -431,10 +441,25 @@ class _TeamSellingScreenState extends State<TeamSellingScreen> {
                           '${overview.overridePercent.toStringAsFixed(0)}% direct override',
                     ),
                     _MetricCard(
+                      label: 'Payout impact',
+                      value: '৳${overview.payoutImpact.toStringAsFixed(0)}',
+                      helper: 'Credited less reversed',
+                    ),
+                    _MetricCard(
                       label: 'Shared lists',
                       value: '${overview.sharedListCount}',
                       helper:
                           '${overview.distributedProductCount} products distributed',
+                    ),
+                    _MetricCard(
+                      label: 'Buyer reach',
+                      value: '${overview.buyerReachCount}',
+                      helper: 'Privacy-safe distinct buyers',
+                    ),
+                    _MetricCard(
+                      label: 'Supply reach',
+                      value: '${overview.anonymousSupplierCount}',
+                      helper: 'Anonymous supplier sources',
                     ),
                   ],
                 ),
@@ -459,9 +484,9 @@ class _TeamSellingScreenState extends State<TeamSellingScreen> {
                     const Expanded(
                       child: _SectionLead(
                         icon: HugeIcons.strokeRoundedShare08,
-                        title: 'Shared supplier lists',
+                        title: 'Team list drafts',
                         subtitle:
-                            'Distribute top products and supplier picks to your team.',
+                            'Saved on this device; Store team assignment is not confirmed.',
                       ),
                     ),
                     OutlinedButton.icon(
@@ -484,7 +509,7 @@ class _TeamSellingScreenState extends State<TeamSellingScreen> {
                       border: Border.all(color: AppColor.safe),
                     ),
                     child: Text(
-                      'Share your first supplier list to help team sellers start faster.',
+                      'Create a device draft for a future Store-backed team list.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColor.neutral2,
                         fontWeight: FontWeight.w600,
@@ -718,7 +743,9 @@ class _MemberCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = member.isActive ? AppColor.primarySoft : AppColor.safe1;
-    final statusTextColor = member.isActive ? AppColor.primary : AppColor.neutral2;
+    final statusTextColor = member.isActive
+        ? AppColor.primary
+        : AppColor.neutral2;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -778,8 +805,14 @@ class _MemberCard extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _MiniStat(label: 'Order volume', value: '৳${member.orderVolume.toStringAsFixed(0)}'),
-              _MiniStat(label: 'Override', value: '৳${member.overrideGenerated.toStringAsFixed(0)}'),
+              _MiniStat(
+                label: 'Order volume',
+                value: '৳${member.orderVolume.toStringAsFixed(0)}',
+              ),
+              _MiniStat(
+                label: 'Override',
+                value: '৳${member.overrideGenerated.toStringAsFixed(0)}',
+              ),
               _MiniStat(
                 label: 'Rule',
                 value: '${overridePercent.toStringAsFixed(0)}% direct',

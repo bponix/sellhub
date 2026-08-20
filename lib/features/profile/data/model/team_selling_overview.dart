@@ -18,6 +18,9 @@ class TeamSellingOverview {
     required this.distributedProductCount,
     required this.members,
     required this.sharedLists,
+    this.buyerReachCount = 0,
+    this.anonymousSupplierCount = 0,
+    this.payoutImpact = 0,
   });
 
   final String teamId;
@@ -35,4 +38,7 @@ class TeamSellingOverview {
   final int distributedProductCount;
   final List<TeamMemberEntry> members;
   final List<TeamSharedListEntry> sharedLists;
+  final int buyerReachCount;
+  final int anonymousSupplierCount;
+  final double payoutImpact;
 }

@@ -12,11 +12,7 @@ class CategoriesCubit extends SafeCubit<CategoriesState> {
 
   void ensureSite(int siteId) {
     if (state.siteId == null || state.siteId == siteId) return;
-    emit(
-      CategoriesState(
-        siteId: siteId,
-      ),
-    );
+    emit(CategoriesState(siteId: siteId));
   }
 
   void reset() {
@@ -28,13 +24,7 @@ class CategoriesCubit extends SafeCubit<CategoriesState> {
     if (state.allCategory.isNotEmpty) return;
     try {
       final data = await _repository.fetchCategories(siteId);
-      emit(
-        state.copyWith(
-          siteId: siteId,
-          allCategory: data,
-          clearError: true,
-        ),
-      );
+      emit(state.copyWith(siteId: siteId, allCategory: data, clearError: true));
     } catch (error) {
       emit(
         state.copyWith(
@@ -54,13 +44,7 @@ class CategoriesCubit extends SafeCubit<CategoriesState> {
     await fetchAllCategory(siteId);
     try {
       final data = await _repository.fetchSubCategories(siteId);
-      emit(
-        state.copyWith(
-          siteId: siteId,
-          subCategory: data,
-          clearError: true,
-        ),
-      );
+      emit(state.copyWith(siteId: siteId, subCategory: data, clearError: true));
     } catch (error) {
       emit(
         state.copyWith(
@@ -80,11 +64,7 @@ class CategoriesCubit extends SafeCubit<CategoriesState> {
     try {
       final data = await _repository.fetchSubSubCategories(siteId);
       emit(
-        state.copyWith(
-          siteId: siteId,
-          subSubCategory: data,
-          clearError: true,
-        ),
+        state.copyWith(siteId: siteId, subSubCategory: data, clearError: true),
       );
     } catch (error) {
       emit(

@@ -64,16 +64,22 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
   }
 
   Future<_OpsPayload> _load() async {
-    final userId = await LocalStorage.getUserID() ?? 0;
     final activeStore = context.read<StoreContextCubit>().state.activeStore;
     final siteId = activeStore?.siteId ?? 0;
+    final userId = await LocalStorage.getUserID() ?? 0;
     if (userId <= 0 || siteId <= 0) {
       return _OpsPayload.empty();
     }
     final profileRepository = di.sl<ProfileRepository>();
     final checkoutRepository = di.sl<CheckoutRepository>();
-    final customer = await profileRepository.fetchSelfStoreCustomer(userId, siteId);
-    final buyers = await profileRepository.fetchBuyerBook(userId: userId, siteId: siteId);
+    final customer = await profileRepository.fetchSelfStoreCustomer(
+      userId,
+      siteId,
+    );
+    final buyers = await profileRepository.fetchBuyerBook(
+      userId: userId,
+      siteId: siteId,
+    );
     final disputes = await profileRepository.fetchPayoutDisputes(
       userId: userId,
       siteId: siteId,
@@ -131,9 +137,9 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
       customer: customer,
       buyers: buyers,
       payoutDisputes: disputes,
-      orderIssueReports: issues.where((item) => item.siteId == siteId).toList(
-            growable: false,
-          ),
+      orderIssueReports: issues
+          .where((item) => item.siteId == siteId)
+          .toList(growable: false),
       teamOverview: team,
       quickOrderDrafts: drafts,
       orderGroups: orderGroups,
@@ -146,18 +152,23 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
 
   List<BuyerBookProfile> _buildRepeatNextWeek(List<BuyerBookProfile> buyers) {
     final now = DateTime.now();
-    final candidates = buyers.where((buyer) {
-      if (!buyer.isRepeatBuyer || buyer.isBlocked) return false;
-      final lastOrderedAt = buyer.lastOrderedAt;
-      if (lastOrderedAt == null) return false;
-      final days = now.difference(lastOrderedAt).inDays;
-      return days >= 7 && days <= 45;
-    }).toList(growable: false)
-      ..sort((a, b) {
-        final scoreA = (a.totalDelivered * 4) + (a.totalOrders * 3) - a.returnCount;
-        final scoreB = (b.totalDelivered * 4) + (b.totalOrders * 3) - b.returnCount;
-        return scoreB.compareTo(scoreA);
-      });
+    final candidates =
+        buyers
+            .where((buyer) {
+              if (!buyer.isRepeatBuyer || buyer.isBlocked) return false;
+              final lastOrderedAt = buyer.lastOrderedAt;
+              if (lastOrderedAt == null) return false;
+              final days = now.difference(lastOrderedAt).inDays;
+              return days >= 7 && days <= 45;
+            })
+            .toList(growable: false)
+          ..sort((a, b) {
+            final scoreA =
+                (a.totalDelivered * 4) + (a.totalOrders * 3) - a.returnCount;
+            final scoreB =
+                (b.totalDelivered * 4) + (b.totalOrders * 3) - b.returnCount;
+            return scoreB.compareTo(scoreA);
+          });
     return candidates.take(6).toList(growable: false);
   }
 
@@ -178,16 +189,23 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
     final phoneMatch = RegExp(r'(\+?88)?01[3-9]\d{8}').firstMatch(raw);
-    final quantityMatch = RegExp(r'(\d+)\s*(pcs|piece|pieces|x)\b', caseSensitive: false)
-        .firstMatch(raw);
-    final priceMatch = RegExp(r'(?:৳|tk|bdt)\s*([0-9]{2,6})', caseSensitive: false)
-        .firstMatch(raw);
+    final quantityMatch = RegExp(
+      r'(\d+)\s*(pcs|piece|pieces|x)\b',
+      caseSensitive: false,
+    ).firstMatch(raw);
+    final priceMatch = RegExp(
+      r'(?:৳|tk|bdt)\s*([0-9]{2,6})',
+      caseSensitive: false,
+    ).firstMatch(raw);
     final addressLine = lines.firstWhere(
-      (item) => item.toLowerCase().contains('address') || item.toLowerCase().contains('area'),
+      (item) =>
+          item.toLowerCase().contains('address') ||
+          item.toLowerCase().contains('area'),
       orElse: () => '',
     );
     final buyerLine = lines.firstWhere(
-      (item) => !RegExp(r'(\+?88)?01[3-9]\d{8}').hasMatch(item) &&
+      (item) =>
+          !RegExp(r'(\+?88)?01[3-9]\d{8}').hasMatch(item) &&
           !item.toLowerCase().contains('address') &&
           !item.toLowerCase().contains('area') &&
           !item.toLowerCase().contains('price') &&
@@ -196,7 +214,9 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
       orElse: () => '',
     );
     final productLine = lines.firstWhere(
-      (item) => item.toLowerCase().contains('product') || item.toLowerCase().contains('item'),
+      (item) =>
+          item.toLowerCase().contains('product') ||
+          item.toLowerCase().contains('item'),
       orElse: () => lines.length > 1 ? lines[1] : lines.first,
     );
 
@@ -206,29 +226,42 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
       }
       if (_buyerNameController.text.trim().isEmpty && buyerLine.isNotEmpty) {
         _buyerNameController.text = buyerLine
-            .replaceFirst(RegExp(r'^(name|buyer)\s*:?\s*', caseSensitive: false), '')
+            .replaceFirst(
+              RegExp(r'^(name|buyer)\s*:?\s*', caseSensitive: false),
+              '',
+            )
             .trim();
       }
       if (_addressController.text.trim().isEmpty && addressLine.isNotEmpty) {
         _addressController.text = addressLine
-            .replaceFirst(RegExp(r'^(address|area)\s*:?\s*', caseSensitive: false), '')
+            .replaceFirst(
+              RegExp(r'^(address|area)\s*:?\s*', caseSensitive: false),
+              '',
+            )
             .trim();
       }
       if (_areaController.text.trim().isEmpty && addressLine.isNotEmpty) {
         _areaController.text = addressLine
-            .replaceFirst(RegExp(r'^(address|area)\s*:?\s*', caseSensitive: false), '')
+            .replaceFirst(
+              RegExp(r'^(address|area)\s*:?\s*', caseSensitive: false),
+              '',
+            )
             .split(',')
             .first
             .trim();
       }
       if (_productController.text.trim().isEmpty && productLine.isNotEmpty) {
         _productController.text = productLine
-            .replaceFirst(RegExp(r'^(product|item)\s*:?\s*', caseSensitive: false), '')
+            .replaceFirst(
+              RegExp(r'^(product|item)\s*:?\s*', caseSensitive: false),
+              '',
+            )
             .trim();
       }
       if (_quantityController.text.trim().isEmpty ||
           _quantityController.text.trim() == '1') {
-        _quantityController.text = quantityMatch?.group(1) ?? _quantityController.text;
+        _quantityController.text =
+            quantityMatch?.group(1) ?? _quantityController.text;
       }
       if (_sellPriceController.text.trim().isEmpty && priceMatch != null) {
         _sellPriceController.text = priceMatch.group(1) ?? '';
@@ -241,7 +274,10 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
     });
   }
 
-  Future<void> _saveQuickOrder(_OpsPayload payload, {bool openFlow = false}) async {
+  Future<void> _saveQuickOrder(
+    _OpsPayload payload, {
+    bool openFlow = false,
+  }) async {
     if (_savingQuickOrder) return;
     final buyerName = _buyerNameController.text.trim();
     final phone = _phoneController.text.trim();
@@ -249,7 +285,10 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
     final address = _addressController.text.trim();
     final quantity = int.tryParse(_quantityController.text.trim()) ?? 1;
     final sellPrice = int.tryParse(_sellPriceController.text.trim()) ?? 0;
-    if (buyerName.isEmpty || phone.isEmpty || productTitle.isEmpty || sellPrice <= 0) {
+    if (buyerName.isEmpty ||
+        phone.isEmpty ||
+        productTitle.isEmpty ||
+        sellPrice <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Buyer, phone, product, and sell price are required.'),
@@ -262,8 +301,12 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
       _savingQuickOrder = true;
     });
     try {
+      final supplierName =
+          context.read<StoreContextCubit>().state.activeStore?.title ??
+          'Current supplier';
       final checkoutRepository = di.sl<CheckoutRepository>();
-      final draftId = 'chat-${payload.siteId}-${DateTime.now().millisecondsSinceEpoch}';
+      final draftId =
+          'chat-${payload.siteId}-${DateTime.now().millisecondsSinceEpoch}';
       final line = ResellerOrderLineDraft(
         id: null,
         title: productTitle,
@@ -305,9 +348,7 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
           <String, dynamic>{
             ...line.toJson(),
             'supplierId': payload.siteId,
-            'supplierName':
-                context.read<StoreContextCubit>().state.activeStore?.title ??
-                    'Current supplier',
+            'supplierName': supplierName,
             'siteId': payload.siteId,
           },
         ],
@@ -402,7 +443,8 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
       backgroundColor: Colors.white,
       appBar: const SellHubTopAppBar(
         title: 'Reseller ops',
-        subtitle: 'Chat intake, truth mode, legs, disputes, repeat, team, and referrals',
+        subtitle:
+            'Chat intake, truth mode, legs, disputes, repeat, team, and referrals',
         icon: HugeIcons.strokeRoundedDashboardSquare03,
         showBackButton: true,
       ),
@@ -426,7 +468,8 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                 _SectionCard(
                   icon: HugeIcons.strokeRoundedMessage02,
                   title: 'Chat-to-order mode',
-                  subtitle: 'Paste a chat, parse it, and turn it into a buyer-ready draft.',
+                  subtitle:
+                      'Paste a chat, parse it, and turn it into a buyer-ready draft.',
                   child: Column(
                     children: [
                       TextField(
@@ -453,9 +496,14 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                             child: FilledButton(
                               onPressed: _savingQuickOrder
                                   ? null
-                                  : () => _saveQuickOrder(payload, openFlow: true),
+                                  : () => _saveQuickOrder(
+                                      payload,
+                                      openFlow: true,
+                                    ),
                               child: Text(
-                                _savingQuickOrder ? 'Saving...' : 'Save and open flow',
+                                _savingQuickOrder
+                                    ? 'Saving...'
+                                    : 'Save and open flow',
                               ),
                             ),
                           ),
@@ -468,7 +516,8 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                 _SectionCard(
                   icon: HugeIcons.strokeRoundedShoppingBasket01,
                   title: 'True quick-order lane',
-                  subtitle: 'Capture a sale draft with the minimum reseller fields.',
+                  subtitle:
+                      'Capture a sale draft with the minimum reseller fields.',
                   child: Column(
                     children: [
                       _TwoFieldRow(
@@ -504,7 +553,9 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                               _paymentMode = value;
                             });
                           },
-                          decoration: const InputDecoration(labelText: 'Payment'),
+                          decoration: const InputDecoration(
+                            labelText: 'Payment',
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -516,7 +567,9 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                       _TwoFieldRow(
                         left: TextField(
                           controller: _productController,
-                          decoration: const InputDecoration(labelText: 'Product'),
+                          decoration: const InputDecoration(
+                            labelText: 'Product',
+                          ),
                         ),
                         right: TextField(
                           controller: _quantityController,
@@ -527,7 +580,9 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                       const SizedBox(height: 10),
                       TextField(
                         controller: _sellPriceController,
-                        decoration: const InputDecoration(labelText: 'Sell price'),
+                        decoration: const InputDecoration(
+                          labelText: 'Sell price',
+                        ),
                         keyboardType: TextInputType.number,
                       ),
                       const SizedBox(height: 10),
@@ -542,7 +597,9 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                       ),
                       if (payload.quickOrderDrafts.isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        ...payload.quickOrderDrafts.take(3).map(
+                        ...payload.quickOrderDrafts
+                            .take(3)
+                            .map(
                               (draft) => _ActionListCard(
                                 title: draft.buyerName,
                                 subtitle:
@@ -558,7 +615,9 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                                       name: draft.buyerName,
                                       phone: draft.buyerPhone,
                                       addresses: <String>[
-                                        if (draft.buyerAddress.trim().isNotEmpty)
+                                        if (draft.buyerAddress
+                                            .trim()
+                                            .isNotEmpty)
                                           draft.buyerAddress.trim(),
                                       ],
                                       primaryAddress: draft.buyerAddress,
@@ -584,7 +643,7 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                                       lastOrderId: null,
                                     ),
                                   );
-                                  if (!mounted) return;
+                                  if (!context.mounted) return;
                                   AppRouter.goToCart(context);
                                 },
                               ),
@@ -606,7 +665,8 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                           items: <({String label, String value})>[
                             (
                               label: 'Lanes',
-                              value: '${payload.supplierLegPreview!['supplierCount'] ?? 0}',
+                              value:
+                                  '${payload.supplierLegPreview!['supplierCount'] ?? 0}',
                             ),
                             (
                               label: 'Sell',
@@ -621,7 +681,8 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                           ],
                         ),
                         const SizedBox(height: 10),
-                        ...((payload.supplierLegPreview!['suppliers'] as List<dynamic>? ??
+                        ...((payload.supplierLegPreview!['suppliers']
+                                    as List<dynamic>? ??
                                 const <dynamic>[])
                             .whereType<Map>()
                             .map(
@@ -636,7 +697,9 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                       ],
                       if (payload.orderGroups.isNotEmpty) ...[
                         const SizedBox(height: 10),
-                        ...payload.orderGroups.take(3).map(
+                        ...payload.orderGroups
+                            .take(3)
+                            .map(
                               (group) => _MiniLedgerCard(
                                 title: group.title,
                                 subtitle:
@@ -645,7 +708,8 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                               ),
                             ),
                       ],
-                      if (payload.supplierLegPreview == null && payload.orderGroups.isEmpty)
+                      if (payload.supplierLegPreview == null &&
+                          payload.orderGroups.isEmpty)
                         const _EmptyHint(
                           text:
                               'Save a quick-order draft first to generate supplier lanes here.',
@@ -675,7 +739,7 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                                     actionLabel: 'Start order',
                                     onAction: () async {
                                       await _useBuyer(buyer);
-                                      if (!mounted) return;
+                                      if (!context.mounted) return;
                                       AppRouter.goToCart(context);
                                     },
                                   ),
@@ -698,15 +762,25 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                 _SectionCard(
                   icon: HugeIcons.strokeRoundedUserMultiple02,
                   title: 'Team network operations',
-                  subtitle: 'Track invite conversion, team output, and shared distribution.',
+                  subtitle:
+                      'Track invite conversion, team output, and shared distribution.',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _KpiRow(
                         items: <({String label, String value})>[
-                          (label: 'Active', value: '${payload.teamOverview.activeMembers}'),
-                          (label: 'Invites', value: '${payload.teamOverview.pendingInvites}'),
-                          (label: 'Lists', value: '${payload.teamOverview.sharedListCount}'),
+                          (
+                            label: 'Active',
+                            value: '${payload.teamOverview.activeMembers}',
+                          ),
+                          (
+                            label: 'Invites',
+                            value: '${payload.teamOverview.pendingInvites}',
+                          ),
+                          (
+                            label: 'Lists',
+                            value: '${payload.teamOverview.sharedListCount}',
+                          ),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -714,11 +788,14 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                         title: payload.teamOverview.teamName,
                         subtitle:
                             'Volume ৳${payload.teamOverview.teamOrderVolume.toStringAsFixed(0)} • Override ৳${payload.teamOverview.overrideEarned.toStringAsFixed(0)}',
-                        trailing: '${payload.teamOverview.distributedProductCount} products',
+                        trailing:
+                            '${payload.teamOverview.distributedProductCount} products',
                       ),
                       if (payload.teamOverview.members.isNotEmpty) ...[
                         const SizedBox(height: 10),
-                        ...payload.teamOverview.members.take(3).map(
+                        ...payload.teamOverview.members
+                            .take(3)
+                            .map(
                               (member) => _MiniLedgerCard(
                                 title: member.name,
                                 subtitle:
@@ -751,7 +828,11 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                         items: <({String label, String value})>[
                           (
                             label: 'Code',
-                            value: payload.customer?.referCode?.trim().isNotEmpty == true
+                            value:
+                                payload.customer?.referCode
+                                        ?.trim()
+                                        .isNotEmpty ==
+                                    true
                                 ? payload.customer!.referCode!.trim()
                                 : 'Not set',
                           ),
@@ -768,12 +849,15 @@ class _ResellerOpsScreenState extends State<ResellerOpsScreen> {
                       ),
                       const SizedBox(height: 10),
                       if (payload.referralBuyers.isNotEmpty)
-                        ...payload.referralBuyers.take(3).map(
+                        ...payload.referralBuyers
+                            .take(3)
+                            .map(
                               (buyer) => _MiniLedgerCard(
                                 title: buyer.name,
                                 subtitle:
                                     '${buyer.totalOrders} orders • ${buyer.district}',
-                                trailing: '৳${buyer.totalSales.toStringAsFixed(0)}',
+                                trailing:
+                                    '৳${buyer.totalSales.toStringAsFixed(0)}',
                               ),
                             ),
                       const SizedBox(height: 10),
@@ -906,16 +990,16 @@ class _SectionCard extends StatelessWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColor.text,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        color: AppColor.text,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColor.neutral2,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -960,9 +1044,9 @@ class _TruthModeCard extends StatelessWidget {
                 child: Text(
                   'Backend truth mode',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               _TruthPill(label: mode == 'backend' ? 'Backend' : 'Local MVP'),
@@ -974,9 +1058,9 @@ class _TruthModeCard extends StatelessWidget {
                 ? 'Use backend-first operator expectations when live truth is available.'
                 : 'Local-first mode is active. Treat payout, team, and dispute surfaces as local records.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColor.neutral2,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColor.neutral2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 12),
           SegmentedButton<String>(
@@ -1012,9 +1096,9 @@ class _TruthPill extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColor.primary,
-              fontWeight: FontWeight.w800,
-            ),
+          color: AppColor.primary,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -1050,9 +1134,7 @@ class _KpiRow extends StatelessWidget {
           .map(
             (item) => Expanded(
               child: Container(
-                margin: EdgeInsets.only(
-                  right: item == items.last ? 0 : 8,
-                ),
+                margin: EdgeInsets.only(right: item == items.last ? 0 : 8),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppColor.safe1,
@@ -1064,17 +1146,17 @@ class _KpiRow extends StatelessWidget {
                     Text(
                       item.label,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppColor.neutral2,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        color: AppColor.neutral2,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       item.value,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColor.text,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        color: AppColor.text,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ],
                 ),
@@ -1116,17 +1198,17 @@ class _MiniLedgerCard extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColor.neutral2,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: AppColor.neutral2,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -1135,9 +1217,9 @@ class _MiniLedgerCard extends StatelessWidget {
           Text(
             trailing,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColor.primary,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColor.primary,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -1176,26 +1258,23 @@ class _ActionListCard extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColor.neutral2,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: AppColor.neutral2,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 10),
-          OutlinedButton(
-            onPressed: onAction,
-            child: Text(actionLabel),
-          ),
+          OutlinedButton(onPressed: onAction, child: Text(actionLabel)),
         ],
       ),
     );
@@ -1213,34 +1292,37 @@ class _DisputeInbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = <({
-      String title,
-      String subtitle,
-      String badge,
-      DateTime updatedAt,
-      VoidCallback onTap,
-    })>[
-      ...payoutDisputes.map(
-        (item) => (
-          title: 'Payout ${item.orderId}',
-          subtitle:
-              '${item.reason} • ${formatDateTime(item.updatedAt)}',
-          badge: item.status,
-          updatedAt: item.updatedAt ?? item.createdAt ?? DateTime.now(),
-          onTap: () => AppRouter.goToPayouts(context),
-        ),
-      ),
-      ...orderIssueReports.map(
-        (item) => (
-          title: 'Order ${item.orderId}',
-          subtitle:
-              '${item.issueType} • ${formatDateTime(item.updatedAt)}',
-          badge: item.status,
-          updatedAt: item.updatedAt,
-          onTap: () => AppRouter.goToOrders(context),
-        ),
-      ),
-    ]..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final items =
+        <
+            ({
+              String title,
+              String subtitle,
+              String badge,
+              DateTime updatedAt,
+              VoidCallback onTap,
+            })
+          >[
+            ...payoutDisputes.map(
+              (item) => (
+                title: 'Payout ${item.orderId}',
+                subtitle: '${item.reason} • ${formatDateTime(item.updatedAt)}',
+                badge: item.status,
+                updatedAt: item.updatedAt ?? item.createdAt ?? DateTime.now(),
+                onTap: () => AppRouter.goToPayouts(context),
+              ),
+            ),
+            ...orderIssueReports.map(
+              (item) => (
+                title: 'Order ${item.orderId}',
+                subtitle:
+                    '${item.issueType} • ${formatDateTime(item.updatedAt)}',
+                badge: item.status,
+                updatedAt: item.updatedAt,
+                onTap: () => AppRouter.goToOrders(context),
+              ),
+            ),
+          ]
+          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
     if (items.isEmpty) {
       return const _EmptyHint(
@@ -1277,20 +1359,20 @@ class _DisputeInbox extends StatelessWidget {
                           children: [
                             Text(
                               item.title,
-                              style:
-                                  Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: AppColor.text,
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: AppColor.text,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               item.subtitle,
-                              style:
-                                  Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppColor.neutral2,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: AppColor.neutral2,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
                           ],
                         ),
@@ -1325,9 +1407,9 @@ class _EmptyHint extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColor.neutral2,
-              fontWeight: FontWeight.w600,
-            ),
+          color: AppColor.neutral2,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

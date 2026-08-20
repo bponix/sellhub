@@ -303,18 +303,18 @@ class _AddressListTab extends StatelessWidget {
                 Text(
                   emptyTitle,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColor.text,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColor.text,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   emptySubtitle,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColor.neutral2,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: AppColor.neutral2,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -354,7 +354,8 @@ class _AddressListTab extends StatelessWidget {
                           address.formattedAddress.trim().isNotEmpty
                               ? address.formattedAddress.trim()
                               : address.address.trim(),
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
                                 color: AppColor.text,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -365,7 +366,8 @@ class _AddressListTab extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             address.address.trim(),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
                                   color: AppColor.neutral2,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -392,10 +394,7 @@ class _AddressListTab extends StatelessWidget {
 }
 
 class _AddressDraft {
-  const _AddressDraft({
-    required this.address,
-    required this.formattedAddress,
-  });
+  const _AddressDraft({required this.address, required this.formattedAddress});
 
   final String address;
   final String formattedAddress;
@@ -439,17 +438,17 @@ class _AddressEditorSheetState extends State<_AddressEditorSheet> {
             Text(
               title,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColor.text,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: AppColor.text,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               'Keep the first line short and the details line complete for checkout.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColor.neutral2,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: AppColor.neutral2,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 16),
             TextFormField(

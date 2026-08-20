@@ -36,12 +36,12 @@ class NotificationsScreen extends StatelessWidget {
                 value: 'read',
                 child: Text('Mark all read'),
               ),
-              PopupMenuItem<String>(
-                value: 'clear',
-                child: Text('Clear all'),
-              ),
+              PopupMenuItem<String>(value: 'clear', child: Text('Clear all')),
             ],
-            icon: const AppHugeIcon(HugeIcons.strokeRoundedMoreHorizontal, size: 20),
+            icon: const AppHugeIcon(
+              HugeIcons.strokeRoundedMoreHorizontal,
+              size: 20,
+            ),
           ),
         ],
       ),
@@ -92,8 +92,12 @@ class NotificationsScreen extends StatelessWidget {
               ),
             );
           }
-          final unread = state.notifications.where((item) => !item.isRead).toList();
-          final read = state.notifications.where((item) => item.isRead).toList();
+          final unread = state.notifications
+              .where((item) => !item.isRead)
+              .toList();
+          final read = state.notifications
+              .where((item) => item.isRead)
+              .toList();
           final totalItems = unread.length + read.length + 2;
           return ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -179,17 +183,17 @@ class _NotificationHero extends StatelessWidget {
                 Text(
                   'Notification center',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: AppColor.text,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    color: AppColor.text,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   'Unread $unreadCount  •  Total $totalCount',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColor.neutral2,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: AppColor.neutral2,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -203,9 +207,9 @@ class _NotificationHero extends StatelessWidget {
             child: Text(
               '$unreadCount new',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColor.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: AppColor.primary,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
@@ -283,20 +287,23 @@ class _NotificationCard extends StatelessWidget {
         if (!context.mounted) return;
         final routeName = item.routeName;
         if (routeName != null && routeName.isNotEmpty) {
-          final handled = await PendingProductDeepLinkHandler.handleRoutePayload(
-            context,
-            routeName: routeName,
-            routeParams: item.routeParams,
-          );
+          final handled =
+              await PendingProductDeepLinkHandler.handleRoutePayload(
+                context,
+                routeName: routeName,
+                routeParams: item.routeParams,
+              );
           if (!context.mounted) return;
           if (handled) return;
           AppRouter.goNamed(routeName, queryParameters: item.routeParams);
         }
       },
-        child: Container(
+      child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: item.isRead ? Colors.white : AppColor.safe1.withValues(alpha: 0.45),
+          color: item.isRead
+              ? Colors.white
+              : AppColor.safe1.withValues(alpha: 0.45),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: item.isRead
@@ -375,7 +382,8 @@ class _NotificationCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             InkWell(
-              onTap: () => context.read<NotificationCenterCubit>().remove(item.id),
+              onTap: () =>
+                  context.read<NotificationCenterCubit>().remove(item.id),
               borderRadius: BorderRadius.circular(12),
               child: const Padding(
                 padding: EdgeInsets.all(4),

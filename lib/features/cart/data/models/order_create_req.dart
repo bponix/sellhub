@@ -54,6 +54,7 @@ class OrderCreateReq {
     required this.vat,
     required this.vatAmount,
     required this.weight,
+    this.idempotencyKey,
   });
 
   final dynamic userId;
@@ -110,6 +111,7 @@ class OrderCreateReq {
   final int? vat;
   final int? vatAmount;
   final int? weight;
+  final String? idempotencyKey;
 
   factory OrderCreateReq.fromJson(Map<String, dynamic> json) {
     return OrderCreateReq(
@@ -171,6 +173,7 @@ class OrderCreateReq {
       vat: json["vat"],
       vatAmount: json["vatAmount"],
       weight: json["weight"],
+      idempotencyKey: json["idempotencyKey"] as String?,
     );
   }
 
@@ -229,6 +232,7 @@ class OrderCreateReq {
     "vat": vat,
     "vatAmount": vatAmount,
     "weight": weight,
+    "idempotencyKey": idempotencyKey,
   };
 }
 

@@ -26,7 +26,8 @@ class SettingsState extends Equatable {
       notificationOptIn: notificationOptIn ?? this.notificationOptIn,
       locationGranted: locationGranted ?? this.locationGranted,
       notificationGranted: notificationGranted ?? this.notificationGranted,
-      notificationAvailable: notificationAvailable ?? this.notificationAvailable,
+      notificationAvailable:
+          notificationAvailable ?? this.notificationAvailable,
       loading: loading ?? this.loading,
     );
   }
