@@ -51,3 +51,26 @@ graphify-out/
 
 # Nested git metadata
 **/.git/
+
+# Video files (all video formats strictly ignored)
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.flv
+*.wmv
+*.m4v
+*.3gp
+*.3g2
+*.mts
+*.m2ts
+*.vob
+*.ogv
+*.mpg
+*.mpeg
+*.m2v
+*.h264
+*.h265
+*.hevc
+*.m3u8
