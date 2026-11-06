@@ -13,6 +13,9 @@ analyzer:
   exclude:
     # Local smoke/probe scripts intentionally print command-line diagnostics.
     - tool/**
+    - build/**
+    - android/**
+    - ios/**
 
 linter:
   # The lint rules applied to this project can be customized in the
